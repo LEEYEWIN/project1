@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 /**
  * 카카오맵 JavaScript SDK를 한 번만 불러온다.
- * - 키: frontend/.env.local 에  VITE_KAKAO_JS_KEY=발급받은_JavaScript_키
- * - 카카오 개발자 콘솔 > 앱 > 플랫폼 > Web 에 http://localhost:5173 등록 필요
+ * - 키: frontend/.env.local 에  REACT_APP_KAKAO_JS_KEY=발급받은_JavaScript_키 (수정 후 npm start 재시작)
+ * - 카카오 개발자 콘솔 > 앱 > 플랫폼 키 > JavaScript SDK 도메인에 http://localhost:3000 등록 필요
  * 반환: { ready, error }
  */
 let loadingPromise = null;
@@ -12,8 +12,8 @@ function loadSdk() {
   if (window.kakao?.maps?.LatLng) return Promise.resolve();
   if (loadingPromise) return loadingPromise;
 
-  const key = import.meta.env.VITE_KAKAO_JS_KEY;
-  if (!key) return Promise.reject(new Error('VITE_KAKAO_JS_KEY가 설정되지 않았습니다 (.env.local 확인).'));
+  const key = process.env.REACT_APP_KAKAO_JS_KEY;
+  if (!key) return Promise.reject(new Error('REACT_APP_KAKAO_JS_KEY가 설정되지 않았습니다 (.env.local 확인 후 npm start 재시작).'));
 
   loadingPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
@@ -23,14 +23,14 @@ function loadSdk() {
       // 키·도메인이 틀리거나 카카오맵 사용 설정이 꺼져 있으면 스크립트는 받아와도 kakao.maps가 없다
       if (!window.kakao?.maps?.load) {
         loadingPromise = null;
-        reject(new Error('카카오맵 SDK 인증 실패: JavaScript 키, Web 도메인(http://localhost:5173), 카카오맵 사용 설정(ON)을 확인하세요.'));
+        reject(new Error(`카카오맵 SDK 인증 실패: JavaScript 키, JavaScript SDK 도메인(${window.location.origin}), 카카오맵 사용 설정(ON)을 확인하세요.`));
         return;
       }
       window.kakao.maps.load(resolve); // autoload=false → 직접 load 호출
     };
     script.onerror = () => {
       loadingPromise = null;
-      reject(new Error(`카카오맵 SDK 요청 실패(${location.origin}). F12 > Network 에서 sdk.js 상태코드를 확인하세요. 401=키/도메인, 403=카카오맵 사용 설정 OFF`));
+      reject(new Error(`카카오맵 SDK 요청 실패(${window.location.origin}). F12 > Network 에서 sdk.js 상태코드를 확인하세요. 401=키/도메인, 403=카카오맵 사용 설정 OFF`));
     };
     document.head.appendChild(script);
   });
