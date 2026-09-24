@@ -1,0 +1,30 @@
+# ===== 프론트 (React / Vite) =====
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+
+# ===== 백엔드 (Spring Boot / Gradle / Eclipse) =====
+backend/build/
+backend/.gradle/
+backend/bin/
+backend/out/
+backend/target/
+backend/.settings/
+backend/.classpath
+backend/.project
+backend/.factorypath
+backend/.apt_generated/
+# 비밀번호·API 키가 들어 있는 파일 (절대 올리지 않음)
+backend/src/main/resources/application-local.properties
+
+# gradle-wrapper.jar 는 꼭 올려야 함 (팀원이 Gradle 설치 없이 빌드)
+!backend/gradle/wrapper/gradle-wrapper.jar
+
+# ===== 기타 =====
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.metadata/
