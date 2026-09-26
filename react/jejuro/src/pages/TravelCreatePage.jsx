@@ -48,12 +48,18 @@ export default function TravelCreatePage() {
     if (index === 1) {
       const incomplete = form.companions.some((c) => !c.relationCode || !c.genderCode || !c.ageGroupCode);
       if (incomplete) return '동반자 정보를 모두 선택하세요.';
+      if (form.companions.length > 18) return '동반자는 최대 18명까지 입력할 수 있습니다.';
     }
     if (index === 2) {
       for (const group of meta.groups) {
         for (const q of group.questions) {
           const count = (form.answers[q.preferenceId] ?? []).length;
-          if (count < group.minSelections) return `'${q.name}' 질문에 답해 주세요.`;
+          if (count < group.minSelections) {
+            if (group.minSelections === 1) return `'${q.name}' 질문에 답해 주세요.`;
+            return group.minSelections === group.maxSelections
+              ? `'${q.name}'을(를) ${group.minSelections}개 골라 주세요. (지금 ${count}개)`
+              : `'${q.name}'을(를) 최소 ${group.minSelections}개 골라 주세요. (지금 ${count}개)`;
+          }
           if (group.maxSelections != null && count > group.maxSelections) {
             return `'${q.name}'은(는) 최대 ${group.maxSelections}개까지 고를 수 있습니다.`;
           }

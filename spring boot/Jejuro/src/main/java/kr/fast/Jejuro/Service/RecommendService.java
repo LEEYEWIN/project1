@@ -23,6 +23,10 @@ import kr.fast.Jejuro.Repository.TravelRegionRepository;
 import kr.fast.Jejuro.Entity.AiTravelInput;
 import kr.fast.Jejuro.Repository.AiTravelInputRepository;
 import kr.fast.Jejuro.RequestDTO.AiRequest;
+import kr.fast.Jejuro.RequestDTO.AiRequest.CompanionInput;
+import kr.fast.Jejuro.Entity.Region;
+import kr.fast.Jejuro.Repository.RegionRepository;
+import kr.fast.Jejuro.Repository.CompanionRepository;
 
 @Service
 public class RecommendService {
@@ -35,21 +39,27 @@ public class RecommendService {
  private final AiClient aiClient;
  private final PoiSourceMapRepository sourceMapRepository;
  private final PoiService poiService;
+ private final RegionRepository regionRepository;
+ private final CompanionRepository companionRepository;
 
  public RecommendService(TravelAccessService travelAccessService, TravelRegionRepository travelRegionRepository,
                          AiTravelInputRepository aiInputRepository, AiClient aiClient,
-                         PoiSourceMapRepository sourceMapRepository, PoiService poiService) {
+                         PoiSourceMapRepository sourceMapRepository, PoiService poiService,
+                         RegionRepository regionRepository, CompanionRepository companionRepository) {
      this.travelAccessService = travelAccessService;
      this.travelRegionRepository = travelRegionRepository;
      this.aiInputRepository = aiInputRepository;
      this.aiClient = aiClient;
      this.sourceMapRepository = sourceMapRepository;
      this.poiService = poiService;
+     this.regionRepository = regionRepository;
+     this.companionRepository = companionRepository;
  }
 
  /**
   * 1) 내 여행인지 확인  2) VIEW에서 AI 입력 조회 + 설문 완료 확인
-  * 3) AI 호출 → 원본 ID 목록  4) 원본 ID → poi_id 변환  5) POI 정보 붙여서 반환
+  * 3) 권역 코드·동반자 목록을 붙여 AI 호출 → 원본 ID 목록(FastAPI는 place_name)
+  * 4) 원본 ID → poi_id 변환(POI_SOURCE_MAP)  5) POI 정보 붙여서 반환
   * 추천 결과는 DB에 저장하지 않는다(설계 결정). 화면이 sessionStorage에 보관한다.
   */
  @Transactional(readOnly = true)
@@ -66,7 +76,20 @@ public class RecommendService {
              ? travelRegionRepository.findByTravelId(travelId).stream().map(TravelRegion::getRegionId).toList()
              : List.of();
 
-     List<String> sourceIds = aiClient.recommend(AiRequest.of(input, regionIds, LIMIT));
+     // 권역 코드(EAST/WEST/SOUTH/NORTH): FastAPI는 코드 문자열로 받는다
+     List<String> regionCodes = regionRepository.findAllById(regionIds).stream()
+             .map(Region::getRegionCode).toList();
+
+     // 동반자: DB 코드 그대로 (정렬·18-slot 변환은 AI 서버)
+     List<CompanionInput> companions = companionRepository.findByTravelIdOrderByCompanionSeq(travelId).stream()
+             .map(c -> new CompanionInput(c.getRelationCode(), c.getGenderCode(), c.getAgeGroupCode()))
+             .toList();
+
+     AiRequest request = AiRequest.of(input, travel.getRegionMode().name(), regionCodes, regionIds,
+             companions, LIMIT);
+
+     // 결과 = 원본 ID 목록(FastAPI는 place_name). POI_SOURCE_MAP.source_poi_id로 우리 관광지와 연결
+     List<String> sourceIds = aiClient.recommend(request);
 
      // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거)
      Map<String, Long> idMap = sourceMapRepository.findBySourcePoiIdIn(sourceIds).stream()

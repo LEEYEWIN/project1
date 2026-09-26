@@ -29,6 +29,7 @@ import kr.fast.Jejuro.Entity.Travel;
 import kr.fast.Jejuro.Entity.TravelPreference;
 import kr.fast.Jejuro.Entity.TravelRegion;
 import kr.fast.Jejuro.RequestDTO.TravelCreateRequest;
+import kr.fast.Jejuro.RequestDTO.TravelCreateRequest.AnswerReq;
 import kr.fast.Jejuro.RequestDTO.TravelCreateRequest.CompanionReq;
 import kr.fast.Jejuro.Repository.CompanionRepository;
 import kr.fast.Jejuro.Repository.TravelPreferenceRepository;
@@ -121,11 +122,16 @@ public class TravelService {
      }
 
      // 6) 설문 답변: 선택지 하나당 한 행, 응답 방식은 질문 정보에서 복사
+     //    values 배열 순서 = 사용자가 고른 순서 → answer_rank 1, 2, 3 (1순위를 AI에 보냄)
      Map<Long, Preference> questionMap = questions.stream()
              .collect(Collectors.toMap(Preference::getPreferenceId, Function.identity()));
-     req.answers().forEach(a -> a.values().forEach(value ->
+     for (AnswerReq a : req.answers()) {
+         List<Integer> values = a.values();
+         for (int rank = 1; rank <= values.size(); rank++) {
              travelPreferenceRepository.save(new TravelPreference(travelId, a.preferenceId(),
-                     questionMap.get(a.preferenceId()).getResponseType(), value))));
+                     questionMap.get(a.preferenceId()).getResponseType(), values.get(rank - 1), rank));
+         }
+     }
 
      return travelId;
  }
@@ -190,7 +196,13 @@ public class TravelService {
      }
  }
 
+ /** AI 모델이 동반자를 최대 18명(18-slot)까지 받으므로 18명까지만 허용 */
+ private static final int MAX_COMPANIONS = 18;
+
  private void validateCompanions(List<CompanionReq> companions) {
+     if (companions.size() > MAX_COMPANIONS) {
+         throw ApiException.badRequest("동반자는 최대 " + MAX_COMPANIONS + "명까지 입력할 수 있습니다.");
+     }
      for (CompanionReq c : companions) {
          if (c.relationCode() < 1 || c.relationCode() > 11
                  || c.genderCode() < 1 || c.genderCode() > 2

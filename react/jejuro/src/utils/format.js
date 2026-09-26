@@ -18,3 +18,23 @@ export function formatDate(iso) {
   const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
   return `${d.getMonth() + 1}.${d.getDate()}(${week})`;
 }
+
+/**
+ * 관광지 분류 코드(POI.category_code) → 화면 이름.
+ * AI 학습 데이터 VISIT_AREA_TYPE_CD 기준 (1~8, 체험 활동은 9)
+ */
+export const CATEGORY_LABEL = {
+  NATURE: '자연관광지',
+  HISTORY: '역사·유적·종교',
+  CULTURE: '문화시설',
+  COMMERCIAL: '상업지구',
+  LEISURE: '레저·스포츠',
+  THEME: '테마시설',
+  TRAIL: '산책로·둘레길',
+  FESTIVAL: '축제·행사',
+  EXPERIENCE: '체험 활동',
+};
+
+export function categoryLabel(code) {
+  return CATEGORY_LABEL[code] ?? code;
+}

@@ -1,4 +1,5 @@
 const EMPTY = { relationCode: '', genderCode: '', ageGroupCode: '' };
+const MAX_COMPANIONS = 18; // AI 모델이 동반자를 최대 18명(18-slot)까지 받음
 
 /** 2단계: 동반자 (본인 제외). 혼자 여행이면 아무도 추가하지 않고 다음으로. */
 export default function CompanionStep({ form, update, meta }) {
@@ -24,7 +25,7 @@ export default function CompanionStep({ form, update, meta }) {
 
   return (
     <section className="card">
-      <p className="hint">함께 가는 사람을 추가하세요. 혼자라면 바로 다음을 누르세요.</p>
+      <p className="hint">함께 가는 사람을 추가하세요(본인 제외, 최대 18명). 혼자라면 바로 다음을 누르세요.</p>
 
       {list.map((_, i) => (
         <div className="companion" key={i}>
@@ -38,8 +39,8 @@ export default function CompanionStep({ form, update, meta }) {
         </div>
       ))}
 
-      <button type="button" className="btn ghost" onClick={add}>
-        + 동반자 추가
+      <button type="button" className="btn ghost" onClick={add} disabled={list.length >= MAX_COMPANIONS}>
+        + 동반자 추가 ({list.length}/{MAX_COMPANIONS})
       </button>
     </section>
   );

@@ -23,6 +23,7 @@ public class AiTravelInputRepository {
          SELECT travel_id, gender_code, age_group_code,
                 style_nature_city, style_new_familiar, style_hidden_famous,
                 style_relax_activity, photo_importance, style_plan_free, income_code,
+                travel_motive_1, user_mission_1,
                 travel_motive, user_mission, companion_count, is_survey_complete
          FROM AI_TRAVEL_INPUT
          WHERE travel_id = ? AND user_id = ?
@@ -46,6 +47,8 @@ public class AiTravelInputRepository {
              (Integer) rs.getObject("photo_importance", Integer.class),
              (Integer) rs.getObject("style_plan_free", Integer.class),
              (Integer) rs.getObject("income_code", Integer.class),
+             (Integer) rs.getObject("travel_motive_1", Integer.class),
+             (Integer) rs.getObject("user_mission_1", Integer.class),
              jsonToList(rs.getString("travel_motive")),
              jsonToList(rs.getString("user_mission")),
              rs.getInt("companion_count"),

@@ -6,6 +6,7 @@ import useBookmarks from '../hooks/useBookmarks.js';
 import PoiCard from '../components/common/PoiCard.jsx';
 import HeartButton from '../components/common/HeartButton.jsx';
 import Loading from '../components/common/Loading.jsx';
+import { categoryLabel } from '../utils/format.js';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 
 // REGION 테이블의 초기 데이터와 같은 값
@@ -82,7 +83,7 @@ export default function PoiBrowsePage() {
             <option value="">모든 분류</option>
             {categories.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {categoryLabel(c)}
               </option>
             ))}
           </select>
