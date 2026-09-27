@@ -16,5 +16,6 @@ public record PoiSummaryResponse(
      Integer regionId,
      String regionName,
      String imageUrl,
-     String description) {
+     String description,          // 한 줄 소개
+     String detailDescription) {  // 세부 설명 (없으면 null)
 }

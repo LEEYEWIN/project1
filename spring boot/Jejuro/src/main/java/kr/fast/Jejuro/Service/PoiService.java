@@ -71,7 +71,8 @@ public class PoiService {
      return pois.stream()
              .map(p -> new PoiSummaryResponse(p.getPoiId(), p.getPoiName(), p.getAddress(),
                      p.getLatitude(), p.getLongitude(), p.getCategoryCode(), p.getRegionId(),
-                     regionNames.get(p.getRegionId()), p.getImageUrl(), p.getDescription()))
+                     regionNames.get(p.getRegionId()), p.getImageUrl(), p.getDescription(),
+                     p.getDetailDescription()))
              .toList();
  }
 }

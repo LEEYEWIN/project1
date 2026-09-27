@@ -11,7 +11,7 @@ import jakarta.persistence.Table;
 
 /** 관광지 마스터. 원본 데이터 적재로만 채우므로 서비스에서는 조회만 한다. */
 @Entity
-@Table(name = "poi")
+@Table(name = "POI")
 public class Poi {
 
  @Id
@@ -22,7 +22,8 @@ public class Poi {
  private BigDecimal longitude;
  private String categoryCode;
  private Integer regionId;
- private String description;
+ private String description;          // 한 줄 소개 (카드)
+ private String detailDescription;    // 세부 설명 (카드의 "자세히" 펼치기)
  private String imageUrl;
 
  protected Poi() {
@@ -36,5 +37,6 @@ public class Poi {
  public String getCategoryCode() { return categoryCode; }
  public Integer getRegionId() { return regionId; }
  public String getDescription() { return description; }
+ public String getDetailDescription() { return detailDescription; }
  public String getImageUrl() { return imageUrl; }
 }

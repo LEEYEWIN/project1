@@ -8,12 +8,14 @@ import KakaoMap from '../components/map/KakaoMap.jsx';
 import LegList from '../components/map/LegList.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
+import LodgingPanel from '../components/route/LodgingPanel.jsx';
 
 /**
  * 6페이지: 카카오맵으로 일차별 동선과 이동수단별 시간 보기
  * - 자동차: 서버가 카카오모빌리티 길찾기 호출(실제 도로 경로)
  * - 도보: 직선거리 기반 추정(카카오 도보 API는 제휴 전용)
  * - 동선 최적화: 서버가 추천 순서를 계산 → "이 순서로 저장"하면 5페이지 저장 API 재사용
+ * - 주변 숙소(FR-26): 오른쪽 [주변 숙소] 탭 → 기준 관광지·반경·숙소를 지도에 원·마커로 표시
  */
 export default function RouteMapPage() {
   const { travelId, routeId } = useParams();
@@ -24,6 +26,9 @@ export default function RouteMapPage() {
   const [suggest, setSuggest] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [panel, setPanel] = useState('route'); // 'route' 이동 정보 | 'lodging' 주변 숙소
+  const [lodgingResult, setLodgingResult] = useState(null);
+  const [selectedLodgingId, setSelectedLodgingId] = useState(null);
 
   const loadRoute = useCallback(async () => {
     const detail = await fetchRoute(routeId);
@@ -45,6 +50,21 @@ export default function RouteMapPage() {
       .then(setDir)
       .catch((e) => setError(errorMessage(e)));
   }, [routeId, dayNo, mode]);
+
+  // 날짜·이동수단·탭이 바뀌면 지도의 숙소 표시를 지움 (새 결과가 오면 다시 그림)
+  useEffect(() => {
+    setLodgingResult(null);
+    setSelectedLodgingId(null);
+  }, [dayNo, mode, panel]);
+
+  const lodgingOnMap = useMemo(() => {
+    if (panel !== 'lodging' || !lodgingResult?.anchor) return null;
+    return {
+      center: { lat: lodgingResult.anchor.latitude, lng: lodgingResult.anchor.longitude, name: lodgingResult.anchor.name },
+      radiusM: lodgingResult.radiusKm * 1000,
+      items: lodgingResult.items,
+    };
+  }, [panel, lodgingResult]);
 
   const day = route?.days.find((d) => d.dayNo === dayNo);
   const points = useMemo(
@@ -140,65 +160,95 @@ export default function RouteMapPage() {
       </div>
 
       <div className="map-layout">
-        <KakaoMap points={points} path={dir?.path ?? points} />
+        <KakaoMap
+          points={points}
+          path={dir?.path ?? points}
+          lodging={lodgingOnMap}
+          selectedLodgingId={selectedLodgingId}
+          onSelectLodging={setSelectedLodgingId}
+        />
 
         <section className="card">
-          {!dir ? (
-            <Loading text="이동 정보를 계산하는 중…" />
+          <div className="panel-tabs">
+            <button type="button" className={panel === 'route' ? 'on' : ''} onClick={() => setPanel('route')}>
+              이동 정보
+            </button>
+            <button type="button" className={panel === 'lodging' ? 'on' : ''} onClick={() => setPanel('lodging')}>
+              주변 숙소
+            </button>
+          </div>
+
+          {panel === 'lodging' ? (
+            <LodgingPanel
+              key={`${dayNo}-${mode}`}
+              routeId={routeId}
+              route={route}
+              dayNo={dayNo}
+              mode={mode}
+              selectedId={selectedLodgingId}
+              onSelect={setSelectedLodgingId}
+              onResult={setLodgingResult}
+            />
           ) : (
             <>
-              <p className="total">
-                총 {formatDuration(dir.totalDurationSec)} · {formatDistance(dir.totalDistanceM)}
-                {dir.estimated && <span className="badge">추정값</span>}
-              </p>
-              {dir.notice && <p className="hint">⚠ {dir.notice}</p>}
-              {dir.estimated && !dir.notice && (
-                <p className="hint">
-                  {mode === 'WALK'
-                    ? '도보 시간은 직선거리×1.3, 시속 4km로 계산한 값입니다.'
-                    : '카카오 REST 키가 없어 직선거리로 추정했습니다.'}
+            {!dir ? (
+              <Loading text="이동 정보를 계산하는 중…" />
+            ) : (
+              <>
+                <p className="total">
+                  총 {formatDuration(dir.totalDurationSec)} · {formatDistance(dir.totalDistanceM)}
+                  {dir.estimated && <span className="badge">추정값</span>}
                 </p>
-              )}
-              <LegList legs={dir.legs} mode={mode} />
-            </>
-          )}
-
-          {points.length >= 3 && !route.locked && (
-            <div className="optimize">
-              {!suggest ? (
-                <button type="button" className="btn ghost" onClick={askOptimize} disabled={busy}>
-                  효율적인 순서 추천받기
-                </button>
-              ) : (
-                <div className="suggest">
-                  <p>
-                    추천 순서로 바꾸면 이동 거리가{' '}
-                    <strong>
-                      {formatDistance(suggest.beforeDistanceM)} → {formatDistance(suggest.afterDistanceM)}
-                    </strong>
-                    (직선 기준)
+                {dir.notice && <p className="hint">⚠ {dir.notice}</p>}
+                {dir.estimated && !dir.notice && (
+                  <p className="hint">
+                    {mode === 'WALK'
+                      ? '도보 시간은 직선거리×1.3, 시속 4km로 계산한 값입니다.'
+                      : '카카오 REST 키가 없어 직선거리로 추정했습니다.'}
                   </p>
-                  <ol>
-                    {suggest.poiIds.map((id) => (
-                      <li key={id}>{nameOf(id)}</li>
-                    ))}
-                  </ol>
-                  <div className="actions">
-                    <button type="button" className="btn ghost" onClick={() => setSuggest(null)}>
-                      취소
-                    </button>
-                    <button
-                      type="button"
-                      className="btn primary"
-                      onClick={applySuggestion}
-                      disabled={busy || suggest.afterDistanceM >= suggest.beforeDistanceM}
-                    >
-                      이 순서로 저장
-                    </button>
+                )}
+                <LegList legs={dir.legs} mode={mode} />
+              </>
+            )}
+
+            {points.length >= 3 && !route.locked && (
+              <div className="optimize">
+                {!suggest ? (
+                  <button type="button" className="btn ghost" onClick={askOptimize} disabled={busy}>
+                    효율적인 순서 추천받기
+                  </button>
+                ) : (
+                  <div className="suggest">
+                    <p>
+                      추천 순서로 바꾸면 이동 거리가{' '}
+                      <strong>
+                        {formatDistance(suggest.beforeDistanceM)} → {formatDistance(suggest.afterDistanceM)}
+                      </strong>
+                      (직선 기준)
+                    </p>
+                    <ol>
+                      {suggest.poiIds.map((id) => (
+                        <li key={id}>{nameOf(id)}</li>
+                      ))}
+                    </ol>
+                    <div className="actions">
+                      <button type="button" className="btn ghost" onClick={() => setSuggest(null)}>
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        className="btn primary"
+                        onClick={applySuggestion}
+                        disabled={busy || suggest.afterDistanceM >= suggest.beforeDistanceM}
+                      >
+                        이 순서로 저장
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+            </>
           )}
         </section>
       </div>
