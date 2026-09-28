@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /** 모든 에러를 { "message": "..." } 형태로 통일해서 React가 같은 방식으로 처리하게 한다. */
 @RestControllerAdvice
@@ -29,6 +30,12 @@ public class GlobalExceptionHandler {
              .map(f -> f.getField() + ": " + f.getDefaultMessage())
              .orElse("입력값을 확인하세요.");
      return ResponseEntity.badRequest().body(Map.of("message", msg));
+ }
+
+ /** 사진이 application.properties의 최대 크기(5MB)를 넘음 */
+ @ExceptionHandler(MaxUploadSizeExceededException.class)
+ public ResponseEntity<Map<String, String>> handleUploadSize(MaxUploadSizeExceededException e) {
+     return ResponseEntity.badRequest().body(Map.of("message", "사진은 5MB 이하만 올릴 수 있습니다."));
  }
 
  /** DB 제약(UNIQUE, CHECK, FK, 트리거) 위반 */

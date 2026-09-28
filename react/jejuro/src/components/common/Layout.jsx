@@ -14,6 +14,7 @@ export default function Layout() {
             내 여행
           </NavLink>
           <NavLink to="/travels/new">새 여행</NavLink>
+          <NavLink to="/pois">관광지</NavLink>
           <NavLink to="/community">후기 게시판</NavLink>
           <TestUserSwitcher />
         </nav>

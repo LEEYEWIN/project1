@@ -38,3 +38,11 @@ export const CATEGORY_LABEL = {
 export function categoryLabel(code) {
   return CATEGORY_LABEL[code] ?? code;
 }
+
+/** 서버 날짜시간 "2026-10-18T13:05:12" → "2026.10.18" (withTime이면 "2026.10.18 13:05") */
+export function formatDateTime(iso, withTime = false) {
+  if (!iso) return '';
+  const [date, time = ''] = String(iso).split('T');
+  const d = date.replaceAll('-', '.');
+  return withTime && time ? `${d} ${time.slice(0, 5)}` : d;
+}

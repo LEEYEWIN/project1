@@ -7,7 +7,7 @@ export async function fetchPoisByIds(ids) {
   return data;
 }
 
-/** 3-1페이지: 전체 관광지 검색 → { items, page, size, totalPages, totalCount } */
+/** 관광지 목록·검색 (이름 가나다순) → { items, page, size, totalPages, totalCount } */
 export async function searchPois({ regionId, category, keyword, page = 0, size = 12 } = {}) {
   const { data } = await client.get('/pois/search', {
     params: { regionId: regionId || undefined, category: category || undefined, keyword: keyword || undefined, page, size },
@@ -15,8 +15,14 @@ export async function searchPois({ regionId, category, keyword, page = 0, size =
   return data;
 }
 
-/** 3-1페이지: 분류 필터 목록 ["BEACH", "NATURE", ...] */
+/** 관광 유형 필터 목록 ["CULTURE", "NATURE", ...] */
 export async function fetchPoiCategories() {
   const { data } = await client.get('/pois/categories');
+  return data;
+}
+
+/** 관광지 상세 (운영 정보 포함) — 비회원도 사용 */
+export async function fetchPoiDetail(poiId) {
+  const { data } = await client.get(`/pois/${poiId}`);
   return data;
 }

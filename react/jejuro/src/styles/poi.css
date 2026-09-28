@@ -1,0 +1,24 @@
+/* 관광지 목록·상세 전용 스타일 (PoiListPage·PoiDetailPage에서 import) */
+
+.poi-detail-page { display: flex; flex-direction: column; gap: 16px; }
+.poi-detail-page > .btn { align-self: flex-start; }
+.poi-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.poi-hero-img { border-radius: 14px; overflow: hidden; }
+.poi-hero-text h1 { margin: 4px 0 10px; font-size: 30px; }
+.poi-lead { margin: 0 0 16px; font-size: 16px; line-height: 1.7; color: #3d4b56; }
+.poi-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.poi-actions .add-route-btn { margin-top: 0; }
+.poi-detail-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+.poi-detail-grid .card, .poi-detail-page > .card { margin-bottom: 0; }
+.poi-detail-page h2 { font-size: 17px; }
+.poi-long { margin: 0; white-space: pre-line; line-height: 1.8; font-size: 14px; }
+.poi-info { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.poi-info div { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: 8px; font-size: 14px; }
+.poi-info dt { font-weight: 700; color: var(--sub); }
+.poi-info dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.missing { color: var(--sub); }
+.poi-detail-page .map-box + .btn { margin-top: 10px; display: inline-block; }
+
+@media (max-width: 760px) {
+  .poi-hero, .poi-detail-grid { grid-template-columns: 1fr; }
+}

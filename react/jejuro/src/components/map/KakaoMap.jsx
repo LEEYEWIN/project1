@@ -68,7 +68,13 @@ export default function KakaoMap({ points, path, height = 460, lodging = null, s
     }
 
     boundsRef.current = bounds;
-    map.setBounds(bounds, 60, 60, 60, 60); // 모든 방문지가 보이게 확대/이동
+    if (points.length === 1) {
+      // 한 곳만 있을 때(관광지 상세): 너무 확대되지 않게 중심만 옮기고 동네가 보이는 정도로
+      map.setCenter(new kakao.maps.LatLng(points[0].lat, points[0].lng));
+      map.setLevel(4);
+    } else {
+      map.setBounds(bounds, 60, 60, 60, 60); // 모든 방문지가 보이게 확대/이동
+    }
   }, [ready, points, path]);
 
   // 주변 숙소: 기준 지점 + 반경 원 + 숙소 마커
