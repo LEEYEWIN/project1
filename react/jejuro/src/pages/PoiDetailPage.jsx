@@ -15,8 +15,8 @@ import '../styles/poi.css';
  * 관광지 상세 (FR-33)
  * ① /pois/:poiId                       둘러보기 (찜 없음)
  * ② /travels/:travelId/pois/:poiId     여행에서 들어옴: ♡ 찜 + [루트에 추가]
- * - 이름·관광 유형·권역·사진·한 줄 소개·세부 설명·주소·운영 정보
- * - 없는 정보는 "정보 없음", 좌표가 없거나 제주 밖이면 지도 대신 "위치 확인 필요"
+ * - 이름·관광 유형·권역·사진·한 줄 소개·세부 설명·주소(사진 옆)·지도
+ * - 좌표가 없거나 제주 밖이면 지도 대신 "위치 확인 필요"
  * - 없는 관광지(404)는 안내 후 목록으로 가는 버튼
  * - 여행 만족도 별점은 관광지 평점으로 쓰지 않으므로 표시하지 않는다
  */
@@ -51,7 +51,11 @@ export default function PoiDetailPage() {
     () => (poi?.locationChecked ? [{ lat: Number(poi.latitude), lng: Number(poi.longitude), name: poi.name }] : []),
     [poi]
   );
-
+    /** 카카오맵 새 창으로 열기 */
+  const openKakaoMap = () => {
+    const url = `https://map.kakao.com/link/map/${encodeURIComponent(poi.name)},${poi.latitude},${poi.longitude}`;
+    window.open(url, '_blank', 'noopener');
+  };
   /** 목록에서 왔으면 뒤로(검색 조건 유지), 주소로 바로 왔으면 목록으로 */
   const back = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate(listPath));
 
@@ -81,16 +85,6 @@ export default function PoiDetailPage() {
   }
   if (!poi) return <main className="page"><Loading /></main>;
 
-  const info = [
-    ['주소', poi.address],
-    ['전화', poi.phone],
-    ['홈페이지', poi.homepage],
-    ['이용 시간', poi.openingHours],
-    ['쉬는 날', poi.closedDays],
-    ['이용 요금', poi.fee],
-    ['주차', poi.parking],
-  ];
-
   return (
     <main className="page wide poi-detail-page">
       <button type="button" className="btn ghost small" onClick={back}>
@@ -107,6 +101,7 @@ export default function PoiDetailPage() {
           </p>
           <h1>{poi.name}</h1>
           <p className="poi-lead">{poi.description ?? '소개 정보 없음'}</p>
+          {poi.address && <p className="poi-addr">{poi.address}</p>}
 
           {travelMode && (
             <div className="poi-actions">
@@ -119,49 +114,20 @@ export default function PoiDetailPage() {
         </div>
       </div>
 
-      <div className="poi-detail-grid">
-        <section className="card">
-          <h2>소개</h2>
-          <p className="poi-long">{poi.detailDescription ?? poi.description ?? '정보 없음'}</p>
-        </section>
-
-        <section className="card">
-          <h2>이용 정보</h2>
-          <dl className="poi-info">
-            {info.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd className={value ? '' : 'missing'}>
-                  {!value
-                    ? '정보 없음'
-                    : label === '홈페이지'
-                      ? <a href={value} target="_blank" rel="noreferrer">{value}</a>
-                      : label === '전화'
-                        ? <a href={`tel:${value.replace(/[^0-9+]/g, '')}`}>{value}</a>
-                        : value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className="hint small">운영 정보는 바뀔 수 있어요. 방문 전에 한 번 더 확인하세요.</p>
-        </section>
-      </div>
+      <section className="card">
+        <h2>소개</h2>
+        <p className="poi-long">{poi.detailDescription ?? poi.description ?? '소개 정보 없음'}</p>
+      </section>
 
       <section className="card">
         <h2>위치</h2>
         {poi.locationChecked ? (
           <>
             <KakaoMap points={points} path={[]} height={320} />
-            <a
-              className="btn ghost small"
-              href={`https://map.kakao.com/link/map/${encodeURIComponent(poi.name)},${poi.latitude},${poi.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <button type="button" className="btn ghost small" onClick={openKakaoMap}>
               카카오맵에서 크게 보기
-            </a>
-          </>
-        ) : (
+            </button>
+          </>        ) : (
           <p className="missing">위치 확인 필요 — 좌표 정보가 없거나 올바르지 않아 지도를 표시하지 않아요.</p>
         )}
       </section>

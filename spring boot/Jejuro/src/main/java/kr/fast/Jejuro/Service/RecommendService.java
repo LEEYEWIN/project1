@@ -31,7 +31,10 @@ import kr.fast.Jejuro.Repository.CompanionRepository;
 @Service
 public class RecommendService {
 
- private static final int LIMIT = 20;
+ /** 화면에 보여 줄 추천 개수 */
+ private static final int SHOW_COUNT = 10;
+ /** AI에 요청하는 개수: 우리 DB에 없는 장소가 빠질 것을 대비해 조금 더 받는다 */
+ private static final int REQUEST_COUNT = 15;
 
  private final TravelAccessService travelAccessService;
  private final TravelRegionRepository travelRegionRepository;
@@ -86,7 +89,7 @@ public class RecommendService {
              .toList();
 
      AiRequest request = AiRequest.of(input, travel.getRegionMode().name(), regionCodes, regionIds,
-             companions, LIMIT);
+             companions, REQUEST_COUNT);
 
      // 결과 = 원본 ID 목록(FastAPI는 place_name). POI_SOURCE_MAP.source_poi_id로 우리 관광지와 연결
      List<String> sourceIds = aiClient.recommend(request);
@@ -98,7 +101,9 @@ public class RecommendService {
              .map(idMap::get)
              .filter(id -> id != null)
              .collect(Collectors.toCollection(LinkedHashSet::new))
-             .stream().toList();
+             .stream()
+             .limit(SHOW_COUNT) // AI 순위대로 10개만
+             .toList();
 
      return new RecommendResponse(travelId, poiService.findSummaries(poiIds));
  }

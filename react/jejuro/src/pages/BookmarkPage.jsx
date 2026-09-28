@@ -9,6 +9,7 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 /**
  * 4페이지: 찜 목록
  * 찜 취소, 추천 목록으로 돌아가기, 찜한 관광지로 경로 만들기(5페이지)
+ * 카드를 누르면 관광지 상세로 이동
  */
 export default function BookmarkPage() {
   const { travelId } = useParams();
@@ -45,6 +46,7 @@ export default function BookmarkPage() {
             <PoiCard
               key={poi.poiId}
               poi={poi}
+              to={`/travels/${travelId}/pois/${poi.poiId}`}
               right={
                 <button
                   type="button"

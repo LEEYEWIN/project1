@@ -14,6 +14,7 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
  * 3페이지: 추천 관광지 목록
  * 데이터 출처: ① 2페이지가 넘겨준 state.pois ② 없으면(새로고침) sessionStorage의 ID로 다시 조회
  * 카드의 하트로 바로 찜(4페이지 기능)을 할 수 있다.
+ * 카드를 누르면 관광지 상세(/travels/:travelId/pois/:poiId)로 이동, 뒤로 가기로 돌아온다.
  */
 export default function RecommendationListPage() {
   const { travelId } = useParams();
@@ -68,6 +69,7 @@ export default function RecommendationListPage() {
             <PoiCard
               key={poi.poiId}
               poi={poi}
+              to={`/travels/${travelId}/pois/${poi.poiId}`}
               right={
                 <HeartButton
                   on={isBookmarked(poi.poiId)}
