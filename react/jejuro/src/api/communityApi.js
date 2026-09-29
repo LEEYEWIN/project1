@@ -81,3 +81,12 @@ export async function updateComment(commentId, content) {
 export async function deleteComment(commentId) {
   await client.delete(`/community/comments/${commentId}`);
 }
+
+/**
+ * 글에 첨부된 최종 경로를 내 새 여행으로 가져오기 → { travelId }
+ * payload: { travelName, startDate: 'YYYY-MM-DD' }  (종료일은 원래 일수만큼 서버가 계산)
+ */
+export async function importRoute(postId, payload) {
+  const { data } = await client.post(`/community/posts/${postId}/import`, payload);
+  return data;
+}

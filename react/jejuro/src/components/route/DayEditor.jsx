@@ -2,7 +2,7 @@
  * 선택한 일차의 방문 순서표.
  * - 순번 칸(1번 ▼)에서 번호를 고르면 그 순번으로 이동
  * - 일차 칸(1일차 ▼)에서 다른 일차를 고르면 그 일차의 맨 뒤로 이동
- * - ▲▼ 로 한 칸씩, ✕ 로 빼기
+ * - ▲▼ 로 한 칸씩, ✕ 로 경로에서 빼기(여행 장소에는 남음)
  * 화면의 순번이 그대로 ROUTE_SPOT.visit_order 로 저장된다.
  */
 export default function DayEditor({ dayNo, tripDays, spots, onChange, onMoveToDay }) {
@@ -17,7 +17,7 @@ export default function DayEditor({ dayNo, tripDays, spots, onChange, onMoveToDa
   const remove = (index) => onChange(spots.filter((_, i) => i !== index));
 
   if (spots.length === 0) {
-    return <p className="empty">{dayNo}일차에 방문할 곳을 왼쪽 찜 목록에서 넣어 주세요.</p>;
+    return <p className="empty">{dayNo}일차에 방문할 곳을 왼쪽 여행 장소에서 넣어 주세요.</p>;
   }
 
   return (

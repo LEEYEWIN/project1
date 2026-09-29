@@ -4,7 +4,8 @@ import { fetchPoiCategories, searchPois } from '../api/poiApi.js';
 import { errorMessage } from '../api/client.js';
 import useBookmarks from '../hooks/useBookmarks.js';
 import PoiCard from '../components/common/PoiCard.jsx';
-import HeartButton from '../components/common/HeartButton.jsx';
+import PlaceButton from '../components/common/PlaceButton.jsx';
+import PlaceGuide from '../components/common/PlaceGuide.jsx';
 import AddToRouteButton from '../components/poi/AddToRouteButton.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
@@ -23,8 +24,8 @@ const PAGE_SIZE = 12;
 
 /**
  * 관광지 목록·검색 (FR-32, FR-34) — 두 곳에서 같은 화면을 쓴다
- * ① /pois                      메인 메뉴에서: 둘러보기만 (찜 없음, 비회원 가능)
- * ② /travels/:travelId/pois    여행 찜 목록 → "전체 관광지 보기": ♡ 찜 + [루트에 추가]
+ * ① /pois                      메인 메뉴에서: 둘러보기만 (장소 추가 없음, 비회원 가능)
+ * ② /travels/:travelId/pois    여행 장소 → "관광지 더 찾기": [+ 장소 추가] + [루트에 추가]
  * - 권역·관광 유형·검색어는 함께 적용(AND), 이름 가나다순, 12개씩
  * - 조건을 바꾸면 1쪽부터. 조건은 주소(?region=&category=&q=&page=)에 남겨 뒤로 가기 해도 유지
  */
@@ -87,15 +88,17 @@ export default function PoiListPage() {
         <h1>제주 관광지</h1>
         {travelMode && (
           <Link className="btn ghost" to={`/travels/${travelId}/bookmarks`}>
-            ← 찜 목록
+            ← 여행 장소
           </Link>
         )}
       </div>
-      <p className="hint">
-        {travelMode
-          ? '♡로 찜하거나 [루트에 추가]로 경로의 원하는 일차에 바로 넣을 수 있어요.'
-          : '제주 관광지를 권역·관광 유형·이름으로 찾아보세요. 찜과 루트 만들기는 여행을 만든 뒤 할 수 있어요.'}
-      </p>
+      {travelMode ? (
+        <PlaceGuide travelId={travelId} count={bookmarks.length} />
+      ) : (
+        <p className="hint">
+          제주 관광지를 권역·관광 유형·이름으로 찾아보세요. 장소 추가와 경로 짜기는 여행을 만든 뒤 할 수 있어요.
+        </p>
+      )}
 
       <section className="card filter-box" aria-label="관광지 찾기">
         <div className="chips" role="group" aria-label="권역">
@@ -164,7 +167,7 @@ export default function PoiListPage() {
                 to={detailPath(poi.poiId)}
                 right={
                   travelMode && (
-                    <HeartButton
+                    <PlaceButton
                       on={isBookmarked(poi.poiId)}
                       disabled={pending.has(poi.poiId)}
                       onClick={() => toggle(poi)}
@@ -200,14 +203,14 @@ export default function PoiListPage() {
 
       {travelMode ? (
         <div className="bottom-bar">
-          <span>찜 {bookmarks.length}곳</span>
+          <span>여행 장소 {bookmarks.length}곳</span>
           <Link className="btn primary" to={`/travels/${travelId}/bookmarks`}>
-            찜 목록에서 루트 짜기 →
+            여행 장소 보기 →
           </Link>
         </div>
       ) : (
         <div className="bottom-bar">
-          <span>마음에 드는 곳이 있나요? 여행을 만들면 AI 추천과 찜, 루트 짜기를 할 수 있어요.</span>
+          <span>마음에 드는 곳이 있나요? 여행을 만들면 AI 추천, 장소 추가, 경로 짜기를 할 수 있어요.</span>
           <Link className="btn primary" to="/travels/new">
             새 여행 만들기 →
           </Link>

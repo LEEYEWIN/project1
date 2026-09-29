@@ -3,13 +3,15 @@ import { addBookmark, fetchBookmarks, removeBookmark } from '../api/bookmarkApi.
 import { errorMessage } from '../api/client.js';
 
 /**
- * 찜 상태 관리 훅 (추천·찜·관광지 화면 공용). travelId가 없으면 아무것도 하지 않는다.
+ * 여행 장소(예전 이름: 찜) 상태 관리 훅 (추천·여행 장소·관광지 화면 공용). travelId가 없으면 아무것도 하지 않는다.
+ * 여행 장소 = 이 여행의 경로(일정)에 넣을 관광지.
  * - bookmarks: [{ bookmarkId, poi }]
  * - isBookmarked(poiId), toggle(poi)
  * toggle은 "낙관적 업데이트": 화면을 먼저 바꾸고, 서버가 실패하면 원래대로 되돌린다.
- * ensure(poi): 찜이 안 되어 있으면 찜한다(루트에 추가하기 전에 사용). 실패하면 예외를 그대로 던짐.
+ * ensure(poi): 여행 장소에 없으면 추가한다(루트에 추가하기 전에 사용). 실패하면 예외를 그대로 던짐.
+ * source: 이 화면에서 담으면 서버에 남길 출처 — 'RECOMMEND'(AI 추천 목록) / 'SEARCH'(기본)
  */
-export default function useBookmarks(travelId) {
+export default function useBookmarks(travelId, source = 'SEARCH') {
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +19,7 @@ export default function useBookmarks(travelId) {
 
   const reload = useCallback(async () => {
     if (!travelId) {
-      // 여행 없이 들어온 관광지 화면(메인 → 관광지): 찜 기능 없음
+      // 여행 없이 들어온 관광지 화면(메인 → 관광지): 장소 추가 기능 없음
       setLoading(false);
       return;
     }
@@ -50,7 +52,7 @@ export default function useBookmarks(travelId) {
       if (on) {
         await removeBookmark(travelId, poi.poiId);
       } else {
-        const saved = await addBookmark(travelId, poi.poiId);
+        const saved = await addBookmark(travelId, poi.poiId, source);
         setBookmarks((list) => list.map((b) => (b.poi.poiId === poi.poiId ? saved : b)));
       }
       setError('');
@@ -68,7 +70,7 @@ export default function useBookmarks(travelId) {
 
   const ensure = async (poi) => {
     if (isBookmarked(poi.poiId)) return;
-    const saved = await addBookmark(travelId, poi.poiId);
+    const saved = await addBookmark(travelId, poi.poiId, source);
     setBookmarks((list) => (list.some((b) => b.poi.poiId === poi.poiId) ? list : [saved, ...list]));
   };
 

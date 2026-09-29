@@ -1,6 +1,5 @@
 package kr.fast.Jejuro.Controller;
 
-
 // [6페이지 카카오맵 동선]
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,8 +39,9 @@ public class DirectionsController {
 
     /** 효율적인 방문 순서 제안(저장은 하지 않음. 수락하면 화면이 PUT /api/routes/{routeId}로 저장) */
     @PostMapping("/routes/{routeId}/days/{dayNo}/optimize")
-    public OptimizeResponse optimize(@PathVariable("routeId") Long routeId, @PathVariable("dayNo") int dayNo) {
-        return directionsService.optimize(routeId, dayNo, currentUser.id());
+    public OptimizeResponse optimize(@PathVariable("routeId") Long routeId, @PathVariable("dayNo") int dayNo,
+                                     @RequestParam(name = "fixEnd", defaultValue = "false") boolean fixEnd) {
+        return directionsService.optimize(routeId, dayNo, fixEnd, currentUser.id());
     }
 
     /** 5페이지: 저장 전 순서로 동선·이동시간 미리보기 */
@@ -50,9 +50,9 @@ public class DirectionsController {
         return directionsService.preview(req.poiIds(), req.modeOrCar());
     }
 
-    /** 5페이지: 저장 전 순서로 효율적인 순서 제안 */
+    /** 5페이지: 저장 전 순서로 효율적인 순서 제안 (1번 방문지 고정, fixEnd=true면 마지막도 고정) */
     @PostMapping("/directions/preview/optimize")
     public OptimizeResponse previewOptimize(@Valid @RequestBody DirectionsPreviewRequest req) {
-        return directionsService.previewOptimize(req.poiIds());
+        return directionsService.previewOptimize(req.poiIds(), req.fixEndOrFalse());
     }
 }

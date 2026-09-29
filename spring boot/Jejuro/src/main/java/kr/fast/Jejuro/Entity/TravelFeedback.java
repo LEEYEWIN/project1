@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 
 /** 여행당 1건. 채택한 경로를 실제로 수행했는지와 만족도. */
 @Entity
-@Table(name = "travel_feedback")
+@Table(name = "TRAVEL_FEEDBACK")
 public class TravelFeedback {
 
  @Id

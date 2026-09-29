@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adoptRoute, deleteTravel, fetchTravelDetail } from '../api/travelApi.js';
+import { fetchRoute } from '../api/routeApi.js';
 import { errorMessage } from '../api/client.js';
 import { formatDate } from '../utils/format.js';
 import Loading from '../components/common/Loading.jsx';
@@ -9,28 +10,25 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', NOT_TAKEN: '가지 않음' };
 
 /**
- * 7페이지(상세): 여행 기록
- * - 만든 경로 중 하나를 골라 → 아래 큰 버튼으로 [지도 보기] / [최종 경로로 채택]
- * - 채택은 확정: 이후 경로 편집·새 경로 만들기·채택 변경 불가
- * - 후기는 여행 종료일부터 작성 가능
- * - 채택한 경로의 일차별 일정 표시
- * - 후기(8페이지)로 이동, 여행 삭제
+ * 7페이지(상세): 여행 한 개 = 경로 한 개
+ * 진행 단계: ① 여행 장소 추가 → ② 장소를 날짜별로 모두 배치(경로 짜기, 자동 저장) → ③ 일정 확정 → ④ 후기
+ * - 일정 확정(= 최종 경로 채택)은 여행 장소가 모두 배치되어야 가능. 확정하면 경로·장소를 바꿀 수 없다
+ * - 확정 전에는 지금 경로를 아래에서 미리 보고 확정
+ * - 커뮤니티에서 가져온 여행은 설문이 없어 AI 추천 목록 링크를 숨긴다
  */
 export default function TravelDetailPage() {
   const { travelId } = useParams();
   const navigate = useNavigate();
   const [travel, setTravel] = useState(null);
+  const [route, setRoute] = useState(null); // 확정 전 경로 미리보기
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState(null); // 선택한 경로 id (지도 보기·채택 대상)
 
   const load = useCallback(() => {
     fetchTravelDetail(travelId)
-      .then((t) => {
+      .then(async (t) => {
         setTravel(t);
-        // 채택된 경로가 있으면 그 경로, 없으면 관광지가 있는 첫 경로를 기본 선택
-        const first = t.routes.find((r) => r.adopted) ?? t.routes.find((r) => r.spotCount > 0);
-        setSelected((cur) => cur ?? first?.routeId ?? null);
+        if (t.route && !t.adoptedRoute) setRoute(await fetchRoute(t.route.routeId));
       })
       .catch((e) => setError(errorMessage(e)));
   }, [travelId]);
@@ -38,12 +36,11 @@ export default function TravelDetailPage() {
   useEffect(load, [load]);
 
   const adopt = async () => {
-    if (!selected) return;
-    if (!window.confirm('이 경로를 최종 경로로 채택할까요?\n채택하면 이 여행의 경로는 더 이상 수정할 수 없습니다.')) return;
+    if (!window.confirm('이 경로로 일정을 확정할까요?\n확정하면 경로와 여행 장소를 더 이상 바꿀 수 없습니다.')) return;
     setBusy(true);
     setError('');
     try {
-      await adoptRoute(travelId, selected);
+      await adoptRoute(travelId, travel.route.routeId);
       load();
     } catch (e) {
       setError(errorMessage(e));
@@ -53,7 +50,7 @@ export default function TravelDetailPage() {
   };
 
   const remove = async () => {
-    if (!window.confirm('이 여행과 경로·찜·후기를 모두 삭제할까요? 되돌릴 수 없습니다.')) return;
+    if (!window.confirm('이 여행과 경로·여행 장소·후기를 모두 삭제할까요? 되돌릴 수 없습니다.')) return;
     try {
       await deleteTravel(travelId);
       navigate('/travels', { replace: true });
@@ -66,9 +63,19 @@ export default function TravelDetailPage() {
   if (!travel) return <main className="page"><Loading /></main>;
 
   const t = travel;
-  const locked = t.routes.some((r) => r.adopted); // 채택 후에는 경로 수정 불가
+  const locked = Boolean(t.adoptedRoute);
+  const unplaced = t.placeCount - t.placedCount;
+  const canAdopt = !locked && t.route && t.placeCount > 0 && unplaced === 0;
+  const shownRoute = locked ? t.adoptedRoute : route;
+  const hasSpots = (t.route?.spotCount ?? 0) > 0;
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+  const spotResult = new Map((locked ? t.feedback?.spots ?? [] : []).map((sp) => [sp.poiId, sp]));
+  const visitedCount = (t.feedback?.spots ?? []).filter((sp) => sp.visited).length;
+  const step = locked ? 3 : t.placeCount === 0 ? 0 : unplaced > 0 ? 1 : 2;
+  const STEPS = ['여행 장소 추가', '날짜별로 모두 배치', '일정 확정'];
+
   return (
     <main className="page">
       <div className="title-row">
@@ -82,106 +89,116 @@ export default function TravelDetailPage() {
         {t.companions.length > 0 &&
           ` · 동반: ${t.companions.map((c) => `${c.relation}(${c.ageGroup})`).join(', ')}`}
       </p>
+      {t.imported && (
+        <p className="imported-note">
+          커뮤니티 글의 경로를 가져와 만든 여행이에요.{' '}
+          {t.sourcePostId && <Link to={`/community/posts/${t.sourcePostId}`}>원래 글 보기</Link>}
+        </p>
+      )}
 
       <nav className="quick-links">
-        <Link to={`/travels/${travelId}/recommendations`}>추천 목록</Link>
-        <Link to={`/travels/${travelId}/bookmarks`}>찜 목록</Link>
-        {!locked && <Link to={`/travels/${travelId}/routes/new`}>새 경로 만들기</Link>}
+        {!t.imported && <Link to={`/travels/${travelId}/recommendations`}>AI 추천 목록</Link>}
+        <Link to={`/travels/${travelId}/bookmarks`}>여행 장소 {t.placeCount}곳</Link>
+        {!locked && <Link to={`/travels/${travelId}/pois`}>관광지 더 찾기</Link>}
       </nav>
 
       <ErrorBox message={error} />
 
-      {/* 경로 목록: 하나를 골라 아래 큰 버튼으로 지도 보기 / 최종 채택 */}
       <section className="card">
-        <h2>만든 경로</h2>
-        {locked && <p className="hint">최종 경로가 채택되어 경로를 더 이상 수정할 수 없습니다.</p>}
-        {t.routes.length === 0 ? (
-          <p className="empty">아직 경로가 없습니다. 찜 목록에서 경로를 만들어 보세요.</p>
+        <h2>여행 일정</h2>
+        <ol className="progress-steps">
+          {STEPS.map((label, i) => (
+            <li key={label} className={i < step ? 'done' : i === step ? 'now' : ''}>
+              <span>{i < step ? '✓' : i + 1}</span>
+              {label}
+              {i === 1 && t.placeCount > 0 && <small>{t.placedCount}/{t.placeCount}곳</small>}
+            </li>
+          ))}
+        </ol>
+
+        {locked ? (
+          <p className="hint">일정을 확정했어요. 경로와 여행 장소는 더 이상 바꿀 수 없어요.</p>
+        ) : t.placeCount === 0 ? (
+          <p className="hint">먼저 AI 추천 목록이나 관광지 목록에서 [+ 장소 추가]로 이 여행에 갈 곳을 담아 주세요.</p>
+        ) : unplaced > 0 ? (
+          <p className="hint">
+            여행 장소 {t.placeCount}곳 중 <b>{unplaced}곳</b>이 아직 경로에 없어요. 모두 날짜별로 배치하면 일정을 확정할 수 있어요.
+          </p>
         ) : (
-          <ul className="route-list selectable">
-            {t.routes.map((r) => {
-              const empty = r.spotCount === 0;
-              const on = selected === r.routeId;
-              return (
-                <li
-                  key={r.routeId}
-                  className={[r.adopted && 'adopted', on && 'on', empty && 'empty-route'].filter(Boolean).join(' ')}
-                  onClick={() => !empty && setSelected(r.routeId)}
-                >
-                  <label className="route-pick">
-                    <input
-                      type="radio"
-                      name="route"
-                      checked={on}
-                      disabled={empty}
-                      onChange={() => setSelected(r.routeId)}
-                    />
-                    <span>
-                      <strong>{r.routeName ?? `경로 #${r.routeId}`}</strong>
-                      {r.adopted && <span className="badge">최종 경로</span>}
-                      <small>{empty ? '관광지가 없는 경로 · 편집해서 채워 주세요' : `${r.dayCount}일 · ${r.spotCount}곳`}</small>
-                    </span>
-                  </label>
-                  {!locked && (
-                    <Link
-                      className="btn small ghost"
-                      to={`/travels/${travelId}/routes/${r.routeId}/edit`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      편집
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <p className="hint">모든 장소를 배치했어요. 아래 일정을 확인하고 확정하세요.</p>
         )}
 
-        {t.routes.length > 0 && (
-          <div className="route-actions">
+        <div className="route-actions">
+          {locked ? (
             <button
               type="button"
               className="btn big ghost"
-              disabled={!selected}
-              onClick={() => navigate(`/travels/${travelId}/routes/${selected}/map`)}
+              onClick={() => navigate(`/travels/${travelId}/routes/${t.adoptedRoute.routeId}/map`)}
             >
-              지도에서 동선 보기
+              지도에서 동선·숙소 보기
             </button>
+          ) : (
             <button
               type="button"
-              className="btn big primary"
-              disabled={busy || !selected || locked}
-              onClick={adopt}
+              className="btn big ghost"
+              disabled={t.placeCount === 0}
+              onClick={() => navigate(`/travels/${travelId}/route`)}
             >
-              {locked ? '최종 경로 채택 완료' : '최종 경로로 채택'}
+              {hasSpots ? '경로 이어서 짜기' : '경로 짜기'}
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            className="btn big primary"
+            disabled={busy || !canAdopt}
+            title={!canAdopt && !locked ? '여행 장소를 모두 배치해야 확정할 수 있어요' : undefined}
+            onClick={adopt}
+          >
+            {locked ? '일정 확정 완료' : '이 경로로 일정 확정'}
+          </button>
+        </div>
       </section>
 
-      {/* 채택한 경로 일정 */}
-      {t.adoptedRoute && (
+      {shownRoute && shownRoute.days.length > 0 && (
         <section className="card">
-          <h2>최종 일정 · {t.adoptedRoute.routeName ?? `경로 #${t.adoptedRoute.routeId}`}</h2>
-          {t.adoptedRoute.days.map((d) => (
+          <h2>
+            {locked ? '확정한 일정' : '지금 경로 미리보기'}
+            <small>{shownRoute.routeName ?? ''}</small>
+          </h2>
+          {shownRoute.days.map((d) => (
             <div key={d.dayNo} className="timeline-day">
               <h3>
                 {d.dayNo}일차 <small>{formatDate(d.date)}</small>
               </h3>
               <ol className="timeline">
-                {d.spots.map((s) => (
-                  <li key={s.poi.poiId}>
-                    <span className="order small">{s.visitOrder}</span> {s.poi.name}
-                    <small className="muted"> · {s.poi.regionName}</small>
-                  </li>
-                ))}
+                {d.spots.map((s) => {
+                  const result = spotResult.get(s.poi.poiId); // 후기의 관광지별 결과
+                  return (
+                    <li key={s.poi.poiId} className={result?.visited === false ? 'spot-missed' : ''}>
+                      <span className="order small">{s.visitOrder}</span> <span className="spot-name">{s.poi.name}</span>
+                      <small className="muted"> · {s.poi.regionName}</small>
+                      {result?.visited === false && <span className="tag">못 감</span>}
+                      {result?.reaction === 'LIKE' && <span className="tag on">좋았어요</span>}
+                      {result?.reaction === 'DISLIKE' && <span className="tag">아쉬워요</span>}
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           ))}
+          {locked && (t.feedback?.spots ?? []).length > 0 && (
+            <p className="hint">
+              다녀온 곳 {visitedCount}/{t.feedback.spots.length}곳
+            </p>
+          )}
+          {!locked && (
+            <Link className="btn ghost small" to={`/travels/${travelId}/routes/${shownRoute.routeId}/map`}>
+              지도에서 동선·숙소 보기
+            </Link>
+          )}
         </section>
       )}
 
-      {/* 후기 */}
       <section className="card">
         <h2>다녀온 후기</h2>
         {t.feedback ? (
@@ -195,7 +212,7 @@ export default function TravelDetailPage() {
             후기 남기기
           </Link>
         ) : !locked ? (
-          <p className="muted">최종 경로를 채택하면 여행 종료일부터 후기를 남길 수 있습니다.</p>
+          <p className="muted">일정을 확정하면 여행 종료일부터 후기를 남길 수 있습니다.</p>
         ) : (
           <p className="muted">
             {formatDate(t.endDate)}(여행 종료일)부터 후기를 남길 수 있습니다.

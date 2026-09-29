@@ -1,7 +1,7 @@
 package kr.fast.Jejuro.Controller;
 
 
-//[4페이지 찜]
+//[4페이지 여행 장소 (예전 이름: 찜) — 주소 /bookmarks 는 그대로]
 
 import java.util.List;
 
@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
-import kr.fast.Jejuro.Config.CurrentUser;
 import kr.fast.Jejuro.RequestDTO.BookmarkRequest;
 import kr.fast.Jejuro.ResponseDTO.BookmarkResponse;
+import kr.fast.Jejuro.Config.CurrentUser;
+
+import jakarta.validation.Valid;
 import kr.fast.Jejuro.Service.BookmarkService;
 
 @RestController
@@ -41,7 +42,7 @@ public class BookmarkController {
  @PostMapping
  @ResponseStatus(HttpStatus.CREATED)
  public BookmarkResponse add(@PathVariable("travelId") Long travelId, @Valid @RequestBody BookmarkRequest req) {
-     return bookmarkService.add(travelId, currentUser.id(), req.poiId());
+     return bookmarkService.add(travelId, currentUser.id(), req.poiId(), req.sourceOrSearch());
  }
 
  @DeleteMapping("/{poiId}")

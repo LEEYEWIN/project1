@@ -6,6 +6,7 @@ import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import CommentSection from '../components/community/CommentSection.jsx';
 import RouteDayList from '../components/community/RouteDayList.jsx';
+import RouteShareActions from '../components/community/RouteShareActions.jsx';
 import { formatDateTime } from '../utils/format.js';
 import '../styles/community.css';
 
@@ -13,7 +14,7 @@ import '../styles/community.css';
  * 커뮤니티 글 상세
  * - 제목, 닉네임·작성일·글 종류, 첨부 사진 1장 + 본문(+ 만족도 별점)
  * - 조회수 / 좋아요(누르기·취소) / 댓글 수
- * - 첨부된 최종 경로(일차별, 펼치면 지도)
+ * - 첨부된 최종 경로(일차별, 펼치면 지도) + [경로 링크 공유]·[내 여행으로 가져오기]
  * - 댓글·대댓글
  * 조회수는 브라우저 탭마다 글 하나당 한 번만 올린다(sessionStorage). 새로고침으로 늘지 않음.
  */
@@ -83,6 +84,20 @@ export default function PostDetailPage() {
   }
   if (!post) return <main className="page wide cm"><Loading /></main>;
 
+  const hasRoute = Boolean(post.route?.days?.length);
+  const likeButton = (
+    <button
+      type="button"
+      className={post.liked ? 'cm-like cm-action-like on' : 'cm-like cm-action-like'}
+      aria-pressed={post.liked}
+      aria-label={post.liked ? '좋아요 취소' : '좋아요'}
+      disabled={liking}
+      onClick={toggleLike}
+    >
+      <span aria-hidden="true">{post.liked ? '♥' : '♡'}</span> 좋아요 <strong>{post.likeCount}</strong>
+    </button>
+  );
+
   return (
     <main className="page wide cm">
       <div className="cm-detail-top">
@@ -102,48 +117,46 @@ export default function PostDetailPage() {
       </div>
 
       <h1 className="cm-title">{post.title}</h1>
-      <p className="cm-meta">
-        {post.authorName} · {formatDateTime(post.createdAt)} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
-        {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
-      </p>
+      <div className="cm-author-row">
+        <div className="cm-author-info">
+          <strong className="cm-author-name">{post.authorName}</strong>
+          <span className="cm-author-meta">
+            {formatDateTime(post.createdAt)} · 조회 {post.viewCount} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
+            {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
+          </span>
+        </div>
+        <a className="cm-header-comments" href="#cm-comments-title">댓글 <strong>{post.commentCount}</strong></a>
+      </div>
 
       <div className={post.imageUrl ? 'cm-body with-image' : 'cm-body'}>
         {post.imageUrl && <img className="cm-photo" src={post.imageUrl} alt={`${post.title} 첨부 사진`} />}
         <div className="cm-content-card">
           <p className="cm-content">{post.content}</p>
-          {post.satisfaction != null && (
-            <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
-              만족도 {'★'.repeat(post.satisfaction)}
-              {'☆'.repeat(5 - post.satisfaction)}
-            </span>
-          )}
         </div>
       </div>
 
-      <div className="cm-statbar">
-        <span>조회 {post.viewCount}</span>
-        <button
-          type="button"
-          className={post.liked ? 'cm-like on' : 'cm-like'}
-          aria-pressed={post.liked}
-          aria-label={post.liked ? '좋아요 취소' : '좋아요'}
-          disabled={liking}
-          onClick={toggleLike}
-        >
-          {post.liked ? '♥' : '♡'} {post.likeCount}
-        </button>
-        <span>댓글 {post.commentCount}</span>
-      </div>
+      {!hasRoute && <div className="cm-detail-actions">{likeButton}</div>}
 
       <ErrorBox message={error} />
 
-      {post.route && post.route.days.length > 0 && (
+      {hasRoute && (
         <section className="cm-section" aria-labelledby="cm-route-title">
           <h2 id="cm-route-title" className="cm-h2">첨부된 최종 경로</h2>
           <p className="cm-sub">
             {post.travelName ? `${post.travelName} · ` : ''}일차별 방문지와 지도를 확인합니다.
           </p>
           <RouteDayList route={post.route} />
+          <RouteShareActions post={post} likeButton={likeButton} />
+        </section>
+      )}
+
+      {post.satisfaction != null && (
+        <section className="cm-section cm-satisfaction" aria-labelledby="cm-satisfaction-title">
+          <h2 id="cm-satisfaction-title" className="cm-h2">만족도</h2>
+          <p className="cm-sub">지난 여행에 대한 만족도입니다.</p>
+          <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
+            {'★'.repeat(post.satisfaction)}{'☆'.repeat(5 - post.satisfaction)}
+          </span>
         </section>
       )}
 

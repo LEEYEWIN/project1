@@ -33,6 +33,10 @@ public class User {
  @Column(nullable = false)
  private String status;
 
+ /** USER 일반 회원 / ADMIN 관리자 (관리자 화면 접근) */
+ @Column(nullable = false)
+ private String role;
+
  protected User() {
  }
 
@@ -42,4 +46,9 @@ public class User {
  public LocalDate getBirthDate() { return birthDate; }
  public Integer getGenderCode() { return genderCode; }
  public String getStatus() { return status; }
+ public String getRole() { return role; }
+
+ public boolean isAdmin() {
+     return "ADMIN".equals(role);
+ }
 }

@@ -1,29 +1,34 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchPoisByIds } from '../api/poiApi.js';
+import { fetchTravelDetail } from '../api/travelApi.js';
 import { errorMessage } from '../api/client.js';
 import { loadRecommendationIds } from '../utils/recommendStorage.js';
 import useBookmarks from '../hooks/useBookmarks.js';
 import PoiCard from '../components/common/PoiCard.jsx';
-import HeartButton from '../components/common/HeartButton.jsx';
+import PlaceButton from '../components/common/PlaceButton.jsx';
+import PlaceGuide from '../components/common/PlaceGuide.jsx';
 import RegionFilter from '../components/common/RegionFilter.jsx';
+import RecommendBasis from '../components/recommend/RecommendBasis.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 
 /**
  * 3페이지: 추천 관광지 목록
  * 데이터 출처: ① 2페이지가 넘겨준 state.pois ② 없으면(새로고침) sessionStorage의 ID로 다시 조회
- * 카드의 하트로 바로 찜(4페이지 기능)을 할 수 있다.
- * 카드를 누르면 관광지 상세(/travels/:travelId/pois/:poiId)로 이동, 뒤로 가기로 돌아온다.
+ * - 위쪽 "추천 기준": 이 여행의 정보·설문 1순위로 추천했다는 것을 보여 줌
+ * - 카드의 [+ 장소 추가]: 이 여행의 일정(경로)에 넣을 장소로 담기
+ * - 카드를 누르면 관광지 상세(/travels/:travelId/pois/:poiId)로 이동, 뒤로 가기로 돌아온다.
  */
 export default function RecommendationListPage() {
   const { travelId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [pois, setPois] = useState(location.state?.pois ?? null);
+  const [travel, setTravel] = useState(null);
   const [error, setError] = useState('');
   const [region, setRegion] = useState('전체');
-  const { bookmarks, isBookmarked, toggle, pending, error: bookmarkError } = useBookmarks(travelId);
+  const { bookmarks, isBookmarked, toggle, pending, error: bookmarkError } = useBookmarks(travelId, 'RECOMMEND'); // 여기서 담으면 'AI 추천으로 담음'으로 기록
 
   useEffect(() => {
     if (pois) return;
@@ -36,6 +41,13 @@ export default function RecommendationListPage() {
       .then(setPois)
       .catch((e) => setError(errorMessage(e)));
   }, [pois, travelId, navigate]);
+
+  // 추천 기준(여행 정보·설문) — 실패해도 목록은 보여 준다
+  useEffect(() => {
+    fetchTravelDetail(travelId)
+      .then(setTravel)
+      .catch(() => setTravel(null));
+  }, [travelId]);
 
   const regions = useMemo(() => [...new Set((pois ?? []).map((p) => p.regionName))], [pois]);
   const visible = (pois ?? []).filter((p) => region === '전체' || p.regionName === region);
@@ -56,7 +68,9 @@ export default function RecommendationListPage() {
           </Link>
         </div>
       </div>
-      <p className="hint">마음에 드는 곳의 ♡를 눌러 찜하세요. 찜한 관광지로 여행 경로를 만듭니다.</p>
+
+      <RecommendBasis travel={travel} count={pois.length} />
+      <PlaceGuide travelId={travelId} count={bookmarks.length} />
 
       <RegionFilter regions={regions} value={region} onChange={setRegion} />
       <ErrorBox message={bookmarkError} />
@@ -70,8 +84,9 @@ export default function RecommendationListPage() {
               key={poi.poiId}
               poi={poi}
               to={`/travels/${travelId}/pois/${poi.poiId}`}
+              linkState={{ source: 'RECOMMEND' }}
               right={
-                <HeartButton
+                <PlaceButton
                   on={isBookmarked(poi.poiId)}
                   disabled={pending.has(poi.poiId)}
                   onClick={() => toggle(poi)}
@@ -83,9 +98,9 @@ export default function RecommendationListPage() {
       )}
 
       <div className="bottom-bar">
-        <span>찜 {bookmarks.length}곳</span>
+        <span>여행 장소 {bookmarks.length}곳 · 담은 곳으로 경로를 만들어요</span>
         <Link className="btn primary" to={`/travels/${travelId}/bookmarks`}>
-          찜 목록 보기 →
+          여행 장소 보기 →
         </Link>
       </div>
     </main>

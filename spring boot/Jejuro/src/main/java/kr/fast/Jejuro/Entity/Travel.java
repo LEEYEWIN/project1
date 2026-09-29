@@ -1,5 +1,7 @@
 package kr.fast.Jejuro.Entity;
 
+// [1·7페이지 여행]
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -14,10 +16,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "travel")
+@Table(name = "TRAVEL")
 public class Travel {
 
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)   // AUTO_INCREMENT
     private Long travelId;
 
@@ -35,6 +37,9 @@ public class Travel {
     /** 최종 채택 경로. TRAVEL ↔ TRAVEL_ROUTE 순환 참조라서 객체 연결 대신 ID만 둔다(7페이지에서 사용). */
     private Long adoptedRouteId;
     private LocalDateTime adoptedAt;
+
+    /** 커뮤니티 글의 경로를 가져와 만든 여행이면 그 글 번호(설문이 없어 AI 추천은 받지 않는다) */
+    private Long sourcePostId;
 
     /** DB 기본값(CURRENT_TIMESTAMP)이 채우므로 JPA는 읽기만 한다. */
     @Column(insertable = false, updatable = false)
@@ -58,6 +63,19 @@ public class Travel {
         t.regionMode = regionMode;
         t.ageGroupSnapshot = ageGroup;
         return t;
+    }
+
+    /** 커뮤니티 글의 경로를 가져와 만든 여행. 설문을 거치지 않으므로 권역은 제주 전체로 둔다. */
+    public static Travel createImported(Long userId, int travelNo, String travelName,
+                                        LocalDate startDate, LocalDate endDate, int ageGroup, Long sourcePostId) {
+        Travel t = create(userId, travelNo, travelName, startDate, endDate, RegionMode.ALL, ageGroup);
+        t.sourcePostId = sourcePostId;
+        return t;
+    }
+
+    /** 커뮤니티에서 가져온 여행인지 */
+    public boolean isImported() {
+        return sourcePostId != null;
     }
 
     /** 여행 일수. 10/20~10/22 → 3 */
@@ -95,6 +113,7 @@ public class Travel {
     public Integer getAgeGroupSnapshot() { return ageGroupSnapshot; }
     public Long getAdoptedRouteId() { return adoptedRouteId; }
     public LocalDateTime getAdoptedAt() { return adoptedAt; }
+    public Long getSourcePostId() { return sourcePostId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

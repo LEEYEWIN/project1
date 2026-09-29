@@ -5,6 +5,7 @@ import { fetchTravelDetail } from '../api/travelApi.js';
 import { createPost } from '../api/communityApi.js';
 import { errorMessage } from '../api/client.js';
 import StarRating from '../components/feedback/StarRating.jsx';
+import SpotChecklist from '../components/feedback/SpotChecklist.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 
@@ -28,6 +29,7 @@ const REASONS = [
  * ① 수행 결과·만족도·이유 → TRAVEL_FEEDBACK (PUT, 다시 저장하면 수정)
  * ② (선택) 커뮤니티 후기 글 → COMMUNITY_POST
  * 입력 규칙은 서버와 같다: COMPLETED=별점만 / PARTIAL=별점+이유 / NOT_TAKEN=이유만
+ * 관광지별 결과(TRAVEL_FEEDBACK_SPOT): 일부만 다녀왔으면 못 간 곳을 1곳 이상 표시, 간 곳은 좋았어요/아쉬워요(선택)
  */
 export default function FeedbackPage() {
   const { travelId } = useParams();
@@ -36,6 +38,8 @@ export default function FeedbackPage() {
   const [status, setStatus] = useState('COMPLETED');
   const [score, setScore] = useState(0);
   const [reasons, setReasons] = useState({}); // { WEATHER: '', OTHER: '가족 일정' }
+  const [spots, setSpots] = useState({}); // { [poiId]: { visited, reaction } }
+  const [rateEach, setRateEach] = useState(false); // 계획대로 다녀왔을 때 관광지별 평가 펼치기
   const [share, setShare] = useState(false);
   const [post, setPost] = useState({ title: '', content: '' });
   const [error, setError] = useState('');
@@ -51,6 +55,8 @@ export default function FeedbackPage() {
           setStatus(fb.executionStatus);
           setScore(fb.satisfactionScore ?? 0);
           setReasons(Object.fromEntries(fb.reasons.map((r) => [r.reasonCode, r.reasonText ?? ''])));
+          setSpots(Object.fromEntries((fb.spots ?? []).map((sp) => [sp.poiId, { visited: sp.visited, reaction: sp.reaction }])));
+          if ((fb.spots ?? []).some((sp) => sp.reaction)) setRateEach(true);
         }
       })
       .catch((e) => setError(errorMessage(e)));
@@ -67,8 +73,21 @@ export default function FeedbackPage() {
       return next;
     });
 
+  // 확정 일정의 관광지 전체 (기본값: 갔어요)
+  const plannedIds = (travel?.adoptedRoute?.days ?? []).flatMap((d) => d.spots.map((sp) => sp.poi.poiId));
+  const spotPayload = () => {
+    if (status === 'NOT_TAKEN') return [];
+    if (status === 'COMPLETED' && !rateEach) return [];
+    return plannedIds.map((poiId) => {
+      const v = spots[poiId] ?? { visited: true, reaction: null };
+      const visited = status === 'COMPLETED' ? true : v.visited !== false;
+      return { poiId, visited, reaction: visited ? v.reaction ?? null : null };
+    });
+  };
+
   const validate = () => {
     if (needScore && !score) return '만족도를 선택하세요.';
+    if (status === 'PARTIAL' && !spotPayload().some((sp) => !sp.visited)) return '못 간 곳을 하나 이상 눌러 주세요.';
     if (needReason && Object.keys(reasons).length === 0) return '이유를 하나 이상 고르세요.';
     if ('OTHER' in reasons && !reasons.OTHER.trim()) return '기타 이유를 입력하세요.';
     if (share && (!post.title.trim() || !post.content.trim())) return '후기 글의 제목과 내용을 입력하세요.';
@@ -87,6 +106,7 @@ export default function FeedbackPage() {
         reasons: needReason
           ? Object.entries(reasons).map(([reasonCode, reasonText]) => ({ reasonCode, reasonText: reasonText || null }))
           : [],
+        spots: spotPayload(),
       });
     } catch (e) {
       // 후기 저장 자체가 실패 → 이 화면에 머물며 오류 표시
@@ -117,7 +137,7 @@ export default function FeedbackPage() {
   if (!travel.canWriteFeedback) {
     return (
       <main className="page">
-        <p className="empty">최종 경로를 채택하고 여행 종료일이 되면 후기를 남길 수 있습니다.</p>
+        <p className="empty">일정을 확정하고 여행 종료일이 되면 후기를 남길 수 있습니다.</p>
       </main>
     );
   }
@@ -145,6 +165,22 @@ export default function FeedbackPage() {
           <div className="field">
             만족도
             <StarRating value={score} onChange={setScore} />
+          </div>
+        )}
+
+        {status === 'PARTIAL' && travel.adoptedRoute && (
+          <div className="field">
+            어디를 못 가셨나요? <small className="muted">못 간 곳을 눌러 주세요. 간 곳은 좋았어요/아쉬워요도 남길 수 있어요(선택).</small>
+            <SpotChecklist route={travel.adoptedRoute} value={spots} onChange={setSpots} canMiss />
+          </div>
+        )}
+
+        {status === 'COMPLETED' && travel.adoptedRoute && (
+          <div className="field">
+            <button type="button" className="link-btn" aria-expanded={rateEach} onClick={() => setRateEach((v) => !v)}>
+              {rateEach ? '관광지별 평가 접기 ▲' : '관광지별로 평가하기 (선택) ▼'}
+            </button>
+            {rateEach && <SpotChecklist route={travel.adoptedRoute} value={spots} onChange={setSpots} canMiss={false} />}
           </div>
         )}
 

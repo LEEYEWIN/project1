@@ -1,7 +1,7 @@
 package kr.fast.Jejuro.Service;
 
 
-//[4페이지 찜]
+//[4페이지 여행 장소 (화면 문구: 장소 추가 / 장소에서 빼기) — 테이블 이름은 TRAVEL_BOOKMARK 그대로]
 
 import java.util.List;
 import java.util.Map;
@@ -27,16 +27,18 @@ public class BookmarkService {
  private final TravelBookmarkRepository bookmarkRepository;
  private final PoiRepository poiRepository;
  private final PoiService poiService;
+ private final RouteService routeService;
 
  public BookmarkService(TravelAccessService travelAccessService, TravelBookmarkRepository bookmarkRepository,
-                        PoiRepository poiRepository, PoiService poiService) {
+                        PoiRepository poiRepository, PoiService poiService, RouteService routeService) {
      this.travelAccessService = travelAccessService;
      this.bookmarkRepository = bookmarkRepository;
      this.poiRepository = poiRepository;
      this.poiService = poiService;
+     this.routeService = routeService;
  }
 
- /** 찜 목록 (최근에 찜한 순서) */
+ /** 여행 장소 목록 (최근에 추가한 순서) */
  @Transactional(readOnly = true)
  public List<BookmarkResponse> list(Long travelId, Long userId) {
      travelAccessService.getOwned(travelId, userId);
@@ -51,27 +53,31 @@ public class BookmarkService {
              .toList();
  }
 
- /** 찜 추가. 이미 찜했으면 409 */
+ /** 여행 장소 추가. 이미 추가했으면 409, 일정을 확정한 여행이면 409. source = 담은 화면(RECOMMEND/SEARCH) */
  @Transactional
- public BookmarkResponse add(Long travelId, Long userId, Long poiId) {
-     travelAccessService.getOwned(travelId, userId);
+ public BookmarkResponse add(Long travelId, Long userId, Long poiId, String source) {
+     routeService.ensureNotLocked(travelAccessService.getOwned(travelId, userId));
      if (!poiRepository.existsById(poiId)) {
          throw ApiException.notFound("관광지를 찾을 수 없습니다.");
      }
      if (bookmarkRepository.existsByTravelIdAndPoiId(travelId, poiId)) {
-         throw new ApiException(HttpStatus.CONFLICT, "이미 찜한 관광지입니다.");
+         throw new ApiException(HttpStatus.CONFLICT, "이미 여행 장소에 추가한 관광지입니다.");
      }
-     TravelBookmark saved = bookmarkRepository.save(new TravelBookmark(travelId, poiId));
+     TravelBookmark saved = bookmarkRepository.save(new TravelBookmark(travelId, poiId, source));
      return new BookmarkResponse(saved.getBookmarkId(), poiService.findOne(poiId));
  }
 
- /** 찜 취소. 이미 저장된 루트의 방문지는 지우지 않는다(루트 편집 화면에서 따로 정리). */
+ /**
+  * 여행 장소에서 빼기. 경로에 배치되어 있었다면 경로에서도 함께 빠진다
+  * (경로에는 여행 장소만 들어갈 수 있고, 확정하려면 장소가 모두 배치되어야 하므로).
+  */
  @Transactional
  public void remove(Long travelId, Long userId, Long poiId) {
-     travelAccessService.getOwned(travelId, userId);
+     routeService.ensureNotLocked(travelAccessService.getOwned(travelId, userId));
      int deleted = bookmarkRepository.deleteByTravelIdAndPoiId(travelId, poiId);
      if (deleted == 0) {
-         throw ApiException.notFound("찜하지 않은 관광지입니다.");
+         throw ApiException.notFound("여행 장소에 없는 관광지입니다.");
      }
+     routeService.removePoiFromRoute(travelId, poiId);
  }
 }

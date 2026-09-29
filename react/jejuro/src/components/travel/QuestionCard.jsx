@@ -62,11 +62,13 @@ export default function QuestionCard({ question, max, ranked = false, selected, 
           </span>
         )}
       </p>
+      {ranked && selected.length === 0 && <p className="rank-empty">가장 중요한 것부터 눌러 주세요 → 1순위</p>}
       {ranked && selected.length > 0 && (
         <p className="rank-line">
           {selected.map((v, i) => (
-            <span key={v} className="rank-tag">
+            <span key={v} className={i === 0 ? 'rank-tag first' : 'rank-tag'}>
               {i + 1}순위 {question.options.find((o) => o.value === v)?.name}
+              {i === 0 && ' · AI 추천 반영'}
             </span>
           ))}
         </p>

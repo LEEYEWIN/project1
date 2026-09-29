@@ -148,7 +148,7 @@ export default function PostWritePage() {
                 </option>
               ))}
             </select>
-            <small className="cm-muted">최종 경로를 채택하고 여행 후기를 남긴 여행만 첨부할 수 있어요. 첨부하면 최종 경로가 함께 보여요.</small>
+            <small className="cm-muted">일정을 확정하고 여행 후기를 남긴 여행만 첨부할 수 있어요. 첨부하면 확정한 경로가 함께 보이고, 다른 사람이 링크로 공유하거나 자기 여행으로 가져갈 수 있어요.</small>
           </label>
         )}
 
