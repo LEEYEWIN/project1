@@ -6,6 +6,7 @@ import { errorMessage } from '../api/client.js';
 import { formatDate } from '../utils/format.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
+import ReceiptButton from '../components/travel/ReceiptButton.jsx';
 
 const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', NOT_TAKEN: '가지 않음' };
 
@@ -196,6 +197,7 @@ export default function TravelDetailPage() {
               지도에서 동선·숙소 보기
             </Link>
           )}
+          <ReceiptButton travel={t} route={shownRoute} />
         </section>
       )}
 

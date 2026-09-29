@@ -31,7 +31,7 @@ export function nextAction(t) {
  * 내 여행 달력 옆 상자
  * ① 프로필: 닉네임 + 여행 통계(계획 중·다녀옴·후기)
  * ② 다가오는 여행: D-day, 기간, 진행 단계(장소 → 배치 → 확정), 다음 할 일 버튼
- * ③ 할 일: 여행마다 다음 단계(장소 고르기·경로 배치·일정 확정·후기 쓰기)
+ * ③ 알림: 여행마다 다음 단계(장소 고르기·경로 배치·일정 확정·후기 쓰기)
  */
 export default function MySidePanel({ me, travels }) {
   const today = toIso(new Date());
@@ -71,6 +71,9 @@ export default function MySidePanel({ me, travels }) {
         <Link className="btn primary small side-new" to="/travels/new">
           + 새 여행 만들기
         </Link>
+        <Link className="side-link" to="/dislikes">
+          🙅 관심없음 관광지 관리
+        </Link>
       </section>
 
       <section className="side-box">
@@ -83,9 +86,9 @@ export default function MySidePanel({ me, travels }) {
       </section>
 
       <section className="side-box">
-        <h3>할 일</h3>
+        <h3>알림</h3>
         {todos.length === 0 ? (
-          <p className="muted small-text">지금은 할 일이 없어요.</p>
+          <p className="muted small-text">지금은 알림이 없어요.</p>
         ) : (
           <ul className="todo-list">
             {todos.map(({ t, a }) => (

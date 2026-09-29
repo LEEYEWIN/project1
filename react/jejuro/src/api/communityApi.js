@@ -90,3 +90,13 @@ export async function importRoute(postId, payload) {
   const { data } = await client.post(`/community/posts/${postId}/import`, payload);
   return data;
 }
+
+/**
+ * 글·댓글 신고 → { hidden } (신고가 쌓여 이번에 자동으로 가려졌으면 true)
+ * payload: { targetType: 'POST'|'COMMENT', targetId, reasonCode, detail? }
+ * 409 이미 신고함 / 400 내 글 / 403 이용 정지
+ */
+export async function reportContent(payload) {
+  const { data } = await client.post('/community/reports', payload);
+  return data;
+}

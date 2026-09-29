@@ -9,18 +9,42 @@ export async function fetchKpi({ days = 30 } = {}) {
   return data;
 }
 
-/** 재학습용 CSV 내려받기 (헤더에 테스트 회원이 붙어야 해서 주소를 바로 열지 않고 받아서 저장) */
-export async function downloadTrainingCsv() {
-  const res = await client.get('/admin/kpi/training-data.csv', { responseType: 'blob' });
-  const name = /filename="?([^"]+)"?/.exec(res.headers['content-disposition'] ?? '')?.[1] ?? 'jejuro_training.csv';
-  const url = URL.createObjectURL(res.data);
+/** CSV 파일 받기 (헤더에 테스트 회원이 붙어야 해서 주소를 바로 열지 않고 받아서 저장) */
+async function downloadCsv(url, params, fallbackName) {
+  const res = await client.get(url, { params, responseType: 'blob' });
+  const name = /filename="?([^"]+)"?/.exec(res.headers['content-disposition'] ?? '')?.[1] ?? fallbackName;
+  const href = URL.createObjectURL(res.data);
   const link = document.createElement('a');
-  link.href = url;
+  link.href = href;
   link.download = name;
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(href);
+}
+
+/** 재학습용 CSV 내려받기 */
+export async function downloadTrainingCsv() {
+  await downloadCsv('/admin/kpi/training-data.csv', {}, 'jejuro_training.csv');
+}
+
+/**
+ * 퍼널 이탈 로그 (이탈 확정된 여행, 20건씩)
+ * → { page, totalPages, total, counts: { SURVEYED: 1, ... }, items: [...] }
+ * step: 못 간 단계 (SURVEYED | RECOMMENDED | PLACED_ANY | PLACED_ALL | ADOPTED | REVIEWED, 생략 = 전체)
+ */
+export async function fetchFunnelDrops({ days = 30, step = '', page = 0 } = {}) {
+  const params = { days, page };
+  if (step) params.step = step;
+  const { data } = await client.get('/admin/kpi/funnel-drops', { params });
+  return data;
+}
+
+/** 퍼널 이탈 로그 CSV */
+export async function downloadFunnelDropsCsv({ days = 30, step = '' } = {}) {
+  const params = { days };
+  if (step) params.step = step;
+  await downloadCsv('/admin/kpi/funnel-drops.csv', params, 'jejuro_funnel_drops.csv');
 }
 
 // ------------------------------------------------------------------ 신고 처리
@@ -33,9 +57,14 @@ export async function fetchReports({ status = 'PENDING', type = '', page = 0 } =
   return data;
 }
 
-/** 처리 { action: KEEP|HIDE|DELETE, sanction: NONE|WARNING|SUSPEND_7D|SUSPEND_30D|BAN, memo } */
+/** 처리 { action: KEEP|BLOCK|DELETE, blockReason?: SEXUAL|PRIVACY|ABUSE|SPAM|OTHER, sanction: NONE|WARNING|SUSPEND_7D|SUSPEND_30D|BAN, memo } */
 export async function handleReport(targetType, targetId, payload) {
   await client.post(`/admin/reports/${targetType}/${targetId}/handle`, payload);
+}
+
+/** 차단 해제 (잘못 차단했을 때) */
+export async function unblockReport(targetType, targetId) {
+  await client.post(`/admin/reports/${targetType}/${targetId}/unblock`);
 }
 
 // ------------------------------------------------------------------ 회원 관리
@@ -98,6 +127,15 @@ export async function updatePoi(poiId, payload) {
 
 export async function setPoiHidden(poiId, hidden) {
   await client.put(`/admin/pois/${poiId}/hidden`, { hidden });
+}
+
+/** 삭제 (행은 남기고 여행·경로·후기에는 "확인 불가") / 삭제 취소 */
+export async function deletePoi(poiId) {
+  await client.delete(`/admin/pois/${poiId}`);
+}
+
+export async function restorePoi(poiId) {
+  await client.post(`/admin/pois/${poiId}/restore`);
 }
 
 export async function addPoiMapping(poiId, sourcePoiId) {

@@ -9,6 +9,7 @@ import PlaceButton from '../components/common/PlaceButton.jsx';
 import AddToRouteButton from '../components/poi/AddToRouteButton.jsx';
 import Loading from '../components/common/Loading.jsx';
 import { categoryLabel } from '../utils/format.js';
+import { needsClosedDayCheck } from '../utils/closedDay.js';
 import '../styles/poi.css';
 
 /**
@@ -107,6 +108,11 @@ export default function PoiDetailPage() {
           <h1>{poi.name}</h1>
           <p className="poi-lead">{poi.description ?? '소개 정보 없음'}</p>
           {poi.address && <p className="poi-addr">{poi.address}</p>}
+          {needsClosedDayCheck(poi) && (
+            <p className="closed-day-note" role="note">
+              ⚠ 휴무일을 확인한 뒤 방문하세요. {poi.closedDays ? `쉬는 날: ${poi.closedDays}` : '쉬는 날 정보가 없어요 — 방문 전 전화·홈페이지로 확인해 주세요.'}
+            </p>
+          )}
 
           {travelMode && (
             <div className="poi-actions">

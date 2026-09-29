@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { fetchFeedback, saveFeedback } from '../api/feedbackApi.js';
 import { fetchTravelDetail } from '../api/travelApi.js';
 import { createPost } from '../api/communityApi.js';
+import ImagePicker from '../components/common/ImagePicker.jsx';
 import { errorMessage } from '../api/client.js';
 import StarRating from '../components/feedback/StarRating.jsx';
 import SpotChecklist from '../components/feedback/SpotChecklist.jsx';
@@ -41,7 +42,7 @@ export default function FeedbackPage() {
   const [spots, setSpots] = useState({}); // { [poiId]: { visited, reaction } }
   const [rateEach, setRateEach] = useState(false); // 계획대로 다녀왔을 때 관광지별 평가 펼치기
   const [share, setShare] = useState(false);
-  const [post, setPost] = useState({ title: '', content: '' });
+  const [post, setPost] = useState({ title: '', content: '', imageUrl: null });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -123,6 +124,7 @@ export default function FeedbackPage() {
           title: post.title.trim(),
           content: post.content.trim(),
           travelId: Number(travelId),
+          imageUrl: post.imageUrl,
         });
       } catch (e) {
         // 후기는 이미 저장됨 → 알려주고 그대로 이동
@@ -237,6 +239,10 @@ export default function FeedbackPage() {
                 onChange={(e) => setPost({ ...post, content: e.target.value })}
               />
             </label>
+            <div className="field">
+              사진 (선택)
+              <ImagePicker value={post.imageUrl} onChange={(imageUrl) => setPost((p) => ({ ...p, imageUrl }))} />
+            </div>
           </>
         )}
       </section>

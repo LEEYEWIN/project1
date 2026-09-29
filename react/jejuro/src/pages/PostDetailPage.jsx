@@ -7,6 +7,7 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 import CommentSection from '../components/community/CommentSection.jsx';
 import RouteDayList from '../components/community/RouteDayList.jsx';
 import RouteShareActions from '../components/community/RouteShareActions.jsx';
+import ReportButton from '../components/community/ReportButton.jsx';
 import { formatDateTime } from '../utils/format.js';
 import '../styles/community.css';
 
@@ -16,6 +17,8 @@ import '../styles/community.css';
  * - 조회수 / 좋아요(누르기·취소) / 댓글 수
  * - 첨부된 최종 경로(일차별, 펼치면 지도) + [경로 링크 공유]·[내 여행으로 가져오기]
  * - 댓글·대댓글
+ * - 신고: 남의 글·댓글에 [신고] (같은 대상은 한 번). 신고로 가려진 글은 작성자·관리자만 열 수 있고 상단에 안내
+ * - 관리자가 차단한 글: 작성자 포함 모두 서버가 410 → "'욕설·비방' 등의 사유로 게시글이 차단되었습니다." 알림 후 목록으로
  * 조회수는 브라우저 탭마다 글 하나당 한 번만 올린다(sessionStorage). 새로고침으로 늘지 않음.
  */
 export default function PostDetailPage() {
@@ -39,11 +42,20 @@ export default function PostDetailPage() {
           if (!cancelled) setPost((cur) => cur && { ...cur, viewCount });
         }
       })
-      .catch((e) => !cancelled && setError(errorMessage(e)));
+      .catch((e) => {
+        if (cancelled) return;
+        if (e?.response?.status === 410) {
+          // 관리자가 차단한 글: 사유 알림 → 목록으로
+          window.alert(errorMessage(e));
+          navigate('/community', { replace: true });
+          return;
+        }
+        setError(errorMessage(e));
+      });
     return () => {
       cancelled = true;
     };
-  }, [postId]);
+  }, [postId, navigate]);
 
   const toggleLike = async () => {
     setLiking(true);
@@ -84,27 +96,13 @@ export default function PostDetailPage() {
   }
   if (!post) return <main className="page wide cm"><Loading /></main>;
 
-  const hasRoute = Boolean(post.route?.days?.length);
-  const likeButton = (
-    <button
-      type="button"
-      className={post.liked ? 'cm-like cm-action-like on' : 'cm-like cm-action-like'}
-      aria-pressed={post.liked}
-      aria-label={post.liked ? '좋아요 취소' : '좋아요'}
-      disabled={liking}
-      onClick={toggleLike}
-    >
-      <span aria-hidden="true">{post.liked ? '♥' : '♡'}</span> 좋아요 <strong>{post.likeCount}</strong>
-    </button>
-  );
-
   return (
     <main className="page wide cm">
       <div className="cm-detail-top">
         <button type="button" className="cm-text-btn" onClick={backToList}>
           ‹ 목록으로
         </button>
-        {post.mine && (
+        {post.mine ? (
           <div className="cm-owner">
             <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
               수정
@@ -113,54 +111,80 @@ export default function PostDetailPage() {
               삭제
             </button>
           </div>
+        ) : (
+          <div className="cm-owner">
+            <ReportButton
+              targetType="POST"
+              targetId={post.postId}
+              reported={post.reportedByMe}
+              onReported={(hidden) => hidden && navigate('/community', { replace: true })}
+            />
+          </div>
         )}
       </div>
 
+      {post.blockReason && (
+        <p className="cm-hidden-note" role="status">
+          '{post.blockReason}' 사유로 차단된 글이에요. 관리자만 볼 수 있고, 다른 회원에게는 차단 안내가 나갑니다.
+        </p>
+      )}
+      {post.hidden && !post.blockReason && (
+        <p className="cm-hidden-note" role="status">
+          신고가 접수되어 다른 회원에게는 가려진 글이에요.{' '}
+          {post.mine
+            ? '관리자가 확인한 뒤 다시 보이거나 삭제됩니다. 문제가 되는 부분을 고치면 확인에 도움이 돼요.'
+            : '(관리자라서 보이는 중)'}
+        </p>
+      )}
+
       <h1 className="cm-title">{post.title}</h1>
-      <div className="cm-author-row">
-        <div className="cm-author-info">
-          <strong className="cm-author-name">{post.authorName}</strong>
-          <span className="cm-author-meta">
-            {formatDateTime(post.createdAt)} · 조회 {post.viewCount} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
-            {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
-          </span>
-        </div>
-        <a className="cm-header-comments" href="#cm-comments-title">댓글 <strong>{post.commentCount}</strong></a>
-      </div>
+      <p className="cm-meta">
+        {post.authorName} · {formatDateTime(post.createdAt)} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
+        {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
+      </p>
 
       <div className={post.imageUrl ? 'cm-body with-image' : 'cm-body'}>
         {post.imageUrl && <img className="cm-photo" src={post.imageUrl} alt={`${post.title} 첨부 사진`} />}
         <div className="cm-content-card">
           <p className="cm-content">{post.content}</p>
+          {post.satisfaction != null && (
+            <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
+              만족도 {'★'.repeat(post.satisfaction)}
+              {'☆'.repeat(5 - post.satisfaction)}
+            </span>
+          )}
         </div>
       </div>
 
-      {!hasRoute && <div className="cm-detail-actions">{likeButton}</div>}
+      <div className="cm-statbar">
+        <span>조회 {post.viewCount}</span>
+        <button
+          type="button"
+          className={post.liked ? 'cm-like on' : 'cm-like'}
+          aria-pressed={post.liked}
+          aria-label={post.liked ? '좋아요 취소' : '좋아요'}
+          disabled={liking || (post.hidden && !post.liked)}
+          onClick={toggleLike}
+        >
+          {post.liked ? '♥' : '♡'} {post.likeCount}
+        </button>
+        <span>댓글 {post.commentCount}</span>
+      </div>
 
       <ErrorBox message={error} />
 
-      {hasRoute && (
+      {post.route && post.route.days.length > 0 && (
         <section className="cm-section" aria-labelledby="cm-route-title">
           <h2 id="cm-route-title" className="cm-h2">첨부된 최종 경로</h2>
           <p className="cm-sub">
             {post.travelName ? `${post.travelName} · ` : ''}일차별 방문지와 지도를 확인합니다.
           </p>
           <RouteDayList route={post.route} />
-          <RouteShareActions post={post} likeButton={likeButton} />
+          <RouteShareActions post={post} />
         </section>
       )}
 
-      {post.satisfaction != null && (
-        <section className="cm-section cm-satisfaction" aria-labelledby="cm-satisfaction-title">
-          <h2 id="cm-satisfaction-title" className="cm-h2">만족도</h2>
-          <p className="cm-sub">지난 여행에 대한 만족도입니다.</p>
-          <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
-            {'★'.repeat(post.satisfaction)}{'☆'.repeat(5 - post.satisfaction)}
-          </span>
-        </section>
-      )}
-
-      <CommentSection postId={post.postId} onCountChange={setCommentCount} />
+      <CommentSection postId={post.postId} locked={post.hidden} onCountChange={setCommentCount} />
     </main>
   );
 }

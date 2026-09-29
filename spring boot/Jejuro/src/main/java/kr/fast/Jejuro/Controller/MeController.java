@@ -1,7 +1,9 @@
 package kr.fast.Jejuro.Controller;
 
 
-//[7페이지 내 여행 - 달력 옆 프로필]
+// [7페이지 내 여행 - 달력 옆 프로필]
+
+import java.time.LocalDateTime;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,22 +13,23 @@ import kr.fast.Jejuro.Config.CurrentUser;
 import kr.fast.Jejuro.Repository.UserRepository;
 import kr.fast.Jejuro.ResponseDTO.MeResponse;
 
-/** GET /api/me → { userId, nickname, role }  (지금은 테스트 회원 헤더 X-User-Id 기준) */
+/** GET /api/me → { userId, nickname, role, suspendedUntil, warningCount }  (지금은 테스트 회원 헤더 X-User-Id 기준) */
 @RestController
 public class MeController {
 
- private final UserRepository userRepository;
- private final CurrentUser currentUser;
+    private final UserRepository userRepository;
+    private final CurrentUser currentUser;
 
- public MeController(UserRepository userRepository, CurrentUser currentUser) {
-     this.userRepository = userRepository;
-     this.currentUser = currentUser;
- }
+    public MeController(UserRepository userRepository, CurrentUser currentUser) {
+        this.userRepository = userRepository;
+        this.currentUser = currentUser;
+    }
 
- @GetMapping("/api/me")
- public MeResponse me() {
-     return userRepository.findById(currentUser.id())
-             .map(u -> new MeResponse(u.getUserId(), u.getNickname(), u.getRole()))
-             .orElseThrow(() -> ApiException.notFound("회원을 찾을 수 없습니다."));
- }
+    @GetMapping("/api/me")
+    public MeResponse me() {
+        return userRepository.findById(currentUser.id())
+                .map(u -> new MeResponse(u.getUserId(), u.getNickname(), u.getRole(),
+                        u.isSuspended(LocalDateTime.now()) ? u.getSuspendedUntil() : null, u.getWarningCount()))
+                .orElseThrow(() -> ApiException.notFound("회원을 찾을 수 없습니다."));
+    }
 }

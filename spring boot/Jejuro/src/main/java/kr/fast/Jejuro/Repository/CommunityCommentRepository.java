@@ -5,11 +5,14 @@ package kr.fast.Jejuro.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import jakarta.persistence.LockModeType;
 import kr.fast.Jejuro.Entity.CommunityComment;
 
 public interface CommunityCommentRepository extends JpaRepository<CommunityComment, Long> {
@@ -19,6 +22,11 @@ public interface CommunityCommentRepository extends JpaRepository<CommunityComme
      Long getPostId();
      Long getCnt();
  }
+
+ /** 신고·신고 처리: 댓글 행 잠금 */
+ @Lock(LockModeType.PESSIMISTIC_WRITE)
+ @Query("select c from CommunityComment c where c.commentId = :commentId")
+ Optional<CommunityComment> findByIdForUpdate(@Param("commentId") Long commentId);
 
  /** 글의 댓글 전체(삭제 표시 포함), 오래된 순 */
  List<CommunityComment> findByPostIdOrderByCommentIdAsc(Long postId);

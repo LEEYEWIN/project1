@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react';
 import { downloadTrainingCsv, fetchKpi } from '../../api/adminApi.js';
 import { errorMessage } from '../../api/client.js';
 import Loading from '../../components/common/Loading.jsx';
+import FunnelPanel from '../../components/admin/FunnelPanel.jsx';
 import {
   DatasetPanel,
-  Funnel,
   MissReasons,
-  PerformancePanel,
   PoiTable,
   SegmentTable,
   SummaryTiles,
@@ -90,10 +89,7 @@ export default function AdminKpiPage() {
         <>
           <SummaryTiles s={data.summary} />
 
-          <section className="adm-grid-2">
-            <Funnel steps={data.funnel} />
-            <PerformancePanel p={data.performance} />
-          </section>
+          <FunnelPanel steps={data.funnel} days={days} />
 
           <TrendChart trend={data.trend} />
 

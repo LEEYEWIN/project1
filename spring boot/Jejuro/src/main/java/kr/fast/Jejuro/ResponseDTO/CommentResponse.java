@@ -9,6 +9,9 @@ import java.util.List;
 /**
 * 댓글 한 개 + 그 아래 대댓글(replies).
 * deleted=true: 대댓글이 남아 있어서 자리만 남긴 삭제 댓글 (content·authorName은 null)
+* hidden=true: 신고로 가려진 댓글. 작성자·관리자가 아니면 content·authorName은 null ("신고로 가려진 댓글입니다.")
+* reportedByMe: 로그인 회원이 이미 신고한 댓글
+* blockReason: 관리자가 차단한 사유 이름 ("'욕설·비방' 등의 사유로 차단된 댓글입니다." 표시용, 아니면 null)
 */
 public record CommentResponse(
      Long commentId,
@@ -19,5 +22,8 @@ public record CommentResponse(
      LocalDateTime updatedAt,
      boolean mine,
      boolean deleted,
+     boolean hidden,
+     boolean reportedByMe,
+     String blockReason,
      List<CommentResponse> replies) {
 }

@@ -1,7 +1,6 @@
 package kr.fast.Jejuro.ResponseDTO;
 
 
-
 //[관리자 AI 추천 KPI 대시보드]
 
 import java.time.LocalDate;
@@ -16,7 +15,6 @@ public record AdminKpiResponse(
      Filter filter,
      Summary summary,
      List<FunnelStep> funnel,
-     Performance performance,
      Trend trend,
      Map<String, List<Segment>> segments,   // 기준(companion/age/region/days/motive) → 세그먼트 목록
      List<PoiStat> overRecommended,
@@ -41,19 +39,12 @@ public record AdminKpiResponse(
 
  /**
   * 퍼널 한 단계 (TRAVEL_FUNNEL 뷰).
-  * rate = 앞 단계 대비 전환율, dropped = 이 단계로 넘어가지 못하고 이탈 확정된 여행 수,
+  * count = 이 단계까지 온 여행 수(가장 멀리 간 단계 기준 누적), rate = 앞 단계 대비 전환율,
+  * dropped = 이 단계로 넘어가지 못하고 이탈 확정된 여행 수,
   * waiting = 아직 진행 중이라 이 단계 바로 앞에 머물러 있는 여행 수
+  * → 앞 단계 count = 이 단계 count + dropped + waiting (공유 단계 제외)
   */
  public record FunnelStep(String key, String label, int count, Double rate, int dropped, int waiting) {
- }
-
- /**
-  * AI 모델 성능 (후기까지 끝난 여행, 혼동 행렬).
-  * 예측 양성 = 화면에 추천함(shown = 1), 실제 양성 = 후기에서 "갔어요"
-  * tp 추천했고 감 / fp 추천했지만 안 감 / fn 추천 안 했는데 감 / tn 추천 후보였지만 안 보여 줬고 안 감
-  */
- public record Performance(int travels, int tp, int fp, int fn, int tn,
-                           Double accuracy, Double precision, Double recall, Double f1) {
  }
 
  /** 주별 채택률 (최근 8주) */

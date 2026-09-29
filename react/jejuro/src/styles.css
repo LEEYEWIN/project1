@@ -731,3 +731,23 @@ main.page:has(> .card .chips.column) .card { padding: 32px; }
 .timeline li.spot-missed .spot-name { color: var(--sub); text-decoration: line-through; }
 .timeline .tag { margin-left: 6px; }
 
+/* ===== 19차: 날씨 · 휴무 경고 · 택시비 · 관심없음 · 영수증 · 사진 첨부 ===== */
+.cal-weather { margin-left: 3px; font-size: 13px; line-height: 1; }
+.cal-weather-text { font-size: 13px; font-weight: 500; color: var(--sub); }
+.closed-day-note { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #FFF1CC; color: #6B4A00; font-size: 14px; line-height: 1.5; }
+button.leg-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; color: var(--sub); text-decoration: underline; cursor: pointer; }
+.leg-taxi { font-size: 13px; color: #6B4A00; white-space: nowrap; }
+.leg-taxi-total { margin: 10px 0 0; font-size: 14px; }
+.poi-card.unavailable { opacity: .6; }
+.poi-card .dislike-btn { position: absolute; left: 8px; top: 8px; border: 0; border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 700; background: rgba(27, 36, 48, .72); color: #fff; cursor: pointer; }
+.poi-card .dislike-btn:hover { background: rgba(27, 36, 48, .9); }
+.dislike-note { margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #F3F1EC; font-size: 14px; line-height: 1.6; }
+.dislike-note a { font-weight: 700; }
+.image-picker { display: flex; flex-direction: column; gap: 6px; }
+.image-picker-btn { align-self: flex-start; display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border: 1.5px dashed #C9C2B4; border-radius: 10px; cursor: pointer; font-weight: 700; }
+.image-picker-btn:focus-within { outline: 3px solid #97cadb; outline-offset: 2px; }
+.image-picker-preview { display: flex; align-items: flex-end; gap: 12px; }
+.image-picker-preview img { width: 220px; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
+.receipt-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.side-link { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; text-align: center; }
+

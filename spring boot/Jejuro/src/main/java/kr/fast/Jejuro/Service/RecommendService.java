@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import kr.fast.Jejuro.Config.ApiException;
 
 import kr.fast.Jejuro.Entity.PoiSourceMap;
+import kr.fast.Jejuro.Repository.PoiRepository;
 import kr.fast.Jejuro.Repository.PoiSourceMapRepository;
 import kr.fast.Jejuro.ResponseDTO.RecommendResponse;
 import kr.fast.Jejuro.Entity.RegionMode;
@@ -51,14 +53,17 @@ public class RecommendService {
  private final RegionRepository regionRepository;
  private final CompanionRepository companionRepository;
  private final RecommendLogService recommendLogService;
- /** 지금 쓰는 AI 모델 버전 (AI_MODEL_VERSION 표와 같게) */
+ private final PoiRepository poiRepository;
+ private final DislikeService dislikeService;
+ /** 지금 쓰는 AI 모델 버전 → RECOMMEND_REQUEST.model_version (학습 데이터의 model_version 칼럼) */
  private final String modelVersion;
 
  public RecommendService(TravelAccessService travelAccessService, TravelRegionRepository travelRegionRepository,
                          AiTravelInputRepository aiInputRepository, AiClient aiClient,
                          PoiSourceMapRepository sourceMapRepository, PoiService poiService,
                          RegionRepository regionRepository, CompanionRepository companionRepository,
-                         RecommendLogService recommendLogService,
+                         RecommendLogService recommendLogService, PoiRepository poiRepository,
+                         DislikeService dislikeService,
                          @Value("${ai.model-version:v1.0}") String modelVersion) {
      this.travelAccessService = travelAccessService;
      this.travelRegionRepository = travelRegionRepository;
@@ -69,6 +74,8 @@ public class RecommendService {
      this.regionRepository = regionRepository;
      this.companionRepository = companionRepository;
      this.recommendLogService = recommendLogService;
+     this.poiRepository = poiRepository;
+     this.dislikeService = dislikeService;
      this.modelVersion = modelVersion;
  }
 
@@ -122,12 +129,15 @@ public class RecommendService {
      }
      long elapsed = System.currentTimeMillis() - started;
 
-     // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거)
+     // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거,
+     //                  관리자가 숨기거나 삭제한 관광지·회원이 관심없음으로 표시한 관광지 제외)
      Map<String, Long> idMap = sourceMapRepository.findBySourcePoiIdIn(sourceIds).stream()
              .collect(Collectors.toMap(PoiSourceMap::getSourcePoiId, PoiSourceMap::getPoiId, (a, b) -> a));
+     Set<Long> hidden = idMap.isEmpty() ? new HashSet<>() : new HashSet<>(poiRepository.findHiddenIds(new HashSet<>(idMap.values())));
+     hidden.addAll(dislikeService.ids(userId));
      List<Long> poiIds = sourceIds.stream()
              .map(idMap::get)
-             .filter(id -> id != null)
+             .filter(id -> id != null && !hidden.contains(id))
              .collect(Collectors.toCollection(LinkedHashSet::new))
              .stream()
              .limit(SHOW_COUNT) // AI 순위대로 10개만

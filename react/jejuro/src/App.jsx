@@ -16,6 +16,9 @@ import PostDetailPage from './pages/PostDetailPage.jsx';
 import PostWritePage from './pages/PostWritePage.jsx';
 import AdminLayout from './components/admin/AdminLayout.jsx';
 import AdminKpiPage from './pages/admin/AdminKpiPage.jsx';
+import AdminReportsPage from './pages/admin/AdminReportsPage.jsx';
+import AdminPoisPage from './pages/admin/AdminPoisPage.jsx';
+import DislikesPage from './pages/DislikesPage.jsx';
 
 /**
  * 화면 주소(URL) 정리
@@ -36,6 +39,8 @@ import AdminKpiPage from './pages/admin/AdminKpiPage.jsx';
  *    /community/posts/:postId/edit                  글 수정
  * 관리자 (USER.role = ADMIN)
  *    /admin/kpi                                     AI 추천 KPI 대시보드
+ *    /admin/reports                                 게시글·댓글 신고 처리
+ *    /admin/pois                                    관광지 데이터 관리
  */
 export default function App() {
   return (
@@ -57,6 +62,7 @@ export default function App() {
         <Route path="/travels/:travelId/routes/:routeId/edit" element={<ToRoutePlanner />} />
         <Route path="/travels/:travelId/routes/:routeId/map" element={<RouteMapPage />} />
         <Route path="/travels/:travelId/feedback" element={<FeedbackPage />} />
+        <Route path="/dislikes" element={<DislikesPage />} />
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/community/posts/new" element={<PostWritePage />} />
         <Route path="/community/posts/:postId" element={<PostDetailPage />} />
@@ -66,6 +72,8 @@ export default function App() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="/admin/kpi" replace />} />
         <Route path="kpi" element={<AdminKpiPage />} />
+        <Route path="reports" element={<AdminReportsPage />} />
+        <Route path="pois" element={<AdminPoisPage />} />
       </Route>
     </Routes>
   );

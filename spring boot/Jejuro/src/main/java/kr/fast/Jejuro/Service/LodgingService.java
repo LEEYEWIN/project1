@@ -1,6 +1,7 @@
 package kr.fast.Jejuro.Service;
 
 
+
 //[6페이지 카카오맵 동선 - 주변 숙소 (FR-26)]
 
 import java.util.Comparator;
@@ -123,7 +124,7 @@ public class LodgingService {
              .orElseThrow(() -> ApiException.notFound("관광지를 찾을 수 없습니다: " + anchorSpot.getPoiId()));
      double lat = poi.getLatitude().doubleValue();
      double lng = poi.getLongitude().doubleValue();
-     Anchor anchor = new Anchor(poi.getPoiId(), poi.getPoiName(), lat, lng,
+     Anchor anchor = new Anchor(poi.getPoiId(), poi.displayName(), lat, lng,
              dayNoOf.get(anchorSpot.getRouteDayId()), anchorSpot.getVisitOrder());
 
      // 반경 검색 (+ 자동 확장)
