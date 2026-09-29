@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# React / Node
+node_modules/
+.cache/
+
+# Spring Boot / Gradle
+build/
+.gradle/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
