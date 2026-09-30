@@ -166,6 +166,24 @@ public class AdminPoiService {
      return new AdminPoiResponse(safePage, (int) Math.ceil(total / (double) PAGE_SIZE), total, checks, rows);
  }
 
+ // ------------------------------------------------------------------ 사진 점검
+
+ /**
+  * 사진 주소가 있는 관광지 전부 (삭제한 곳 제외, 번호 순).
+  * 외부 사이트 사진(블로그·검색 썸네일 등)은 만료되거나 다른 사이트에서 못 쓰게 막혀 깨질 수 있어서,
+  * 관리자 화면이 브라우저에서 한 장씩 불러 보고 깨진 곳만 모아 보여 준다 (서버에서 외부로 요청하지 않음).
+  */
+ @Transactional(readOnly = true)
+ public List<AdminPoiResponse.ImageRow> images() {
+     return jdbc.query("""
+             SELECT poi_id, poi_name, image_url, hidden_at IS NOT NULL AS hidden
+               FROM POI
+              WHERE deleted_at IS NULL AND image_url IS NOT NULL AND TRIM(image_url) <> ''
+              ORDER BY poi_id
+             """, (rs, n) -> new AdminPoiResponse.ImageRow(rs.getLong("poi_id"), rs.getString("poi_name"),
+             rs.getString("image_url").trim(), rs.getBoolean("hidden")));
+ }
+
  // ------------------------------------------------------------------ 상세
 
  @Transactional(readOnly = true)

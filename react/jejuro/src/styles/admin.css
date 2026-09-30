@@ -474,3 +474,14 @@
 .adm-map-picker { width: 100%; height: 240px; border-radius: 10px; border: 1px solid #D5D0C4; }
 .adm-form-block { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
 .adm-btn.danger { color: #8F2E3E; border-color: #E8B8C0; }
+
+/* ===== 20-3: 깨진 사진 찾기 ===== */
+.adm-imgcheck { margin-bottom: 16px; }
+.adm-imgcheck-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.adm-imgcheck-head > div { flex: 1 1 360px; min-width: 0; }
+.adm-imgcheck-head p { margin: 4px 0 0; }
+.adm-imgcheck-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 0; font-size: 14px; }
+.adm-imgcheck-progress progress { flex: 1 1 200px; max-width: 360px; height: 8px; }
+.adm-url { max-width: 360px; word-break: break-all; }
+.adm-poi-cell .adm-noimg.broken { color: #B3261E; border-color: #F1B8B3; }
+.image-picker-broken { display: flex; flex-direction: column; gap: 4px; width: 220px; max-width: 100%; aspect-ratio: 4 / 3; justify-content: center; padding: 12px; border: 1.5px dashed #F1B8B3; border-radius: 10px; background: #FDF1F0; color: #B3261E; font-size: 13px; }

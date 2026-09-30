@@ -4,6 +4,7 @@ import { errorMessage } from '../../api/client.js';
 import Loading from '../../components/common/Loading.jsx';
 import { Forbidden, Pager } from '../../components/admin/AdminCommon.jsx';
 import PoiEditor from '../../components/admin/PoiEditor.jsx';
+import BrokenImageFinder from '../../components/admin/BrokenImageFinder.jsx';
 
 /** 데이터 점검 카드 (누르면 그 문제만 보기) */
 const CHECKS = [
@@ -26,6 +27,7 @@ const VIS = [
  * - AI 추천 대상(학습한 275곳) / 직접 선택만(그 밖, AI 추천에 안 나옴) 숫자 — POI.ai_recommend
  * - 데이터 점검(사진 없음·소개 없음·좌표 오류) → 눌러서 해당 관광지만
  * - 검색·권역·분류·보임/숨김 필터, 20곳씩
+ * - [깨진 사진 찾기]: 사진을 브라우저에서 불러 보고 안 뜨는 곳만 모아 [사진 바꾸기]
  * - [수정]·[+ 새 관광지] → 오른쪽 편집 창 (운영 정보, AI 이름 연결, 숨기기)
  */
 export default function AdminPoisPage() {
@@ -150,6 +152,8 @@ export default function AdminPoisPage() {
         ))}
       </form>
 
+      <BrokenImageFinder onEdit={setEditing} />
+
       {error && <p className="adm-error">{error}</p>}
 
       <div className={editing ? 'adm-split wide' : ''}>
@@ -178,7 +182,7 @@ export default function AdminPoisPage() {
                       <tr key={p.poiId} className={editing === p.poiId ? 'sel' : p.hidden || p.deleted ? 'dim' : ''}>
                         <td>
                           <div className="adm-poi-cell">
-                            {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : <span className="adm-noimg">사진 없음</span>}
+                            <Thumb url={p.imageUrl} />
                             <div>
                               <b>{p.poiName}</b> <span className="adm-muted">#{p.poiId}</span>
                               {p.deleted && <span className="adm-badge bad">삭제됨</span>}
@@ -240,4 +244,12 @@ export default function AdminPoisPage() {
       </div>
     </div>
   );
+}
+
+/** 목록 썸네일: 불러오지 못하면 "사진 깨짐" */
+function Thumb({ url }) {
+  const [broken, setBroken] = useState(false);
+  if (!url) return <span className="adm-noimg">사진 없음</span>;
+  if (broken) return <span className="adm-noimg broken" title={url}>사진 깨짐</span>;
+  return <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
 }

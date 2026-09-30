@@ -29,7 +29,7 @@ export default function PoiImage({ src, alt }) {
   }
   return (
     <>
-      <img src={src} alt={alt} loading="lazy" onError={() => setBroken(true)} />
+      <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
       {photoCredit(src) && <small className="poi-credit">사진: {photoCredit(src)}</small>}
     </>
   );

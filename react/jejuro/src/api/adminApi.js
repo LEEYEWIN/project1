@@ -121,3 +121,9 @@ export async function addPoiMapping(poiId, sourcePoiId) {
 export async function removePoiMapping(poiId, sourcePoiId) {
   await client.delete(`/admin/pois/${poiId}/mappings`, { params: { sourcePoiId } });
 }
+
+/** 사진 점검: 사진 주소가 있는 관광지 전부 [{ poiId, poiName, imageUrl, hidden }] */
+export async function fetchPoiImages() {
+  const { data } = await client.get('/admin/pois/images');
+  return data;
+}
