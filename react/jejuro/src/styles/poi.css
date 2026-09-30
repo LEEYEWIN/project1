@@ -1,0 +1,21 @@
+/* Tourist attraction detail: use content imagery and the JEJURO canvas. */
+.poi-detail-page { display: flex; flex-direction: column; gap: 22px; }
+.poi-detail-page > .btn { align-self: flex-start; }
+.poi-hero { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap: 36px; align-items: center; padding: 18px; border: 1px solid var(--line); border-radius: 24px; background: var(--canvas); }
+.poi-hero-img { border-radius: 18px; overflow: hidden; margin: 0; min-height: 340px; }
+.poi-hero-text { padding: 8px 16px 8px 0; min-width: 0; }
+.poi-hero-text h1 { margin: 7px 0 16px; font-size: clamp(30px,3vw,43px); }
+.poi-lead { margin: 0 0 19px; font-size: 16px; line-height: 1.8; color: var(--text); }
+.poi-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
+.poi-actions .add-route-btn { margin-top: 0; }
+.poi-detail-grid { display: grid; grid-template-columns: minmax(0,1.3fr) minmax(0,1fr); gap: 20px; }
+.poi-detail-grid .card, .poi-detail-page > .card { margin-bottom: 0; }
+.poi-detail-page h2 { font-size: 22px; }
+.poi-long { margin: 0; white-space: pre-line; line-height: 1.9; font-size: 15px; }
+.poi-info { margin: 0; display: flex; flex-direction: column; gap: 13px; }
+.poi-info div { display: grid; grid-template-columns: 86px minmax(0,1fr); gap: 10px; font-size: 14px; }
+.poi-info dt { font-weight: 800; color: var(--sub); }
+.poi-info dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; }
+.missing { color: var(--sub); }
+.poi-detail-page .map-box + .btn { margin-top: 12px; display: inline-flex; }
+@media (max-width: 760px) { .poi-hero, .poi-detail-grid { grid-template-columns: 1fr; } .poi-hero { gap: 20px; } .poi-hero-img { min-height: 250px; } .poi-hero-text { padding: 0 8px 8px; } }

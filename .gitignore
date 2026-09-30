@@ -16,3 +16,16 @@ __pycache__/
 # IDE
 .idea/
 .vscode/
+
+# Local development settings and generated files
+.metadata/
+.classpath
+.project
+.settings/
+bin/
+.env.local
+application-local.properties
+uploads/
+
+# Python virtual environment
+.venv/

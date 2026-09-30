@@ -1,0 +1,4 @@
+Tool: built-in image_gen
+Transparent background: true
+
+Use case: stylized-concept. Create a website hero asset: a single charming high-quality 3D miniature floating Jeju island with turquoise sea wrapping black volcanic rocks, a green Seongsan Ilchulbong crater mountain at back left, a friendly gray dol hareubang stone statue at front right, a large orange tangerine with green leaves, small yellow canola flowers and a few white clouds. Warm sunny light, soft tactile detailed clay-like materials, premium playful travel brand. Isolated centered whole composition, transparent background, generous clear margins, nearly square composition. No text, no letters, no logo, no UI, no pedestal beyond the island. The image will sit in front of big orange JEJURO typography on a white webpage.
