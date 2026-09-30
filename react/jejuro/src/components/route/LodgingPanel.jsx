@@ -122,7 +122,10 @@ export default function LodgingPanel({ routeId, route, dayNo, mode, selectedId, 
           ) : (
             <p className="lodging-state">{data.message}</p>
           )}
-          {data.anchor && data.message && <p className="hint small">ℹ {data.message}</p>}
+          {data.anchor && data.items.length === 0 && (
+            <p className="lodging-state">🏨 {data.message ?? '주변에 숙소가 없어요.'}</p>
+          )}
+          {data.anchor && data.items.length > 0 && data.message && <p className="hint small">ℹ {data.message}</p>}
 
           {data.items.length > 0 && (
             <>

@@ -1,6 +1,8 @@
 package kr.fast.Jejuro.Service;
 
 
+
+
 //[6페이지 카카오맵 동선 - 주변 숙소 (FR-26)]
 
 import java.util.Comparator;
@@ -8,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +59,8 @@ public class LodgingService {
          "MOTEL", "모텔",
          "CAMPING", "캠핑·글램핑",
          "ETC", "기타 숙소");
+
+ private static final Logger log = LoggerFactory.getLogger(LodgingService.class);
 
  private final RouteService routeService;
  private final TravelAccessService travelAccessService;
@@ -123,15 +130,25 @@ public class LodgingService {
              .orElseThrow(() -> ApiException.notFound("관광지를 찾을 수 없습니다: " + anchorSpot.getPoiId()));
      double lat = poi.getLatitude().doubleValue();
      double lng = poi.getLongitude().doubleValue();
-     Anchor anchor = new Anchor(poi.getPoiId(), poi.getPoiName(), lat, lng,
+     Anchor anchor = new Anchor(poi.getPoiId(), poi.displayName(), lat, lng,
              dayNoOf.get(anchorSpot.getRouteDayId()), anchorSpot.getVisitOrder());
 
-     // 반경 검색 (+ 자동 확장)
+     // 숙소 데이터가 아예 없거나(ACCOMMODATION 비어 있음) 표를 읽을 수 없으면 "숙소가 없어요"로 안내 (오류 화면 대신)
      double radius = requested;
-     List<NearbyRow> rows = search(lat, lng, radius);
-     while (expand && rows.size() < MIN_RESULTS && radius < RADIUS_STEPS_KM.get(RADIUS_STEPS_KM.size() - 1)) {
-         radius = RADIUS_STEPS_KM.get(RADIUS_STEPS_KM.indexOf(radius) + 1);
+     List<NearbyRow> rows;
+     try {
+         if (accommodationRepository.count() == 0) {
+             return noData(travel, dayNo, requested, anchor, anchorLabel);
+         }
+         // 반경 검색 (+ 자동 확장)
          rows = search(lat, lng, radius);
+         while (expand && rows.size() < MIN_RESULTS && radius < RADIUS_STEPS_KM.get(RADIUS_STEPS_KM.size() - 1)) {
+             radius = RADIUS_STEPS_KM.get(RADIUS_STEPS_KM.indexOf(radius) + 1);
+             rows = search(lat, lng, radius);
+         }
+     } catch (DataAccessException e) {
+         log.warn("숙소 조회 실패 (ACCOMMODATION 표·데이터 확인): {}", e.getMostSpecificCause().getMessage());
+         return noData(travel, dayNo, requested, anchor, anchorLabel);
      }
 
      List<Item> items = rows.stream().map(this::toItem).toList();
@@ -169,6 +186,12 @@ public class LodgingService {
      return new Item(r.getId().longValue(), r.getName(), type, TYPE_NAME.getOrDefault(type, "기타 숙소"),
              r.getAddress(), r.getLatitude().doubleValue(), r.getLongitude().doubleValue(),
              r.getPhone(), r.getImageUrl(), source, (int) Math.round(r.getDistanceM().doubleValue()));
+ }
+
+ /** 등록된 숙소가 하나도 없을 때 */
+ private LodgingResponse noData(Travel travel, int dayNo, double requested, Anchor anchor, String anchorLabel) {
+     return new LodgingResponse("NO_DATA", "등록된 숙소 정보가 없어요.", dayNo, travel.dateOf(dayNo), anchor, anchorLabel,
+             requested, requested, false, List.of());
  }
 
  private LodgingResponse empty(String status, String message, Travel travel, int dayNo, double requested) {

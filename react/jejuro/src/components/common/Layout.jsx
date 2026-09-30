@@ -27,11 +27,11 @@ export default function Layout() {
         <NavLink to="/travels/new">새 여행</NavLink>
         <NavLink to="/pois">관광지</NavLink>
         <NavLink to="/community">후기 게시판</NavLink>
-        {user?.role === 'ADMIN' && <NavLink to="/admin/kpi">관리자</NavLink>}
         {user ? <><div className="account-menu" onMouseLeave={() => setAccountOpen(false)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { event.currentTarget.querySelector('button').focus(); setAccountOpen(false); } }}>
           <button type="button" className="account-name account-trigger" aria-expanded={accountOpen} aria-controls="account-dropdown"
             onClick={() => setAccountOpen(!accountOpen)} onMouseEnter={() => setAccountOpen(true)}> {user.nickname}님 <span aria-hidden="true">⌄</span></button>
           <div id="account-dropdown" className={`account-dropdown ${accountOpen ? 'is-open' : ''}`} onMouseLeave={() => setAccountOpen(false)}>
+            {user.role === 'ADMIN' && <NavLink to="/admin/kpi" onClick={() => setAccountOpen(false)}>관리자 페이지</NavLink>}
             <NavLink to="/account/withdraw" onClick={() => setAccountOpen(false)}>탈퇴하기</NavLink>
           </div>
         </div><button className="btn small" onClick={signOut} disabled={busy}>{busy ? '로그아웃 중…' : '로그아웃'}</button></>

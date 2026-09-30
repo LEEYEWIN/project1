@@ -93,7 +93,6 @@ class AuthControllerTest {
      mvc.perform(get("/api/me").header("X-User-Id", "1")).andExpect(status().isUnauthorized());
      MockHttpSession session = signup();
      mvc.perform(get("/api/admin/kpi").session(session)).andExpect(status().isForbidden());
-     mvc.perform(get("/api/test-users").session(session)).andExpect(status().isForbidden());
  }
  @Test void csrfEndpointIssuesTokenForBrowserClient() throws Exception {
      mvc.perform(get("/api/auth/csrf")).andExpect(status().isOk())

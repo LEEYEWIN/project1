@@ -1,10 +1,14 @@
 package kr.fast.Jejuro.Config;
 
 
+
 //[공통]
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 /** 모든 에러를 { "message": "..." } 형태로 통일해서 React가 같은 방식으로 처리하게 한다. */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+ private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
  @ExceptionHandler(ApiException.class)
  public ResponseEntity<Map<String, String>> handleApi(ApiException e) {
@@ -43,5 +49,13 @@ public class GlobalExceptionHandler {
  public ResponseEntity<Map<String, String>> handleDb(DataIntegrityViolationException e) {
      return ResponseEntity.status(HttpStatus.CONFLICT)
              .body(Map.of("message", "저장할 수 없는 값입니다. 중복이나 허용 범위를 확인하세요."));
+ }
+
+ /** 그 밖의 DB 오류 (없는 표·칼럼 등) → "요청 중 문제" 대신 DB 문제라고 알려 주고 원인은 서버 로그에 */
+ @ExceptionHandler(DataAccessException.class)
+ public ResponseEntity<Map<String, String>> handleDbAccess(DataAccessException e) {
+     log.error("DB 오류: {}", e.getMostSpecificCause().getMessage(), e);
+     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+             .body(Map.of("message", "DB 조회 중 문제가 발생했어요. DB 표·칼럼이 최신인지 확인해 주세요."));
  }
 }

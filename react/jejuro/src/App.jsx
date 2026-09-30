@@ -80,11 +80,13 @@ export default function App() {
         </Route>
         <Route path="*" element={<p className="page">페이지를 찾을 수 없습니다.</p>} />
       </Route>
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Navigate to="/admin/kpi" replace />} />
-        <Route path="kpi" element={<AdminKpiPage />} />
-        <Route path="reports" element={<AdminReportsPage />} />
-        <Route path="pois" element={<AdminPoisPage />} />
+      <Route element={<RequireAuth admin />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/kpi" replace />} />
+          <Route path="kpi" element={<AdminKpiPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="pois" element={<AdminPoisPage />} />
+        </Route>
       </Route>
     </Routes>
   );

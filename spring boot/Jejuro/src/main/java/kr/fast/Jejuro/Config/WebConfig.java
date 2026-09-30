@@ -15,7 +15,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "http://localhost:5173",                // Vite (지금 React)
                         "http://localhost:3000")                // create-react-app을 쓸 경우
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*")                            // X-User-Id(테스트 회원) 헤더 포함
+                .allowedHeaders("*")
                 .allowCredentials(true);
     }
 }

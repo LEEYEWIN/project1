@@ -5,7 +5,7 @@ export function Forbidden() {
   return (
     <div className="adm-empty-page">
       <h1>관리자만 볼 수 있어요</h1>
-      <p>왼쪽 메뉴 아래 "테스트 회원"을 관리자 계정(1번)으로 바꾼 뒤 다시 열어 주세요.</p>
+      <p>관리자 권한이 있는 계정으로 로그인해 주세요.</p>
     </div>
   );
 }

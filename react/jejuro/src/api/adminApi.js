@@ -9,7 +9,7 @@ export async function fetchKpi({ days = 30 } = {}) {
   return data;
 }
 
-/** CSV 파일 받기 (헤더에 테스트 회원이 붙어야 해서 주소를 바로 열지 않고 받아서 저장) */
+/** 인증된 세션으로 CSV를 받아 저장한다. */
 async function downloadCsv(url, params, fallbackName) {
   const res = await client.get(url, { params, responseType: 'blob' });
   const name = /filename="?([^"]+)"?/.exec(res.headers['content-disposition'] ?? '')?.[1] ?? fallbackName;

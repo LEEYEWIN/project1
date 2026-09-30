@@ -1,11 +1,14 @@
 package kr.fast.Jejuro.Entity;
 
 
+
 //[커뮤니티 게시판 - 댓글·대댓글]
 
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -17,71 +20,77 @@ import jakarta.persistence.Table;
 * 삭제는 deletedAt만 기록한다. 대댓글이 달린 원댓글은 "삭제된 댓글입니다."로 자리를 남긴다.
 */
 @Entity
+@DynamicUpdate   // 바뀐 칼럼만 UPDATE (신고 가림·글 수정·제재가 동시에 일어나도 서로 덮어쓰지 않게)
 @Table(name = "COMMUNITY_COMMENT")
 public class CommunityComment {
 
- @Id
- @GeneratedValue(strategy = GenerationType.IDENTITY)
- private Long commentId;
- private Long postId;
- private Long parentCommentId;
- private Long userId;
- private String content;
+@Id
+@GeneratedValue(strategy = GenerationType.IDENTITY)
+private Long commentId;
+private Long postId;
+private Long parentCommentId;
+private Long userId;
+private String content;
 
- @Column(insertable = false, updatable = false)
- private LocalDateTime createdAt;
+@Column(insertable = false, updatable = false)
+private LocalDateTime createdAt;
 
- private LocalDateTime updatedAt;
- private LocalDateTime deletedAt;
- private LocalDateTime hiddenAt;
- private LocalDateTime blockedAt;
- @Column(columnDefinition = "TEXT")
- private String blockReason;
+private LocalDateTime updatedAt;
+private LocalDateTime deletedAt;
+private LocalDateTime hiddenAt;     // 신고로 가림 (작성자·관리자만 내용 확인)
+private String blockReason;         // 관리자 차단 사유 (신고 사유 코드). 있으면 관리자만 내용 확인
 
- protected CommunityComment() {
- }
+protected CommunityComment() {
+}
 
- public CommunityComment(Long postId, Long parentCommentId, Long userId, String content) {
-     this.postId = postId;
-     this.parentCommentId = parentCommentId;
-     this.userId = userId;
-     this.content = content;
- }
+public CommunityComment(Long postId, Long parentCommentId, Long userId, String content) {
+   this.postId = postId;
+   this.parentCommentId = parentCommentId;
+   this.userId = userId;
+   this.content = content;
+}
 
- public void edit(String content, LocalDateTime now) {
-     this.content = content;
-     this.updatedAt = now;
- }
+public void edit(String content, LocalDateTime now) {
+   this.content = content;
+   this.updatedAt = now;
+}
 
- public void delete(LocalDateTime now) {
-     this.deletedAt = now;
- }
+public void delete(LocalDateTime now) {
+   this.deletedAt = now;
+}
 
- public void hide(LocalDateTime now) { hiddenAt = now; }
- public void block(String reason, LocalDateTime now) {
-     hiddenAt = now;
-     blockedAt = now;
-     blockReason = reason;
- }
- public void unhide() {
-     hiddenAt = null;
-     blockedAt = null;
-     blockReason = null;
- }
- public boolean isHidden() { return hiddenAt != null; }
- public boolean isBlocked() { return blockedAt != null; }
- public String getBlockReason() { return blockReason; }
+public boolean isDeleted() { return deletedAt != null; }
+public boolean isHidden() { return hiddenAt != null; }
 
- public boolean isDeleted() { return deletedAt != null; }
- public boolean isReply() { return parentCommentId != null; }
- public boolean isWrittenBy(Long loginUserId) { return userId != null && userId.equals(loginUserId); }
+/** 신고로 가리기 (이미 가려져 있으면 처음 시각 유지) */
+public void hide(LocalDateTime now) {
+   if (hiddenAt == null) hiddenAt = now;
+}
 
- public Long getCommentId() { return commentId; }
- public Long getPostId() { return postId; }
- public Long getParentCommentId() { return parentCommentId; }
- public Long getUserId() { return userId; }
- public String getContent() { return content; }
- public LocalDateTime getCreatedAt() { return createdAt; }
- public LocalDateTime getUpdatedAt() { return updatedAt; }
- public LocalDateTime getDeletedAt() { return deletedAt; }
+/** 관리자가 "문제 없음"으로 처리 → 다시 보이기 */
+public void unhide() {
+   hiddenAt = null;
+   blockReason = null;
+}
+
+/** 관리자 차단: 가리고 사유를 남긴다 → 작성자 포함 모두에게 "○○ 사유로 차단" 안내 */
+public void block(String reason, LocalDateTime now) {
+   hide(now);
+   blockReason = reason;
+}
+
+public boolean isBlocked() { return blockReason != null; }
+public String getBlockReason() { return blockReason; }
+public boolean isReply() { return parentCommentId != null; }
+public boolean isWrittenBy(Long loginUserId) { return userId != null && userId.equals(loginUserId); }
+
+public Long getCommentId() { return commentId; }
+public Long getPostId() { return postId; }
+public Long getParentCommentId() { return parentCommentId; }
+public Long getUserId() { return userId; }
+public String getContent() { return content; }
+public LocalDateTime getCreatedAt() { return createdAt; }
+public LocalDateTime getUpdatedAt() { return updatedAt; }
+public LocalDateTime getDeletedAt() { return deletedAt; }
+public LocalDateTime getHiddenAt() { return hiddenAt; }
 }

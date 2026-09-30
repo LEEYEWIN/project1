@@ -10,7 +10,7 @@ import kr.fast.Jejuro.Repository.UserRepository;
 
 /**
 * 관리자 API 맨 앞에서 호출: 로그인 회원의 USER.role 이 ADMIN 이 아니면 403.
-* (지금은 로그인 대신 X-User-Id 헤더라 화면 상단 테스트 회원을 관리자 계정으로 바꿔서 확인)
+* 관리자 권한은 로그인 회원의 현재 DB 역할을 기준으로 확인한다.
 */
 @Component
 public class AdminGuard {

@@ -33,7 +33,6 @@ export default function AdminLayout() {
         <NavLink to="/admin/reports">
           게시글·신고 {pending > 0 && <span className="adm-nav-count num">{pending}</span>}
         </NavLink>
-        <NavLink to="/admin/users">회원 관리</NavLink>
         <NavLink to="/admin/pois">관광지 데이터</NavLink>
         <div className="adm-user">
           <span>{user?.nickname}님</span>

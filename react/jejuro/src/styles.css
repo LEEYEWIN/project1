@@ -179,10 +179,7 @@ textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px soli
   .travel-status { align-items: flex-start; flex-direction: row; }
 }
 
-/* 테스트 회원 선택 상자 */
 .topbar nav { align-items: center; }
-.test-user { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); padding-left: 12px; border-left: 1px solid var(--line); }
-.test-user select { padding: 4px 8px; font-size: 13px; }
 
 /* 3-1. 전체 관광지 */
 .filter-box .row { align-items: center; margin-top: 4px; }
@@ -315,8 +312,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .topbar nav { gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .topbar nav a { color: var(--text); font-size: 14px; font-weight: 700; padding: 9px 15px; border-radius: 999px; transition: color .16s, background .16s; }
 .topbar nav a:hover, .topbar nav a.active { color: var(--main); background: var(--main-soft); }
-.test-user { border-left-color: var(--line); gap: 10px; font-weight: 600; }
-.test-user select { border-radius: 999px; border-color: var(--line); padding: 7px 12px; }
 
 .page, .page.wide { max-width: 1296px; min-height: calc(100vh - 132px); margin: 0 auto 52px; padding: 44px 24px 100px; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .page.wide { max-width: 1344px; }
@@ -554,7 +549,7 @@ main.page:has(> .card .chips.column) .card { padding: 32px; }
 .side-stats div { min-width: 0; padding: 11px 5px; border-radius: 12px; background: rgba(255, 255, 255, .1); text-align: center; }
 .side-stats dt { font-size: 11px; white-space: nowrap; }
 .side-stats dd { margin: 3px 0 0; font-size: 21px; font-weight: 850; }
-.side-new { width: 100%; }
+.side-dislikes { width: 100%; }
 .upcoming-dday { display: inline-block; margin: 0 0 7px; padding: 3px 10px; border-radius: 999px; background: #ffe29b; color: #684727; font-size: 12px; font-weight: 850; }
 .upcoming-name { display: block; color: #fff; font-size: 17px; font-weight: 800; text-decoration: none; }
 .upcoming-name:hover { text-decoration: underline; }
@@ -731,3 +726,46 @@ main.page:has(> .card .chips.column) .card { padding: 32px; }
 .timeline li.spot-missed .spot-name { color: var(--sub); text-decoration: line-through; }
 .timeline .tag { margin-left: 6px; }
 
+/* ===== 19차: 날씨 · 휴무 경고 · 택시비 · 관심없음 · 영수증 · 사진 첨부 ===== */
+.cal-weather { margin-left: 3px; font-size: 13px; line-height: 1; }
+.cal-weather-text { font-size: 13px; font-weight: 500; color: var(--sub); }
+.closed-day-note { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: #FFF1CC; color: #6B4A00; font-size: 14px; line-height: 1.5; }
+button.leg-link { border: 0; background: none; padding: 0; font: inherit; font-size: 12px; color: var(--sub); text-decoration: underline; cursor: pointer; }
+.leg-taxi { font-size: 13px; color: #6B4A00; white-space: nowrap; }
+.leg-taxi-total { margin: 10px 0 0; font-size: 14px; }
+.poi-card.unavailable { opacity: .6; }
+.poi-card .dislike-btn { position: absolute; left: 8px; top: 8px; border: 0; border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 12px; font-weight: 700; background: rgba(27, 36, 48, .72); color: #fff; cursor: pointer; }
+.poi-card .dislike-btn:hover { background: rgba(27, 36, 48, .9); }
+.dislike-note { margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #F3F1EC; font-size: 14px; line-height: 1.6; }
+.dislike-note a { font-weight: 700; }
+.image-picker { display: flex; flex-direction: column; gap: 6px; }
+.image-picker-btn { align-self: flex-start; display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border: 1.5px dashed #C9C2B4; border-radius: 10px; cursor: pointer; font-weight: 700; }
+.image-picker-btn:focus-within { outline: 3px solid #97cadb; outline-offset: 2px; }
+.image-picker-preview { display: flex; align-items: flex-end; gap: 12px; }
+.image-picker-preview img { width: 220px; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; }
+.receipt-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.side-link { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; text-align: center; }
+
+/* ===== 20차: 관광지별 날씨 · 관심없음 되돌리기 · 확정 후 장소 추가 막기 · 신고된 게시글 ===== */
+.spot-weather { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #F3F1EC; font-size: 13px; line-height: 1.6; vertical-align: middle; white-space: nowrap; }
+.spot-weather .sw-part { display: inline-flex; align-items: center; gap: 2px; }
+.spot-weather small { font-size: 11px; color: var(--sub); }
+.spot-weather .sw-temp { font-variant-numeric: tabular-nums; color: var(--sub); }
+.spot-weather .sw-temp .lo { color: #1c64c8; }
+.spot-weather .sw-temp .hi { color: #c8431c; }
+.locked-note { margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #FFF4E5; font-size: 14px; }
+.poi-card.disliked .poi-img > :first-child { filter: grayscale(1); opacity: .5; }
+.poi-card.disliked .poi-body { opacity: .6; }
+.poi-card .dislike-btn.on { background: #E8590C; }
+.poi-card .dislike-btn.on:hover { background: #c94c0a; }
+.poi-card .dislike-btn:disabled { opacity: .6; cursor: wait; }
+.tabs { display: flex; gap: 6px; margin: 16px 0 12px; border-bottom: 1px solid var(--line); }
+.tabs .tab { font: inherit; font-weight: 600; padding: 10px 14px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--sub); cursor: pointer; }
+.tabs .tab.on { color: inherit; border-bottom-color: currentColor; }
+.cm-reported { display: flex; flex-direction: column; gap: 4px; margin: 16px 0; padding: 28px 20px; border-radius: 12px; background: #F3F1EC; text-align: center; color: var(--sub); }
+.cm-reported b { font-size: 17px; color: inherit; }
+.cm-card-title.reported a { color: var(--sub); }
+
+/* 그리고 19차 블록의 .cal-weather, .cal-weather-text 두 줄은 지우세요 (달력 날씨 삭제) */
+
+.poi-card .dislike-btn:disabled { opacity: .45; cursor: not-allowed; }

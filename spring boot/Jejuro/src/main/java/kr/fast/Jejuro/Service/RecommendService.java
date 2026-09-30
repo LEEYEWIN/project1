@@ -1,12 +1,14 @@
 package kr.fast.Jejuro.Service;
 
 
+
 //[2페이지 AI 추천 중]
 
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -17,8 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import kr.fast.Jejuro.Config.ApiException;
 
-import kr.fast.Jejuro.Entity.Poi;
+import kr.fast.Jejuro.Entity.PoiSourceMap;
 import kr.fast.Jejuro.Repository.PoiRepository;
+import kr.fast.Jejuro.Repository.PoiSourceMapRepository;
 import kr.fast.Jejuro.ResponseDTO.RecommendResponse;
 import kr.fast.Jejuro.Entity.RegionMode;
 import kr.fast.Jejuro.Entity.Travel;
@@ -46,36 +49,41 @@ public class RecommendService {
  private final TravelRegionRepository travelRegionRepository;
  private final AiTravelInputRepository aiInputRepository;
  private final AiClient aiClient;
- private final PoiRepository poiRepository;
+ private final PoiSourceMapRepository sourceMapRepository;
  private final PoiService poiService;
  private final RegionRepository regionRepository;
  private final CompanionRepository companionRepository;
  private final RecommendLogService recommendLogService;
- /** 지금 쓰는 AI 모델 버전 (AI_MODEL_VERSION 표와 같게) */
+ private final PoiRepository poiRepository;
+ private final DislikeService dislikeService;
+ /** 지금 쓰는 AI 모델 버전 → RECOMMEND_REQUEST.model_version (학습 데이터의 model_version 칼럼) */
  private final String modelVersion;
 
  public RecommendService(TravelAccessService travelAccessService, TravelRegionRepository travelRegionRepository,
                          AiTravelInputRepository aiInputRepository, AiClient aiClient,
-                         PoiRepository poiRepository, PoiService poiService,
+                         PoiSourceMapRepository sourceMapRepository, PoiService poiService,
                          RegionRepository regionRepository, CompanionRepository companionRepository,
-                         RecommendLogService recommendLogService,
+                         RecommendLogService recommendLogService, PoiRepository poiRepository,
+                         DislikeService dislikeService,
                          @Value("${ai.model-version:v1.0}") String modelVersion) {
      this.travelAccessService = travelAccessService;
      this.travelRegionRepository = travelRegionRepository;
      this.aiInputRepository = aiInputRepository;
      this.aiClient = aiClient;
-     this.poiRepository = poiRepository;
+     this.sourceMapRepository = sourceMapRepository;
      this.poiService = poiService;
      this.regionRepository = regionRepository;
      this.companionRepository = companionRepository;
      this.recommendLogService = recommendLogService;
+     this.poiRepository = poiRepository;
+     this.dislikeService = dislikeService;
      this.modelVersion = modelVersion;
  }
 
  /**
   * 1) 내 여행인지 확인  2) VIEW에서 AI 입력 조회 + 설문 완료 확인
-  * 3) 권역 코드·동반자 목록을 붙여 AI 호출 → 여행지 이름 목록(place_name)
-  * 4) POI.poi_name과 같은 이름으로 조회  5) POI 정보 붙여서 반환
+  * 3) 권역 코드·동반자 목록을 붙여 AI 호출 → 원본 ID 목록(FastAPI는 place_name)
+  * 4) 원본 ID → poi_id 변환(POI_SOURCE_MAP)  5) POI 정보 붙여서 반환
   * 화면용 추천 결과는 sessionStorage에 보관하고, 관리자 KPI·재학습용 기록만 RECOMMEND_REQUEST/ITEM에 남긴다.
   */
  @Transactional(readOnly = true)
@@ -107,11 +115,11 @@ public class RecommendService {
      AiRequest request = AiRequest.of(input, travel.getRegionMode().name(), regionCodes, regionIds,
              companions, REQUEST_COUNT);
 
-     // FastAPI가 반환한 여행지 이름을 DB 이름과 비교한다.
+     // 결과 = 원본 ID 목록(FastAPI는 place_name). POI_SOURCE_MAP.source_poi_id로 우리 관광지와 연결
      long started = System.currentTimeMillis();
-     List<String> placeNames;
+     List<String> sourceIds;
      try {
-         placeNames = aiClient.recommend(request);
+         sourceIds = aiClient.recommend(request);
      } catch (RuntimeException e) {
          try {
              recommendLogService.fail(travelId, modelVersion, System.currentTimeMillis() - started, e.getMessage());
@@ -122,13 +130,15 @@ public class RecommendService {
      }
      long elapsed = System.currentTimeMillis() - started;
 
-     // 이름이 같은 관광지만 선택한다. 동명 장소는 가장 작은 poi_id를 사용한다.
-     Map<String, Long> idMap = placeNames.isEmpty() ? Map.of()
-             : poiRepository.findByPoiNameInOrderByPoiIdAsc(placeNames).stream()
-                     .collect(Collectors.toMap(Poi::getPoiName, Poi::getPoiId, (a, b) -> a));
-     List<Long> poiIds = placeNames.stream()
+     // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거,
+     //                  AI 추천 대상이 아닌 관광지(직접 선택만)·관리자가 숨기거나 삭제한 관광지·회원이 관심없음으로 표시한 관광지 제외)
+     Map<String, Long> idMap = sourceMapRepository.findBySourcePoiIdIn(sourceIds).stream()
+             .collect(Collectors.toMap(PoiSourceMap::getSourcePoiId, PoiSourceMap::getPoiId, (a, b) -> a));
+     Set<Long> hidden = idMap.isEmpty() ? new HashSet<>() : new HashSet<>(poiRepository.findNotRecommendableIds(new HashSet<>(idMap.values())));
+     hidden.addAll(dislikeService.ids(userId));
+     List<Long> poiIds = sourceIds.stream()
              .map(idMap::get)
-             .filter(id -> id != null)
+             .filter(id -> id != null && !hidden.contains(id))
              .collect(Collectors.toCollection(LinkedHashSet::new))
              .stream()
              .limit(SHOW_COUNT) // AI 순위대로 10개만
@@ -136,7 +146,7 @@ public class RecommendService {
 
      // 관리자 KPI·재학습용 기록 (실패해도 추천 결과에는 영향 없음)
      try {
-         recommendLogService.success(travelId, modelVersion, elapsed, placeNames, idMap, new HashSet<>(poiIds));
+         recommendLogService.success(travelId, modelVersion, elapsed, sourceIds, idMap, new HashSet<>(poiIds));
      } catch (RuntimeException logError) {
          log.warn("추천 기록 저장 실패(추천 결과에는 영향 없음): {}", logError.getMessage());
      }

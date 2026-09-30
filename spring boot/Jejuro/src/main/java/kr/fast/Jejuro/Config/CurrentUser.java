@@ -6,7 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-/** 서버가 인증한 세션만 사용한다. X-User-Id 헤더는 신뢰하지 않는다. */
+/** 서버가 인증한 로그인 세션의 회원 ID를 사용한다. */
 @Component
 public class CurrentUser {
  public Long id() {

@@ -6,7 +6,6 @@ const AuthContext = createContext(null);
 function clearAccountCache() {
   try {
     Object.keys(sessionStorage).filter((key) => key.startsWith('recommend:')).forEach((key) => sessionStorage.removeItem(key));
-    localStorage.removeItem('testUserId');
   } catch { /* 저장소를 사용할 수 없어도 로그인은 동작한다. */ }
 }
 
@@ -56,6 +55,6 @@ export function RequireAuth({ admin = false }) {
   if (loading) return <main className="page center" role="status">로그인 정보를 확인하고 있어요.</main>;
   if (error) return <main className="page center"><div><p role="alert">{error}</p><button className="btn primary" onClick={refresh}>다시 연결</button></div></main>;
   if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
-  if (admin && user.role !== 'ADMIN') return <main className="page"><h1>접근 권한이 없습니다.</h1></main>;
+  if (admin && user.role !== 'ADMIN') return <main className="page"><h1>관리자만 볼 수 있어요</h1><p>관리자 권한이 있는 계정으로 로그인해 주세요.</p></main>;
   return <Outlet />;
 }

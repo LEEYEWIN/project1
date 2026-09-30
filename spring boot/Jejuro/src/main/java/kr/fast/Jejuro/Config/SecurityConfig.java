@@ -8,6 +8,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,6 +24,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.*;
 import kr.fast.Jejuro.Repository.UserRepository;
+import kr.fast.Jejuro.Entity.User;
 
 @Configuration
 @EnableWebSecurity
@@ -60,8 +63,20 @@ public class SecurityConfig {
              .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
              .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup").permitAll()
              .requestMatchers(HttpMethod.GET, "/api/pois/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-             .requestMatchers("/api/test-users").denyAll()
-             .requestMatchers("/api/admin/**").hasRole("ADMIN")
+             .requestMatchers("/api/admin/**").access((authentication, context) -> {
+                 var principal = authentication.get();
+                 if (principal == null || !principal.isAuthenticated()
+                         || principal instanceof AnonymousAuthenticationToken) {
+                     return new AuthorizationDecision(false);
+                 }
+                 try {
+                     boolean admin = users.findById(Long.valueOf(principal.getName()))
+                             .map(User::isAdmin).orElse(false);
+                     return new AuthorizationDecision(admin);
+                 } catch (NumberFormatException ex) {
+                     return new AuthorizationDecision(false);
+                 }
+             })
              .anyRequest().authenticated())
          .exceptionHandling(errors -> errors
              .authenticationEntryPoint((req, res, ex) -> {

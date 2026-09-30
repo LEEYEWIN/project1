@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { downloadTrainingCsv, fetchKpi } from '../../api/adminApi.js';
 import { errorMessage } from '../../api/client.js';
 import Loading from '../../components/common/Loading.jsx';
+import { Forbidden } from '../../components/admin/AdminCommon.jsx';
 import FunnelPanel from '../../components/admin/FunnelPanel.jsx';
 import {
   DatasetPanel,
@@ -54,14 +55,7 @@ export default function AdminKpiPage() {
     }
   };
 
-  if (forbidden) {
-    return (
-      <div className="adm-empty-page">
-        <h1>관리자만 볼 수 있어요</h1>
-        <p>왼쪽 메뉴 아래 "테스트 회원"을 관리자 계정(1번)으로 바꾼 뒤 다시 열어 주세요.</p>
-      </div>
-    );
-  }
+  if (forbidden) return <Forbidden />;
 
   return (
     <div className="adm-page">

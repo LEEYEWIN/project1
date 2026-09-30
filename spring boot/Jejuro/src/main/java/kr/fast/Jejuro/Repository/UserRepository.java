@@ -3,7 +3,6 @@ package kr.fast.Jejuro.Repository;
 
 //[공통]
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,9 +17,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
  Optional<User> findByEmailIgnoreCase(String email);
  boolean existsByEmailIgnoreCase(String email);
-
- /** 테스트 회원 선택 상자용 */
- List<User> findTop20ByStatusOrderByUserId(String status);
 
  /**
   * 회원 행을 잠근다(SELECT ... FOR UPDATE).

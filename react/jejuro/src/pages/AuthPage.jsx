@@ -59,7 +59,7 @@ export default function AuthPage({ signup = false }) {
       <img src={loginSea} alt="제주 바다와 성산일출봉" />
     </aside>
     <section className="auth-main">
-      <span className="auth-login-logo">JEJURO</span>
+      <Link className="auth-login-logo" to="/" title="메인 화면으로">JEJURO</Link>
       <div className={`auth-form-wrap ${signup ? 'auth-form-signup' : ''}`}>
         <h2>{signup ? '회원가입' : '로그인'}</h2>
         <p className="auth-intro">{signup ? '이메일 인증 후 계정을 만들 수 있습니다.' : '저장한 여행과 새로운 발견이 기다리고 있어요.'}</p>
