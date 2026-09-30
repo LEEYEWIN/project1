@@ -6,8 +6,6 @@ package kr.fast.Jejuro.Entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
-import org.hibernate.annotations.DynamicUpdate;
-
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -23,7 +21,6 @@ import jakarta.persistence.Table;
 * - 조회수는 동시에 여러 명이 봐도 틀리지 않게 레포지토리의 UPDATE 쿼리로 올린다.
 */
 @Entity
-@DynamicUpdate   // 바뀐 칼럼만 UPDATE (신고 가림·글 수정·제재가 동시에 일어나도 서로 덮어쓰지 않게)
 @Table(name = "COMMUNITY_POST")
 public class CommunityPost {
 
@@ -48,8 +45,6 @@ public class CommunityPost {
 
  private LocalDateTime updatedAt;
  private LocalDateTime deletedAt;
- private LocalDateTime hiddenAt;     // 신고로 가림 (작성자·관리자만 내용 확인)
- private String blockReason;         // 관리자 차단 사유 (신고 사유 코드). 있으면 관리자만 내용 확인
 
  protected CommunityPost() {
  }
@@ -75,27 +70,6 @@ public class CommunityPost {
  }
 
  public boolean isDeleted() { return deletedAt != null; }
- public boolean isHidden() { return hiddenAt != null; }
-
- /** 신고로 가리기 (이미 가려져 있으면 처음 시각 유지) */
- public void hide(LocalDateTime now) {
-     if (hiddenAt == null) hiddenAt = now;
- }
-
- /** 관리자가 "문제 없음"으로 처리 → 다시 보이기 */
- public void unhide() {
-     hiddenAt = null;
-     blockReason = null;
- }
-
- /** 관리자 차단: 가리고 사유를 남긴다 → 작성자 포함 모두에게 "○○ 사유로 차단" 안내 */
- public void block(String reason, LocalDateTime now) {
-     hide(now);
-     blockReason = reason;
- }
-
- public boolean isBlocked() { return blockReason != null; }
- public String getBlockReason() { return blockReason; }
  public boolean isWrittenBy(Long loginUserId) { return userId != null && userId.equals(loginUserId); }
 
  public Long getPostId() { return postId; }
@@ -109,5 +83,4 @@ public class CommunityPost {
  public LocalDateTime getCreatedAt() { return createdAt; }
  public LocalDateTime getUpdatedAt() { return updatedAt; }
  public LocalDateTime getDeletedAt() { return deletedAt; }
- public LocalDateTime getHiddenAt() { return hiddenAt; }
 }

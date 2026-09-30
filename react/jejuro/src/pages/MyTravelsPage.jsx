@@ -55,9 +55,12 @@ export default function MyTravelsPage() {
   if (!travels) return <main className="page"><Loading /></main>;
 
   return (
-    <main className="page wide">
+    <main className="page wide my-travels-page">
       <div className="title-row">
         <h1>내 여행</h1>
+        <Link className="btn primary" to="/travels/new">
+          + 새 여행
+        </Link>
       </div>
 
       <div className="my-top">
@@ -65,16 +68,28 @@ export default function MyTravelsPage() {
         <MySidePanel me={me} travels={travels} />
       </div>
 
-      <h2 className="list-title">전체 여행 {travels.length}개</h2>
+      <h2 className="travel-list-heading">전체 여행 {travels.length}개</h2>
+      <section className="travel-list-shell" aria-label="여행 목록">
+      <div className="travel-filter-row" role="group" aria-label="여행 상태 필터">
+        <input className="travel-filter-input" type="radio" name="travel-filter" id="travel-filter-all" defaultChecked />
+        <label htmlFor="travel-filter-all">전체</label>
+        <input className="travel-filter-input" type="radio" name="travel-filter" id="travel-filter-planning" />
+        <label htmlFor="travel-filter-planning">여행 계획 중</label>
+        <input className="travel-filter-input" type="radio" name="travel-filter" id="travel-filter-during" />
+        <label htmlFor="travel-filter-during">여행 중</label>
+        <input className="travel-filter-input" type="radio" name="travel-filter" id="travel-filter-ended" />
+        <label htmlFor="travel-filter-ended">여행 종료</label>
+      </div>
       {travels.length === 0 && <p className="empty">아직 만든 여행이 없습니다.</p>}
 
       <div className="travel-list">
         {travels.map((t) => {
           const b = phaseBadge(t);
           return (
-            <Link key={t.travelId} to={`/travels/${t.travelId}`} className="travel-item">
+            <Link key={t.travelId} to={`/travels/${t.travelId}`} className={`travel-item travel-${t.phase === 'AFTER' ? 'ended' : t.phase === 'DURING' ? 'during' : 'planning'}`}>
               <div>
                 {b && <span className={`phase ${b.cls}`}>{b.text}</span>}
+                {!b && <span className="phase after">여행 종료</span>}
                 <h2>{t.travelName}</h2>
                 <p className="muted">
                   {formatDate(t.startDate)} ~ {formatDate(t.endDate)} · {t.tripDays}일 · {t.regionNames.join(', ')}
@@ -91,11 +106,13 @@ export default function MyTravelsPage() {
                   </span>
                 )}
                 {t.hasFeedback && <span className="tag on">후기 작성</span>}
+                <span className="travel-view" aria-hidden="true">보기</span>
               </div>
             </Link>
           );
         })}
       </div>
+      </section>
     </main>
   );
 }

@@ -7,8 +7,9 @@ import java.util.List;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.data.domain.PageRequest;
 
-import kr.fast.Jejuro.Repository.PoiSourceMapRepository;
+import kr.fast.Jejuro.Repository.PoiRepository;
 import kr.fast.Jejuro.RequestDTO.AiRequest;
 
 /** AI 서버가 준비되기 전에 쓰는 가짜 AI: 선택 권역 안의 관광지를 무작위로 돌려준다. */
@@ -16,10 +17,10 @@ import kr.fast.Jejuro.RequestDTO.AiRequest;
 @ConditionalOnProperty(name = "ai.mode", havingValue = "mock", matchIfMissing = true)
 public class MockAiClient implements AiClient {
 
- private final PoiSourceMapRepository sourceMapRepository;
+ private final PoiRepository poiRepository;
 
- public MockAiClient(PoiSourceMapRepository sourceMapRepository) {
-     this.sourceMapRepository = sourceMapRepository;
+ public MockAiClient(PoiRepository poiRepository) {
+     this.poiRepository = poiRepository;
  }
 
  @Override
@@ -29,9 +30,13 @@ public class MockAiClient implements AiClient {
      } catch (InterruptedException e) {
          Thread.currentThread().interrupt();
      }
-     if (request.regionIds().isEmpty()) {
-         return sourceMapRepository.findRandomSourceIds(request.limit());
+     if (request.limit() <= 0) {
+         return List.of();
      }
-     return sourceMapRepository.findRandomSourceIdsInRegions(request.regionIds(), request.limit());
+     PageRequest page = PageRequest.of(0, request.limit());
+     if (request.regionIds().isEmpty()) {
+         return poiRepository.findRandomNames(page);
+     }
+     return poiRepository.findRandomNamesInRegions(request.regionIds(), page);
  }
 }

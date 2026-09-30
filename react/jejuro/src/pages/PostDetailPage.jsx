@@ -7,7 +7,6 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 import CommentSection from '../components/community/CommentSection.jsx';
 import RouteDayList from '../components/community/RouteDayList.jsx';
 import RouteShareActions from '../components/community/RouteShareActions.jsx';
-import ReportButton from '../components/community/ReportButton.jsx';
 import { formatDateTime } from '../utils/format.js';
 import '../styles/community.css';
 
@@ -17,10 +16,7 @@ import '../styles/community.css';
  * - 조회수 / 좋아요(누르기·취소) / 댓글 수
  * - 첨부된 최종 경로(일차별, 펼치면 지도) + [경로 링크 공유]·[내 여행으로 가져오기]
  * - 댓글·대댓글
- * - 신고: 남의 글·댓글에 [신고] (같은 대상은 한 번). 신고되면 관리자 확인 전까지 "신고된 게시글입니다" (관리자만 내용 확인)
- * - 관리자가 차단한 글: 작성자 포함 모두 서버가 410 → "욕설·비방 등의 사유로 차단되었습니다." 알림 후 목록으로
- * - 관리자가 반려한 글: 원래대로 정상 표시
- * 조회수는 글에 들어올 때마다 +1 (목록에서 다시 들어오거나 새로고침해도 올라감).
+ * 조회수는 브라우저 탭마다 글 하나당 한 번만 올린다(sessionStorage). 새로고침으로 늘지 않음.
  */
 export default function PostDetailPage() {
   const { postId } = useParams();
@@ -28,8 +24,7 @@ export default function PostDetailPage() {
   const [post, setPost] = useState(null);
   const [error, setError] = useState('');
   const [liking, setLiking] = useState(false);
-  const [version, setVersion] = useState(0); // 신고 뒤 다시 읽기
-  const viewedRef = useRef(null); // 이 화면에서 조회수를 올린 글 번호 (StrictMode 두 번 실행·신고 후 다시 읽기에서 중복 방지)
+  const viewedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,27 +33,17 @@ export default function PostDetailPage() {
       .then(async (p) => {
         if (cancelled) return;
         setPost(p);
-        // 글에 들어올 때마다 조회수 +1 (같은 회원이 다시 들어와도 올라감)
-        if (viewedRef.current !== postId) {
-          viewedRef.current = postId;
+        if (!viewedRef.current && markViewed(postId)) {
+          viewedRef.current = true;
           const { viewCount } = await increaseView(postId);
           if (!cancelled) setPost((cur) => cur && { ...cur, viewCount });
         }
       })
-      .catch((e) => {
-        if (cancelled) return;
-        if (e?.response?.status === 410) {
-          // 관리자가 차단한 글: 사유 알림 → 목록으로
-          window.alert(errorMessage(e));
-          navigate('/community', { replace: true });
-          return;
-        }
-        setError(errorMessage(e));
-      });
+      .catch((e) => !cancelled && setError(errorMessage(e)));
     return () => {
       cancelled = true;
     };
-  }, [postId, navigate, version]);
+  }, [postId]);
 
   const toggleLike = async () => {
     setLiking(true);
@@ -99,102 +84,95 @@ export default function PostDetailPage() {
   }
   if (!post) return <main className="page wide cm"><Loading /></main>;
 
+  const hasRoute = Boolean(post.route?.days?.length);
+  const likeButton = (
+    <button
+      type="button"
+      className={post.liked ? 'cm-like cm-action-like on' : 'cm-like cm-action-like'}
+      aria-pressed={post.liked}
+      aria-label={post.liked ? '좋아요 취소' : '좋아요'}
+      disabled={liking}
+      onClick={toggleLike}
+    >
+      <span aria-hidden="true">{post.liked ? '♥' : '♡'}</span> 좋아요 <strong>{post.likeCount}</strong>
+    </button>
+  );
+
   return (
     <main className="page wide cm">
       <div className="cm-detail-top">
         <button type="button" className="cm-text-btn" onClick={backToList}>
           ‹ 목록으로
         </button>
-        {post.mine ? (
+        {post.mine && (
           <div className="cm-owner">
-            {/* 신고 처리 전에는 수정 불가 (삭제는 가능) */}
-            {!post.hidden && (
-              <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
-                수정
-              </Link>
-            )}
+            <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
+              수정
+            </Link>
             <button type="button" className="cm-text-btn danger" onClick={remove}>
               삭제
             </button>
           </div>
-        ) : (
-          <div className="cm-owner">
-            <ReportButton
-              targetType="POST"
-              targetId={post.postId}
-              reported={post.reportedByMe}
-              onReported={() => setVersion((v) => v + 1)}
-            />
-          </div>
         )}
       </div>
 
-      {post.blockReason && (
-        <p className="cm-hidden-note" role="status">
-          {post.blockReason} 등의 사유로 차단된 글이에요. 관리자만 볼 수 있고, 다른 회원에게는 차단 안내 후 목록으로 이동합니다.
-        </p>
-      )}
-      {post.hidden && !post.blockReason && post.content != null && (
-        <p className="cm-hidden-note" role="status">
-          신고된 게시글이에요. 다른 회원에게는 "신고된 게시글입니다"로 보여요. [게시글·신고]에서 차단 또는 반려해 주세요. (관리자라서 보이는 중)
-        </p>
-      )}
-
       <h1 className="cm-title">{post.title}</h1>
-      <p className="cm-meta">
-        {post.authorName} · {formatDateTime(post.createdAt)} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
-        {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
-      </p>
-
-      {post.hidden && post.content == null ? (
-        <div className="cm-reported" role="status">
-          <b>신고된 게시글입니다.</b>
-          <span>관리자가 확인 중이에요. 문제가 없으면 다시 정상으로 보여요.</span>
+      <div className="cm-author-row">
+        <div className="cm-author-info">
+          <strong className="cm-author-name">{post.authorName}</strong>
+          <span className="cm-author-meta">
+            {formatDateTime(post.createdAt)} · 조회 {post.viewCount} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
+            {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
+          </span>
         </div>
-      ) : (
+        <a className="cm-header-comments" href="#cm-comments-title">댓글 <strong>{post.commentCount}</strong></a>
+      </div>
+
       <div className={post.imageUrl ? 'cm-body with-image' : 'cm-body'}>
         {post.imageUrl && <img className="cm-photo" src={post.imageUrl} alt={`${post.title} 첨부 사진`} />}
         <div className="cm-content-card">
           <p className="cm-content">{post.content}</p>
-          {post.satisfaction != null && (
-            <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
-              만족도 {'★'.repeat(post.satisfaction)}
-              {'☆'.repeat(5 - post.satisfaction)}
-            </span>
-          )}
         </div>
       </div>
-      )}
 
-      <div className="cm-statbar">
-        <span>조회 {post.viewCount}</span>
-        <button
-          type="button"
-          className={post.liked ? 'cm-like on' : 'cm-like'}
-          aria-pressed={post.liked}
-          aria-label={post.liked ? '좋아요 취소' : '좋아요'}
-          disabled={liking || (post.hidden && !post.liked)}
-          onClick={toggleLike}
-        >
-          {post.liked ? '♥' : '♡'} {post.likeCount}
-        </button>
-        <span>댓글 {post.commentCount}</span>
-      </div>
+      {!hasRoute && <div className="cm-detail-actions">{likeButton}</div>}
 
       <ErrorBox message={error} />
 
-      {post.route && post.route.days.length > 0 && (
+      {hasRoute && (
         <section className="cm-section" aria-labelledby="cm-route-title">
           <h2 id="cm-route-title" className="cm-h2">첨부된 최종 경로</h2>
           <p className="cm-sub">
             {post.travelName ? `${post.travelName} · ` : ''}일차별 방문지와 지도를 확인합니다.
           </p>
           <RouteDayList route={post.route} />
-          <RouteShareActions post={post} />
+          <RouteShareActions post={post} likeButton={likeButton} />
         </section>
       )}
 
-      <CommentSection postId={post.postId} locked={post.hidden} onCountChange={setCommentCount} />
+      {post.satisfaction != null && (
+        <section className="cm-section cm-satisfaction" aria-labelledby="cm-satisfaction-title">
+          <h2 id="cm-satisfaction-title" className="cm-h2">만족도</h2>
+          <p className="cm-sub">지난 여행에 대한 만족도입니다.</p>
+          <span className="cm-rating" aria-label={`만족도 5점 중 ${post.satisfaction}점`}>
+            {'★'.repeat(post.satisfaction)}{'☆'.repeat(5 - post.satisfaction)}
+          </span>
+        </section>
+      )}
+
+      <CommentSection postId={post.postId} onCountChange={setCommentCount} />
     </main>
   );
+}
+
+/** 이 탭에서 처음 보는 글이면 true (그리고 본 것으로 표시) */
+function markViewed(postId) {
+  const key = `viewed-post-${postId}`;
+  try {
+    if (sessionStorage.getItem(key)) return false;
+    sessionStorage.setItem(key, '1');
+  } catch {
+    // 저장소를 못 쓰는 브라우저: 매번 올림
+  }
+  return true;
 }

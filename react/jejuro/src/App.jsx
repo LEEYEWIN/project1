@@ -45,15 +45,21 @@ import DislikesPage from './pages/DislikesPage.jsx';
 export default function App() {
   return (
     <Routes>
+      <Route path="/login" element={<AuthPage key="login" />} />
+      <Route path="/signup" element={<AuthPage key="signup" signup />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/travels" replace />} />
+        <Route path="/" element={<HomePage />} />
+        <Route element={<RequireAuth />}>
+        <Route path="/account/withdraw" element={<WithdrawalPage />} />
         <Route path="/travels" element={<MyTravelsPage />} />
         <Route path="/travels/new" element={<TravelCreatePage />} />
         <Route path="/travels/:travelId" element={<TravelDetailPage />} />
         <Route path="/travels/:travelId/recommending" element={<RecommendingPage />} />
         <Route path="/travels/:travelId/recommendations" element={<RecommendationListPage />} />
+        </Route>
         <Route path="/pois" element={<PoiListPage />} />
         <Route path="/pois/:poiId" element={<PoiDetailPage />} />
+        <Route element={<RequireAuth />}>
         <Route path="/travels/:travelId/pois" element={<PoiListPage />} />
         <Route path="/travels/:travelId/pois/:poiId" element={<PoiDetailPage />} />
         <Route path="/travels/:travelId/bookmarks" element={<BookmarkPage />} />

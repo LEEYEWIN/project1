@@ -68,6 +68,117 @@ export function SummaryTiles({ s }) {
   );
 }
 
+// ------------------------------------------------------------------ 퍼널
+
+export function Funnel({ steps }) {
+  const max = Math.max(...steps.map((s) => s.count), 1);
+  const main = steps.filter((s) => s.key !== 'SHARED'); // 공유는 선택 단계라 "가장 큰 이탈" 판단에서 제외
+  // 가장 많이 빠지는 단계 (전환율 최저)
+  const worst = main.slice(1).reduce((w, s) => (s.rate != null && (w == null || s.rate < w.rate) ? s : w), null);
+  return (
+    <div className="adm-card">
+      <div className="adm-card-head">
+        <h2>사용자 여정 퍼널</h2>
+        <span className="adm-muted">기간 안에 만든 여행 · 가장 멀리 간 단계까지 누적 · 앞 단계 대비 전환율</span>
+      </div>
+      <ul className="adm-funnel">
+        {steps.map((s) => (
+          <li key={s.key} className={worst?.key === s.key ? 'worst' : ''}>
+            <span className="adm-funnel-label">{s.label}</span>
+            <span className="adm-bar-track">
+              <span className="adm-bar" style={{ width: `${(s.count / max) * 100}%` }} title={`${s.label} ${s.count}`} />
+            </span>
+            <span className="adm-funnel-val num">
+              {num(s.count)} {s.rate != null && <em>{pct(s.rate, 0)}</em>}
+            </span>
+            {(s.dropped > 0 || s.waiting > 0) && (
+              <span className="adm-funnel-drop">
+                {s.dropped > 0 && <b>이탈 {num(s.dropped)}</b>}
+                {s.waiting > 0 && <span> 진행 중 {num(s.waiting)}</span>}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {worst && (
+        <p className="adm-note">
+          <b>
+            {main[main.indexOf(worst) - 1].label} → {worst.label}
+          </b>{' '}
+          단계 이탈이 가장 큼 ({pct(1 - worst.rate, 0)}). <b>이탈</b> = 종료일이 지났는데 다음 단계로 못 감(후기는 종료 +14일),{' '}
+          <b>진행 중</b> = 아직 기간이 남음
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ AI 성능 (혼동 행렬)
+
+/**
+ * 예측 = 화면에 추천했나, 정답 = 후기에서 "갔어요"
+ * 정확도 = (TP+TN)/전체, 정밀도 = TP/(TP+FP), 재현율 = TP/(TP+FN), F1 = 2·정밀도·재현율/(정밀도+재현율)
+ */
+const PERF = [
+  { key: 'accuracy', label: '정확도', formula: '(TP+TN) ÷ 전체', desc: '추천·비추천 판단이 맞은 비율' },
+  { key: 'precision', label: '정밀도', formula: 'TP ÷ (TP+FP)', desc: '추천한 곳 중 실제로 간 비율' },
+  { key: 'recall', label: '재현율', formula: 'TP ÷ (TP+FN)', desc: '실제로 간 곳 중 AI가 추천한 비율' },
+  { key: 'f1', label: 'F1 점수', formula: '2PR ÷ (P+R)', desc: '정밀도·재현율의 균형' },
+];
+
+export function PerformancePanel({ p }) {
+  const total = p.tp + p.fp + p.fn + p.tn;
+  return (
+    <div className="adm-card">
+      <div className="adm-card-head">
+        <h2>AI 모델 성능</h2>
+        <span className="adm-muted">이 기간 후기가 끝난 여행 {num(p.travels)}건 · 관광지 {num(total)}곳</span>
+      </div>
+      {total === 0 ? (
+        <p className="adm-empty">후기까지 끝난 여행이 아직 없어요. 여행이 끝나고 후기가 쌓이면 계산됩니다.</p>
+      ) : (
+        <>
+          <div className="adm-perf">
+            {PERF.map((m) => (
+              <div key={m.key} className="adm-perf-item">
+                <span className="adm-tile-label">{m.label}</span>
+                <b className="num">{pct(p[m.key])}</b>
+                <span className="adm-muted num">{m.formula}</span>
+                <span className="adm-muted">{m.desc}</span>
+              </div>
+            ))}
+          </div>
+          <table className="adm-tbl adm-matrix" aria-label="혼동 행렬">
+            <thead>
+              <tr>
+                <th />
+                <th className="r">실제로 감</th>
+                <th className="r">안 감</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">AI가 추천함</th>
+                <td className="r num ok">TP {num(p.tp)}</td>
+                <td className="r num bad">FP {num(p.fp)}</td>
+              </tr>
+              <tr>
+                <th scope="row">추천 안 함</th>
+                <td className="r num bad">FN {num(p.fn)}</td>
+                <td className="r num">TN {num(p.tn)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="adm-note">
+            <b>추천 안 함</b> = AI 후보였지만 상위 10곳에 못 든 곳 + AI 결과에 아예 없던 곳(FN, 검색으로 담고 방문). 추천
+            서비스에서는 정답(방문)이 적어 정확도가 높게 나오기 쉬우므로 <b>정밀도·재현율</b>을 함께 봅니다.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------ 주별 추이 (선 그래프)
 
 export function TrendChart({ trend }) {

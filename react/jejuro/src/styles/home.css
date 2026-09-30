@@ -1,0 +1,76 @@
+.home-page { --home-orange: #ff6a1c; background: #fff; color: #22221e; padding: 0 max(24px, 4.8vw); overflow: hidden; }
+.home-hero { position: relative; max-width: 1600px; margin: 0 auto; height: clamp(580px, 48vw, 790px); isolation: isolate; }
+.home-wordmark { position: absolute; top: 5px; left: 0; width: 100%; font-family: 'Arial Rounded MT Bold', 'Arial Black', sans-serif; font-weight: 1000; letter-spacing: -.065em; font-size: clamp(120px, 21.5vw, 345px); line-height: 1.1; text-align: center; color: var(--home-orange); z-index: -2; }
+.home-hero-copy { position: absolute; left: 0; top: 51%; z-index: 2; }
+.home-hero h1 { font-size: clamp(36px, 4vw, 64px); font-weight: 850; letter-spacing: -2.5px; line-height: 1.25; margin: 0 0 28px; color: #20201d; }
+.home-start { background: var(--home-orange); color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 22px; font-size: 17px; padding: 17px 25px; border-radius: 40px; font-weight: 700; }
+.home-start:hover { background: #e95009; }
+.home-island-wrap { position: absolute; width: 52%; top: 18%; left: 25%; height: 82%; z-index: -1; }
+.home-island { position: relative; width: 100%; height: 100%; object-fit: contain; }
+.home-island-halo { position: absolute; inset: 15% 2% 6%; border-radius: 42% 58% 59% 41%; background: #fff0e8; transform: rotate(-15deg); }
+.home-hero-description { position: absolute; right: 0; top: 55%; font-size: clamp(15px, 1.45vw, 23px); font-weight: 650; line-height: 1.6; letter-spacing: -.5px; margin: 0; }
+.home-discover { max-width: 1600px; margin: 10px auto 0; padding: 35px 0 60px; }
+.home-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.home-kicker { font-size: 11px; letter-spacing: 2px; color: #c56030; margin: 0 0 12px; font-weight: 750; }
+.home-section-heading h2 { color: #23231f; font-size: clamp(25px, 2.5vw, 39px); font-weight: 800; letter-spacing: -1.4px; margin: 0; }
+.home-section-heading > a { color: #e75a19; font-weight: 650; font-size: 15px; text-decoration: none; white-space: nowrap; }
+.home-section-heading > a span { margin-left: 9px; }
+.home-discover-tools { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 20px 0 26px; }
+.home-discover-tools p { margin: 0; color: #828179; font-size: 13px; }
+.home-discover-tools button, .home-state button { background: white; border: 1px solid #eaded2; color: #6a5b4f; font: inherit; font-size: 12px; padding: 9px 14px; border-radius: 30px; cursor: pointer; white-space: nowrap; }
+.home-discover-tools button:disabled { opacity: .5; cursor: wait; }
+.home-destinations { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 20px; }
+.home-tone-0 { --card-bg: #eaf7e4; }
+.home-tone-1 { --card-bg: #e3f4fd; }
+.home-tone-2 { --card-bg: #ffebde; }
+.home-tone-3 { --card-bg: #fff7d0; }
+.home-destination { display: block; min-width: 0; padding: 20px; background: var(--card-bg); color: #252821; border-radius: 15px; text-decoration: none; transition: transform .18s; }
+.home-destination:hover { transform: translateY(-5px); }
+.home-destination-image { position: relative; aspect-ratio: 1.06; overflow: hidden; border-radius: 11px; }
+.home-destination-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.home-card-arrow { position: absolute; right: 0; top: 0; width: 43px; height: 43px; background: var(--card-bg); color: #ed793e; border-radius: 0 0 0 24px; display: grid; place-items: center; font-size: 27px; }
+.home-destination h3 { font-size: 20px; line-height: 1.4; margin: 20px 0 8px; word-break: keep-all; color: #252821; }
+.home-destination p { font-size: 13px; color: #727d6e; line-height: 1.7; margin: 0; word-break: keep-all; }
+.home-image-fallback { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #ffffff77; color: #8c947e; font-size: 14px; }
+.home-image-fallback > span:first-child { font-size: 75px; color: #bac7a6; }
+.home-card-skeleton { height: 340px; border-radius: 15px; background: var(--card-bg); padding: 20px; }
+.home-card-skeleton span { display: block; height: 70%; border-radius: 10px; background: #ffffff88; }
+.home-card-skeleton span + span { height: 16px; width: 65%; margin-top: 25px; }
+.home-state { padding: 50px 20px; text-align: center; border-radius: 16px; background: #fff8f0; color: #807568; }
+.home-footer { max-width: 1600px; margin: 0 auto; padding: 28px 0; border-top: 1px solid #f1eae3; color: #e36c35; font-size: 15px; font-weight: 800; }
+.home-footer span { font-size: 12px; color: #9b958c; font-weight: 400; margin-left: 20px; }
+.home-page a:focus-visible, .home-page button:focus-visible { outline: 3px solid #ed9c68; outline-offset: 4px; }
+@media (max-width: 1000px) {
+ .home-hero { height: 580px; }
+ .home-hero-description { top: 75%; font-size: 14px; }
+ .home-island-wrap { width: 65%; left: 33%; top: 10%; }
+ .home-destinations { gap: 14px; }
+ .home-destination { padding: 14px; }
+ .home-destination h3 { font-size: 17px; }
+}
+@media (max-width: 650px) {
+ .home-page { padding: 0 20px; }
+ .home-hero { height: auto; padding-top: 20px; display: flex; flex-direction: column; }
+ .home-wordmark { position: relative; top: auto; font-size: 22vw; line-height: 1.1; }
+ .home-island-wrap { position: relative; width: 100%; height: 320px; top: auto; left: auto; margin-top: -35px; order: 1; }
+ .home-hero-copy { position: relative; top: auto; order: 2; margin-top: -5px; }
+ .home-hero h1 { font-size: 38px; letter-spacing: -1.5px; margin-bottom: 22px; }
+ .home-start { font-size: 15px; padding: 15px 22px; }
+ .home-hero-description { position: relative; top: auto; order: 3; margin: 22px 0 0; font-weight: 500; color: #7b776f; }
+ .home-discover { margin-top: 24px; padding-bottom: 35px; }
+ .home-section-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
+ .home-discover-tools { align-items: flex-start; }
+ .home-discover-tools p { max-width: 165px; line-height: 1.6; }
+ .home-destinations { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+ .home-destination { padding: 12px; border-radius: 12px; }
+ .home-destination h3 { font-size: 16px; margin-top: 14px; }
+ .home-destination p { font-size: 11px; }
+ .home-card-arrow { width: 32px; height: 32px; font-size: 22px; }
+ .logo img {
+  height: 36px;   /* 크기는 여기서 조절 */
+  width: auto;
+  display: block;
+}
+ .home-footer span { display: block; margin: 8px 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .home-destination { transition: none; } }

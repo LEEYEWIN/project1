@@ -16,6 +16,9 @@ import kr.fast.Jejuro.Entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
+ Optional<User> findByEmailIgnoreCase(String email);
+ boolean existsByEmailIgnoreCase(String email);
+
  /** 테스트 회원 선택 상자용 */
  List<User> findTop20ByStatusOrderByUserId(String status);
 

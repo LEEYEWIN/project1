@@ -17,7 +17,6 @@ import kr.fast.Jejuro.Config.ApiException;
 import kr.fast.Jejuro.Repository.PoiRepository;
 
 import kr.fast.Jejuro.ResponseDTO.PoiSummaryResponse;
-import kr.fast.Jejuro.Entity.Poi;
 import kr.fast.Jejuro.Entity.TravelBookmark;
 import kr.fast.Jejuro.Repository.TravelBookmarkRepository;
 
@@ -58,10 +57,8 @@ public class BookmarkService {
  @Transactional
  public BookmarkResponse add(Long travelId, Long userId, Long poiId, String source) {
      routeService.ensureNotLocked(travelAccessService.getOwned(travelId, userId));
-     Poi poi = poiRepository.findById(poiId)
-             .orElseThrow(() -> ApiException.notFound("관광지를 찾을 수 없습니다."));
-     if (!poi.isAvailable()) {   // 관리자가 숨기거나 삭제한 곳(폐업·정보 오류 등)은 새로 담을 수 없음
-         throw new ApiException(HttpStatus.CONFLICT, "지금은 안내하지 않는 관광지라 추가할 수 없어요.");
+     if (!poiRepository.existsById(poiId)) {
+         throw ApiException.notFound("관광지를 찾을 수 없습니다.");
      }
      if (bookmarkRepository.existsByTravelIdAndPoiId(travelId, poiId)) {
          throw new ApiException(HttpStatus.CONFLICT, "이미 여행 장소에 추가한 관광지입니다.");

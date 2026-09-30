@@ -107,9 +107,8 @@ export default function CommunityPage() {
             {data.items.map((p) => (
               // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
               <li key={p.postId} className="cm-card clickable" onClick={(e) => openCard(e, p.postId)}>
-                <h2 className={p.reported ? 'cm-card-title reported' : 'cm-card-title'}>
-                  {/* 신고 검토 중인 글은 서버가 제목을 "신고된 게시글입니다"로 보내 준다 */}
-                  <Link to={`/community/posts/${p.postId}`}>{p.reported ? `🚫 ${p.title}` : p.title}</Link>
+                <h2 className="cm-card-title">
+                  <Link to={`/community/posts/${p.postId}`}>{p.title}</Link>
                   {p.hasImage && <span className="cm-badge">사진</span>}
                 </h2>
                 <p className="cm-meta">

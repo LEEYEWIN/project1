@@ -21,11 +21,5 @@ public record PoiDetailResponse(
      String regionName,
      String imageUrl,
      String description,
-     String detailDescription,
-     String phone,
-     String homepage,
-     String openingHours,
-     String closedDays,
-     String fee,
-     String parking) {
+     String detailDescription) {
 }

@@ -37,6 +37,7 @@ import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Filter;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.FunnelStep;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.LabelCount;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.MissReasons;
+import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Performance;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.PoiStat;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Reason;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Segment;
@@ -55,7 +56,7 @@ import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.TrendPoint;
 *   reaction  : 좋았어요(LIKE) / 아쉬워요(DISLIKE) / 없음
 *   → 추천 채택률, 일정 반영률, 추이, 세그먼트, 과추천
 * 원자료 2) VIEW TRAVEL_FUNNEL      : 여행별 퍼널 단계·이탈 → 사용자 여정 퍼널
-* 원자료 3) VIEW AI_TRAINING_DATASET: 후기까지 끝난 여행의 학습 데이터(라벨 0~3) → 재학습 데이터셋, CSV
+* 원자료 3) VIEW AI_TRAINING_DATASET: 후기까지 끝난 여행의 학습 데이터(라벨 0~3) → AI 성능, 재학습 데이터셋, CSV
 */
 @Service
 @Transactional(readOnly = true)
@@ -183,6 +184,7 @@ public class AdminKpiService {
              new Filter(days, from.toLocalDate(), to.toLocalDate()),
              summary(items, prevItems, requests, feedbacks, from, to, datasetTravels),
              funnel(from, to),
+             performance(from, to),
              trend(),
              segments(items),
              overRecommended(items),
@@ -270,6 +272,47 @@ public class AdminKpiService {
          if (FUNNEL[i][0].equals(reached)) return FUNNEL[i + 1][0];
      }
      return null;
+ }
+
+ // ------------------------------------------------------------------ AI 성능 (혼동 행렬)
+
+ /**
+  * 후기까지 끝난 여행(이 기간에 후기 작성, AI 추천을 받은 여행)의 (여행, 관광지) 단위 혼동 행렬
+  *   예측 양성 = 화면에 추천함 (shown = 1)        예측 음성 = AI 후보였지만 화면에 안 보임 (shown = 0)
+  *   실제 양성 = 후기에서 "갔어요"                실제 음성 = 안 감
+  *   TP 추천 O·방문 O / FP 추천 O·방문 X / FN 추천 X·방문 O (AI가 놓침) / TN 후보였지만 안 보여 줬고 안 감
+  *   정확도 = (TP+TN)/전체, 정밀도 = TP/(TP+FP), 재현율 = TP/(TP+FN), F1 = 정밀도·재현율의 조화평균
+  */
+ private Performance performance(LocalDateTime from, LocalDateTime to) {
+     Set<String> shown = new HashSet<>();
+     Set<String> hidden = new HashSet<>();
+     Set<Long> travels = new HashSet<>();
+     jdbc.query("""
+             SELECT d.travel_id, d.poi_id, d.shown FROM AI_TRAINING_DATASET d
+               JOIN TRAVEL_FEEDBACK f ON f.travel_id = d.travel_id
+              WHERE f.answered_at >= ? AND f.answered_at < ?
+             """, (rs, n) -> {
+                 travels.add(rs.getLong(1));
+                 return (rs.getInt(3) == 1 ? shown : hidden).add(rs.getLong(1) + ":" + rs.getLong(2));
+             }, from, to);
+
+     Set<String> visited = new HashSet<>();
+     if (!travels.isEmpty()) {
+         jdbc.query("SELECT f.travel_id, fs.poi_id FROM TRAVEL_FEEDBACK f "
+                 + "JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id "
+                 + "WHERE fs.visited = 1 AND f.travel_id IN (" + placeholders(travels.size()) + ")",
+                 (rs, n) -> visited.add(rs.getLong(1) + ":" + rs.getLong(2)), travels.toArray());
+     }
+
+     int tp = (int) shown.stream().filter(visited::contains).count();
+     int fp = shown.size() - tp;
+     int fn = (int) visited.stream().filter(k -> !shown.contains(k)).count();
+     int tn = (int) hidden.stream().filter(k -> !visited.contains(k)).count();
+     Double precision = ratio(tp, tp + fp);
+     Double recall = ratio(tp, tp + fn);
+     Double f1 = precision == null || recall == null || precision + recall == 0 ? null
+             : round(2 * precision * recall / (precision + recall), 4);
+     return new Performance(travels.size(), tp, fp, fn, tn, ratio(tp + tn, tp + fp + fn + tn), precision, recall, f1);
  }
 
  // ------------------------------------------------------------------ 주별 추이

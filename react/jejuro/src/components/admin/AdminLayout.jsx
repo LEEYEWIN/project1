@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { fetchReports } from '../../api/adminApi.js';
-import TestUserSwitcher from '../common/TestUserSwitcher.jsx';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import '../../styles/admin.css';
 
 /**
@@ -10,6 +10,7 @@ import '../../styles/admin.css';
  */
 export default function AdminLayout() {
   const { pathname } = useLocation();
+  const { user } = useAuth();
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
@@ -32,9 +33,10 @@ export default function AdminLayout() {
         <NavLink to="/admin/reports">
           게시글·신고 {pending > 0 && <span className="adm-nav-count num">{pending}</span>}
         </NavLink>
+        <NavLink to="/admin/users">회원 관리</NavLink>
         <NavLink to="/admin/pois">관광지 데이터</NavLink>
         <div className="adm-user">
-          <TestUserSwitcher />
+          <span>{user?.nickname}님</span>
         </div>
         <NavLink to="/travels" className="adm-back">
           ← 서비스 화면으로

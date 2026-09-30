@@ -50,6 +50,11 @@ public class PoiController {
      return poiService.search(regionId, category, keyword, page, size);
  }
 
+ @GetMapping("/discoveries")
+ public List<PoiSummaryResponse> discoveries() {
+     return poiService.homeDiscoveries();
+ }
+
  /** 관광 유형 필터 목록 ["CULTURE", "NATURE", ...] (실제 관광지가 있는 유형만) */
  @GetMapping("/categories")
  public List<String> categories() {

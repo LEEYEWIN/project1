@@ -1,6 +1,5 @@
 package kr.fast.Jejuro.Service;
 
-
 // [커뮤니티 게시판 - 글 목록·상세·쓰기·수정·삭제·좋아요·조회수]
 
 import java.time.LocalDateTime;
@@ -21,15 +20,12 @@ import kr.fast.Jejuro.Config.ApiException;
 import kr.fast.Jejuro.Entity.CommunityPost;
 import kr.fast.Jejuro.Entity.CommunityPostLike;
 import kr.fast.Jejuro.Entity.PostType;
-import kr.fast.Jejuro.Entity.Report;
 import kr.fast.Jejuro.Entity.Travel;
 import kr.fast.Jejuro.Entity.TravelFeedback;
 import kr.fast.Jejuro.Entity.User;
 import kr.fast.Jejuro.Repository.CommunityCommentRepository;
 import kr.fast.Jejuro.Repository.CommunityPostLikeRepository;
 import kr.fast.Jejuro.Repository.CommunityPostRepository;
-import kr.fast.Jejuro.Repository.PoiRepository;
-import kr.fast.Jejuro.Repository.ReportRepository;
 import kr.fast.Jejuro.Repository.TravelFeedbackRepository;
 import kr.fast.Jejuro.Repository.TravelRepository;
 import kr.fast.Jejuro.Repository.UserRepository;
@@ -44,9 +40,6 @@ import kr.fast.Jejuro.ResponseDTO.RouteDetailResponse;
 @Service
 public class CommunityService {
 
-    /** 신고 검토 중인 글의 제목 자리 (관리자 확인 전까지) */
-    public static final String REPORTED_TITLE = "신고된 게시글입니다";
-
     public static final int DEFAULT_PAGE_SIZE = 3;
     private static final int MAX_PAGE_SIZE = 20;
 
@@ -59,16 +52,12 @@ public class CommunityService {
     private final TravelFeedbackRepository feedbackRepository;
     private final TravelAccessService travelAccessService;
     private final RouteService routeService;
-    private final UserStatusService userStatusService;
-    private final ReportRepository reportRepository;
-    private final PoiRepository poiRepository;
 
     public CommunityService(CommunityPostRepository postRepository, CommunityPostLikeRepository likeRepository,
                             CommunityCommentRepository commentRepository, CommunityImageService imageService,
                             UserRepository userRepository, TravelRepository travelRepository,
                             TravelFeedbackRepository feedbackRepository, TravelAccessService travelAccessService,
-                            RouteService routeService, UserStatusService userStatusService,
-                            ReportRepository reportRepository, PoiRepository poiRepository) {
+                            RouteService routeService) {
         this.postRepository = postRepository;
         this.likeRepository = likeRepository;
         this.commentRepository = commentRepository;
@@ -78,9 +67,6 @@ public class CommunityService {
         this.feedbackRepository = feedbackRepository;
         this.travelAccessService = travelAccessService;
         this.routeService = routeService;
-        this.userStatusService = userStatusService;
-        this.reportRepository = reportRepository;
-        this.poiRepository = poiRepository;
     }
 
     // ------------------------------------------------------------------ 목록
@@ -99,7 +85,7 @@ public class CommunityService {
         List<CommunityPost> posts;
         long total;
         if (byLikes) {
-            total = postRepository.countByPostTypeAndDeletedAtIsNullAndBlockReasonIsNull(type);
+            total = postRepository.countByPostTypeAndDeletedAtIsNull(type);
             List<Long> ids = postRepository.findIdsOrderByLikes(type.name(), safeSize, safePage * safeSize).stream()
                     .map(Number::longValue).toList();
             Map<Long, CommunityPost> byId = postRepository.findAllById(ids).stream()
@@ -107,7 +93,7 @@ public class CommunityService {
             posts = ids.stream().map(byId::get).filter(Objects::nonNull).toList();   // 좋아요순 순서 유지
         } else {
             Page<CommunityPost> result = postRepository
-                    .findByPostTypeAndDeletedAtIsNullAndBlockReasonIsNullOrderByPostIdDesc(type, PageRequest.of(safePage, safeSize));
+                    .findByPostTypeAndDeletedAtIsNullOrderByPostIdDesc(type, PageRequest.of(safePage, safeSize));
             posts = result.getContent();
             total = result.getTotalElements();
         }
@@ -124,17 +110,13 @@ public class CommunityService {
 
         List<PostSummaryResponse> items = posts.stream()
                 .map(p -> {
-                    // 신고 검토 중인 글: 목록에는 남기되 제목·사진·경로 대신 "신고된 게시글입니다"
-                    boolean reported = p.isHidden();
-                    Travel t = reported || p.getTravelId() == null ? null : travels.get(p.getTravelId());
-                    return new PostSummaryResponse(p.getPostId(), p.getPostType().name(),
-                            reported ? REPORTED_TITLE : p.getTitle(),
+                    Travel t = p.getTravelId() == null ? null : travels.get(p.getTravelId());
+                    return new PostSummaryResponse(p.getPostId(), p.getPostType().name(), p.getTitle(),
                             authorName(p.getUserId(), names), p.getCreatedAt(), p.getViewCount(),
                             likes.getOrDefault(p.getPostId(), 0L), comments.getOrDefault(p.getPostId(), 0L),
-                            !reported && p.getImageUrl() != null,
+                            p.getImageUrl() != null,
                             t == null ? null : t.getTravelName(),
-                            t == null ? null : routeService.adoptedRouteForPublic(t),
-                            reported);
+                            t == null ? null : routeService.adoptedRouteForPublic(t));
                 })
                 .toList();
 
@@ -144,45 +126,31 @@ public class CommunityService {
 
     // ------------------------------------------------------------------ 상세
 
-    /**
-     * 글 상세 (조회수는 올리지 않음 → 화면이 한 번만 POST /view 호출).
-     * 신고 검토 중인 글: 관리자가 아니면 (작성자 포함) 제목만 "신고된 게시글입니다", 내용·사진·경로는 비움 → hidden=true
-     */
+    /** 글 상세 (조회수는 올리지 않음 → 화면이 한 번만 POST /view 호출) */
     @Transactional(readOnly = true)
     public PostDetailResponse detail(Long postId, Long loginUserId) {
-        CommunityPost p = getReadable(postId, loginUserId);
+        CommunityPost p = getAlive(postId);
         Map<Long, String> names = nicknames(java.util.Collections.singletonList(p.getUserId()));
-        boolean masked = p.isHidden() && !userStatusService.isAdmin(loginUserId);
 
-        Travel t = masked || p.getTravelId() == null ? null : travelRepository.findById(p.getTravelId()).orElse(null);
+        Travel t = p.getTravelId() == null ? null : travelRepository.findById(p.getTravelId()).orElse(null);
         RouteDetailResponse route = t == null ? null : routeService.adoptedRouteForPublic(t);
         Integer satisfaction = t == null ? null : feedbackRepository.findByTravelId(t.getTravelId())
                 .map(TravelFeedback::getSatisfactionScore).orElse(null);
 
-        return new PostDetailResponse(p.getPostId(), p.getPostType().name(),
-                masked ? REPORTED_TITLE : p.getTitle(),
-                masked ? null : p.getContent(),
-                masked ? null : p.getImageUrl(),
-                authorName(p.getUserId(), names), p.isWrittenBy(loginUserId),
+        return new PostDetailResponse(p.getPostId(), p.getPostType().name(), p.getTitle(), p.getContent(),
+                p.getImageUrl(), authorName(p.getUserId(), names), p.isWrittenBy(loginUserId),
                 p.getCreatedAt(), p.getUpdatedAt(), p.getViewCount(),
                 likeRepository.countByPostId(postId),
                 loginUserId != null && likeRepository.existsByPostIdAndUserId(postId, loginUserId),
                 commentRepository.countByPostIdAndDeletedAtIsNull(postId),
                 t == null ? null : t.getTravelId(),
                 t == null ? null : t.getTravelName(), satisfaction, route,
-                travelRepository.countBySourcePostId(postId),
-                p.isHidden(),
-                loginUserId != null && reportRepository.existsByTargetTypeAndTargetIdAndReporterId(Report.POST, postId, loginUserId),
-                p.isBlocked() ? ReportPolicy.label(p.getBlockReason()) : null);
+                travelRepository.countBySourcePostId(postId));
     }
 
     /** 조회수 +1 → 올린 뒤 조회수 */
     @Transactional
     public int increaseView(Long postId) {
-        CommunityPost p = getAlive(postId);
-        if (p.isHidden()) {
-            return p.getViewCount() == null ? 0 : p.getViewCount();   // 신고 검토 중인 글은 조회수를 올리지 않음
-        }
         if (postRepository.increaseViewCount(postId) == 0) {
             throw ApiException.notFound("삭제되었거나 없는 글입니다.");
         }
@@ -220,17 +188,10 @@ public class CommunityService {
     public void update(Long postId, Long userId, PostUpdateRequest req) {
         CommunityPost p = getAlive(postId);
         checkOwner(p, userId);
-        if (p.isBlocked()) {
-            throw new ApiException(HttpStatus.GONE, ReportPolicy.blockedMessage(p.getBlockReason()));
-        }
-        if (p.isHidden()) {
-            throw new ApiException(HttpStatus.CONFLICT, "신고된 게시글은 관리자 확인이 끝난 뒤 수정할 수 있습니다.");
-        }
         String oldImage = p.getImageUrl();
         String newImage = imageService.validateUrl(req.imageUrl());
         p.edit(req.title().trim(), req.content().trim(), newImage, LocalDateTime.now());
-        // 예전 사진 파일 정리. 관리자가 관광지 사진으로 쓰는 파일이면 지우지 않는다
-        if (oldImage != null && !oldImage.equals(newImage) && !poiRepository.existsByImageUrl(oldImage)) {
+        if (oldImage != null && !oldImage.equals(newImage)) {
             imageService.deleteQuietly(oldImage);
         }
     }
@@ -247,9 +208,7 @@ public class CommunityService {
 
     @Transactional
     public LikeResponse like(Long postId, Long userId) {
-        if (getReadable(postId, userId).isHidden()) {
-            throw ApiException.badRequest("신고된 게시글에는 좋아요를 누를 수 없습니다.");
-        }
+        getAlive(postId);
         if (!likeRepository.existsByPostIdAndUserId(postId, userId)) {
             likeRepository.save(new CommunityPostLike(postId, userId));
         }
@@ -264,21 +223,6 @@ public class CommunityService {
     }
 
     // ------------------------------------------------------------------ 공통
-
-    /**
-     * 읽을 수 있는 글: 삭제되지 않았고
-     *  - 관리자가 차단한 글: 관리자만. 작성자 포함 다른 회원은 410 + "욕설·비방 등의 사유로 차단되었습니다."
-     *    (화면은 이 문구를 알림으로 띄우고 목록으로 돌아감)
-     *  - 신고 검토 중인 글(hidden_at): 읽을 수는 있지만 detail()에서 "신고된 게시글입니다"로 가린다
-     *  - 관리자가 반려하면 hidden_at이 지워져 다시 정상으로 보인다
-     */
-    public CommunityPost getReadable(Long postId, Long loginUserId) {
-        CommunityPost p = getAlive(postId);
-        if (p.isBlocked() && !userStatusService.isAdmin(loginUserId)) {
-            throw new ApiException(HttpStatus.GONE, ReportPolicy.blockedMessage(p.getBlockReason()));
-        }
-        return p;
-    }
 
     /** 삭제되지 않은 글 (없거나 삭제됐으면 404) — 댓글 서비스에서도 사용 */
     public CommunityPost getAlive(Long postId) {

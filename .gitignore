@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# React / Node
+node_modules/
+.cache/
+
+# Spring Boot / Gradle
+build/
+.gradle/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+
+# Local development settings and generated files
+.metadata/
+.classpath
+.project
+.settings/
+bin/
+.env.local
+application-local.properties
+uploads/
+
+# Python virtual environment
+.venv/
