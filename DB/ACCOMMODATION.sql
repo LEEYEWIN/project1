@@ -3,9 +3,9 @@
 -- 다시 실행해도 됨: 기존 숙소를 지우고 새로 넣음 (다른 테이블이 참조하지 않음)
 SET NAMES utf8mb4;
 START TRANSACTION;
-DELETE FROM `ACCOMMODATION`;
+DELETE FROM `accommodation`;
 
-INSERT INTO `ACCOMMODATION` (`source_id`, `name`, `accommodation_type`, `address`, `latitude`, `longitude`, `phone`, `image_url`) VALUES
+INSERT INTO `accommodation` (`source_id`, `name`, `accommodation_type`, `address`, `latitude`, `longitude`, `phone`, `image_url`) VALUES
 ('VJ:CNTS_000000000018103', 'ATnoon호텔', 'HOTEL', '제주특별자치도 제주시 은남1길 8', 33.4893618, 126.4950589, '064-749-2500', 'https://api.cdn.visitjeju.net/photomng/imgpath/201804/30/079340d0-21a7-4566-9918-1a98ed417bf8.webp'),
 ('VJ:CNTS_000000000020875', 'BK호텔제주', 'HOTEL', '제주특별자치도 서귀포시 칠십리로91번길 12', 33.2411080, 126.5643000, '064-763-0779', 'https://api.cdn.visitjeju.net/photomng/imgpath/201804/30/fe994493-9473-4dc1-83fa-b7fd567a300e.webp'),
 ('TOUR:397643', 'C&P리조트', 'RESORT', '제주특별자치도 서귀포시 성산읍 중산간동로 4328-63', 33.3899196, 126.8308317, NULL, 'https://tong.visitkorea.or.kr/cms/resource/55/1933155_image2_1.jpg'),

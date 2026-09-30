@@ -25,23 +25,7 @@ const EMPTY = {
   description: '',
   detailDescription: '',
   imageUrl: '',
-  phone: '',
-  homepage: '',
-  openingHours: '',
-  closedDays: '',
-  fee: '',
-  parking: '',
 };
-
-/** 한 줄 입력칸 */
-const TEXT_FIELDS = [
-  { name: 'phone', label: '문의 전화', max: 100 },
-  { name: 'homepage', label: '홈페이지', max: 500, placeholder: 'https://' },
-  { name: 'openingHours', label: '이용 시간', max: 1000 },
-  { name: 'closedDays', label: '쉬는 날', max: 1000 },
-  { name: 'fee', label: '이용 요금', max: 1000 },
-  { name: 'parking', label: '주차', max: 1000 },
-];
 
 /**
  * 관리자 관광지 편집 창 (오른쪽)
@@ -254,13 +238,6 @@ export default function PoiEditor({ poiId, options, onClose, onSaved }) {
             <input name="imageUrl" value={form.imageUrl} maxLength={2048} placeholder="https://" onChange={change} />
           </label>
         </div>
-        {TEXT_FIELDS.map((f) => (
-          <label key={f.name}>
-            {f.label}
-            <input name={f.name} value={form[f.name]} maxLength={f.max} placeholder={f.placeholder ?? '비우면 "정보 없음"'} onChange={change} />
-          </label>
-        ))}
-
         {error && <p className="adm-error">{error}</p>}
         {saved && (
           <p className="adm-ok" role="status">

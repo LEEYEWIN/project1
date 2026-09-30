@@ -8,6 +8,7 @@ node_modules/
 # Spring Boot / Gradle
 build/
 .gradle/
+.gradle-user-home/
 
 # Python
 __pycache__/

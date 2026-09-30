@@ -1,15 +1,19 @@
 import axios from 'axios';
-import { getTestUserId } from '../utils/testUser.js';
 
 // 모든 API 호출이 공유하는 axios 인스턴스
 const client = axios.create({
   baseURL: '/api',
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// 요청마다 테스트 회원 ID를 헤더에 붙인다 → 서버 CurrentUser가 읽는다 (로그인 대신)
-client.interceptors.request.use((config) => {
-  config.headers['X-User-Id'] = getTestUserId();
+// Spring Security가 쓰기 요청에 요구하는 CSRF 토큰을 현재 세션에서 받는다.
+// 로그인 때 세션 ID와 토큰이 바뀔 수 있으므로 요청마다 새로 읽는다.
+client.interceptors.request.use(async (config) => {
+  if (!['get', 'head', 'options'].includes(config.method?.toLowerCase())) {
+    const { data } = await client.get('/auth/csrf');
+    config.headers[data.headerName] = data.token;
+  }
   return config;
 });
 

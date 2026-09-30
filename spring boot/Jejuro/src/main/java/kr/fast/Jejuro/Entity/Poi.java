@@ -3,17 +3,22 @@ package kr.fast.Jejuro.Entity;
 //[3페이지 추천 목록 (2~7페이지 공용)]
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** 관광지 마스터. 원본 데이터 적재로만 채우므로 서비스에서는 조회만 한다. */
+/** 관광지 마스터와 관리자 화면에서 수정하는 정보. */
 @Entity
 @Table(name = "POI")
 public class Poi {
 
  @Id
+ @GeneratedValue(strategy = GenerationType.IDENTITY)
  private Long poiId;
  private String poiName;
  private String address;
@@ -21,11 +26,39 @@ public class Poi {
  private BigDecimal longitude;
  private String categoryCode;
  private Integer regionId;
- private String description;          // 한 줄 소개 (카드)
+ @Column(columnDefinition = "TEXT")
+ private String description;
+ @Column(columnDefinition = "TEXT")
+ private String detailDescription;
+ @Column(length = 2048)
  private String imageUrl;
+ private LocalDateTime hiddenAt;
+ private LocalDateTime deletedAt;
+ private boolean aiRecommend;
 
  protected Poi() {
  }
+
+ public Poi(Fields fields) {
+     update(fields);
+ }
+
+ public void update(Fields fields) {
+     poiName = fields.poiName();
+     address = fields.address();
+     latitude = fields.latitude();
+     longitude = fields.longitude();
+     categoryCode = fields.categoryCode();
+     regionId = fields.regionId();
+     description = fields.description();
+     detailDescription = fields.detailDescription();
+     imageUrl = fields.imageUrl();
+ }
+
+ public void hide(LocalDateTime now) { hiddenAt = now; }
+ public void show() { hiddenAt = null; }
+ public void delete(LocalDateTime now) { deletedAt = now; }
+ public void restore() { deletedAt = null; }
 
  public Long getPoiId() { return poiId; }
  public String getPoiName() { return poiName; }
@@ -35,7 +68,15 @@ public class Poi {
  public String getCategoryCode() { return categoryCode; }
  public Integer getRegionId() { return regionId; }
  public String getDescription() { return description; }
- // 현재 POI 데이터는 description 하나에 소개글을 저장한다.
- public String getDetailDescription() { return description; }
+ public String getDetailDescription() { return detailDescription; }
  public String getImageUrl() { return imageUrl; }
+ public LocalDateTime getHiddenAt() { return hiddenAt; }
+ public LocalDateTime getDeletedAt() { return deletedAt; }
+ public boolean isAiRecommend() { return aiRecommend; }
+ public boolean isDeleted() { return deletedAt != null; }
+
+ public record Fields(String poiName, String address, BigDecimal latitude, BigDecimal longitude,
+                      String categoryCode, Integer regionId, String description, String detailDescription,
+                      String imageUrl) {
+ }
 }

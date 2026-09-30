@@ -33,6 +33,10 @@ public class CommunityComment {
 
  private LocalDateTime updatedAt;
  private LocalDateTime deletedAt;
+ private LocalDateTime hiddenAt;
+ private LocalDateTime blockedAt;
+ @Column(columnDefinition = "TEXT")
+ private String blockReason;
 
  protected CommunityComment() {
  }
@@ -52,6 +56,21 @@ public class CommunityComment {
  public void delete(LocalDateTime now) {
      this.deletedAt = now;
  }
+
+ public void hide(LocalDateTime now) { hiddenAt = now; }
+ public void block(String reason, LocalDateTime now) {
+     hiddenAt = now;
+     blockedAt = now;
+     blockReason = reason;
+ }
+ public void unhide() {
+     hiddenAt = null;
+     blockedAt = null;
+     blockReason = null;
+ }
+ public boolean isHidden() { return hiddenAt != null; }
+ public boolean isBlocked() { return blockedAt != null; }
+ public String getBlockReason() { return blockReason; }
 
  public boolean isDeleted() { return deletedAt != null; }
  public boolean isReply() { return parentCommentId != null; }

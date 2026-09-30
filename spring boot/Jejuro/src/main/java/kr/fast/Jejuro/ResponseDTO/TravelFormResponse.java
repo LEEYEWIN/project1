@@ -27,7 +27,7 @@ public record TravelFormResponse(
                            String responseType, List<Option> options) {
     }
 
-    public record Option(Integer value, String name, String description) {
+    public record Option(Integer value, String name) {
     }
     
     

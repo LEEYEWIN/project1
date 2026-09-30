@@ -5,14 +5,22 @@ package kr.fast.Jejuro.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+
+import jakarta.persistence.LockModeType;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import kr.fast.Jejuro.Entity.CommunityComment;
 
 public interface CommunityCommentRepository extends JpaRepository<CommunityComment, Long> {
+
+ @Lock(LockModeType.PESSIMISTIC_WRITE)
+ @Query("select c from CommunityComment c where c.commentId = :commentId")
+ Optional<CommunityComment> findByIdForUpdate(@Param("commentId") Long commentId);
 
  /** 삭제되지 않은 댓글 수 (글별, 목록에서 여러 글을 한 번에) */
  interface PostCount {

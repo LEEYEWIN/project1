@@ -14,7 +14,6 @@ public class PreferenceOption {
     private Long preferenceId;
     private Integer optionValue;
     private String optionName;
-    private String description;
 
     protected PreferenceOption() {
     }
@@ -23,5 +22,4 @@ public class PreferenceOption {
     public Long getPreferenceId() { return preferenceId; }
     public Integer getOptionValue() { return optionValue; }
     public String getOptionName() { return optionName; }
-    public String getDescription() { return description; }
 }

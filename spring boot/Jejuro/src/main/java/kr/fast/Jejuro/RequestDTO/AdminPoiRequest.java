@@ -23,11 +23,5 @@ public record AdminPoiRequest(
         @NotNull(message = "권역을 골라 주세요.") Integer regionId,
         @NotBlank(message = "한 줄 소개를 입력해 주세요.") @Size(max = 1000) String description,
         @Size(max = 10000) String detailDescription,
-        @Size(max = 2048) String imageUrl,
-        @Size(max = 100) String phone,
-        @Size(max = 500) String homepage,
-        @Size(max = 1000) String openingHours,
-        @Size(max = 1000) String closedDays,
-        @Size(max = 1000) String fee,
-        @Size(max = 1000) String parking) {
+        @Size(max = 2048) String imageUrl) {
 }

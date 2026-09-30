@@ -19,6 +19,11 @@ public class PoiSourceMap {
  protected PoiSourceMap() {
  }
 
+ public PoiSourceMap(String sourcePoiId, Long poiId) {
+     this.sourcePoiId = sourcePoiId;
+     this.poiId = poiId;
+ }
+
  public String getSourcePoiId() { return sourcePoiId; }
  public Long getPoiId() { return poiId; }
 }

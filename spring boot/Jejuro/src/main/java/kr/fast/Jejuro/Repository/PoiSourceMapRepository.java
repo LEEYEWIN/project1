@@ -14,6 +14,7 @@ import kr.fast.Jejuro.Entity.PoiSourceMap;
 public interface PoiSourceMapRepository extends JpaRepository<PoiSourceMap, String> {
 
     List<PoiSourceMap> findBySourcePoiIdIn(Collection<String> sourcePoiIds);
+    List<PoiSourceMap> findByPoiIdOrderBySourcePoiId(Long poiId);
 
     /** 가짜 AI용: 제주 전체에서 무작위 N개 */
     @Query(value = """

@@ -4,10 +4,14 @@ package kr.fast.Jejuro.Repository;
 //[커뮤니티 게시판]
 
 import java.util.List;
+import java.util.Optional;
+
+import jakarta.persistence.LockModeType;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +20,10 @@ import kr.fast.Jejuro.Entity.CommunityPost;
 import kr.fast.Jejuro.Entity.PostType;
 
 public interface CommunityPostRepository extends JpaRepository<CommunityPost, Long> {
+
+ @Lock(LockModeType.PESSIMISTIC_WRITE)
+ @Query("select p from CommunityPost p where p.postId = :postId")
+ Optional<CommunityPost> findByIdForUpdate(@Param("postId") Long postId);
 
  /** 최신순: 삭제되지 않은 글을 글 번호 내림차순으로 (페이지 단위) */
  Page<CommunityPost> findByPostTypeAndDeletedAtIsNullOrderByPostIdDesc(PostType postType, Pageable pageable);

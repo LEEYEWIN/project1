@@ -201,8 +201,7 @@ public class AdminPoiService {
                      rs.getLong("recommended"), rs.getLong("feedback")), poiId, poiId, poiId, poiId).get(0);
      return new AdminPoiResponse.Detail(p.getPoiId(), p.getPoiName(), p.getAddress(), p.getLatitude(),
              p.getLongitude(), p.getCategoryCode(), p.getRegionId(), p.getDescription(), p.getDetailDescription(),
-             p.getImageUrl(), p.getPhone(), p.getHomepage(), p.getOpeningHours(), p.getClosedDays(), p.getFee(),
-             p.getParking(), p.getHiddenAt(), p.getDeletedAt(), p.isAiRecommend(), mappings, usage);
+             p.getImageUrl(), p.getHiddenAt(), p.getDeletedAt(), p.isAiRecommend(), mappings, usage);
  }
 
  // ------------------------------------------------------------------ 추가·수정·숨김
@@ -292,14 +291,9 @@ public class AdminPoiService {
          }
          image = imageService.validateUrl(image);   // 실제로 올라간 파일인지 확인
      }
-     String homepage = trim(r.homepage());
-     if (homepage != null && !homepage.startsWith("http://") && !homepage.startsWith("https://")) {
-         throw ApiException.badRequest("홈페이지 주소는 http:// 또는 https:// 로 시작해야 합니다.");
-     }
      return new Poi.Fields(r.poiName().trim(), r.address().trim(), scale(r.latitude()), scale(r.longitude()),
              cat, r.regionId(), r.description().trim(), trim(r.detailDescription()),
-             image == null ? "" : image, trim(r.phone()), homepage, trim(r.openingHours()),
-             trim(r.closedDays()), trim(r.fee()), trim(r.parking()));
+             image == null ? "" : image);
  }
 
  private static BigDecimal scale(BigDecimal v) {

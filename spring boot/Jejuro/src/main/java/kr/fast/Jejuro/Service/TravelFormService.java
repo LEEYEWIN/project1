@@ -52,7 +52,7 @@ public class TravelFormService {
      Map<Long, List<Option>> optionsByQuestion = optionRepository
              .findAllByOrderByPreferenceIdAscOptionValueAsc().stream()
              .collect(Collectors.groupingBy(PreferenceOption::getPreferenceId, LinkedHashMap::new,
-                     Collectors.mapping(o -> new Option(o.getOptionValue(), o.getOptionName(), o.getDescription()),
+                     Collectors.mapping(o -> new Option(o.getOptionValue(), o.getOptionName()),
                              Collectors.toList())));
 
      // 질문을 그룹별로 묶는다 (질문 ID 순서 유지)

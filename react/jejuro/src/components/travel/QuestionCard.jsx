@@ -83,7 +83,6 @@ export default function QuestionCard({ question, max, ranked = false, selected, 
               type="button"
               className={on ? 'chip on' : 'chip'}
               disabled={!on && full}
-              title={o.description ?? undefined}
               onClick={() => click(o.value)}
             >
               {ranked && on && <b className="rank-badge">{index + 1}</b>}

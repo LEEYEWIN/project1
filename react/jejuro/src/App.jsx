@@ -1,5 +1,9 @@
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import Layout from './components/common/Layout.jsx';
+import AuthPage from './pages/AuthPage.jsx';
+import HomePage from './pages/HomePage.jsx';
+import WithdrawalPage from './pages/WithdrawalPage.jsx';
+import { RequireAuth } from './auth/AuthContext.jsx';
 import TravelCreatePage from './pages/TravelCreatePage.jsx';
 import RecommendingPage from './pages/RecommendingPage.jsx';
 import RecommendationListPage from './pages/RecommendationListPage.jsx';
@@ -73,6 +77,7 @@ export default function App() {
         <Route path="/community/posts/new" element={<PostWritePage />} />
         <Route path="/community/posts/:postId" element={<PostDetailPage />} />
         <Route path="/community/posts/:postId/edit" element={<PostWritePage />} />
+        </Route>
         <Route path="*" element={<p className="page">페이지를 찾을 수 없습니다.</p>} />
       </Route>
       <Route path="/admin" element={<AdminLayout />}>

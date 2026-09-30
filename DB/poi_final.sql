@@ -1,6 +1,7 @@
 -- 제주로 관광지 목록 (poi_final_v4.csv, 536곳) — check_poi.py 자동 생성
--- 새 DB에서 jeju_schema.sql → test_user.sql → 이 파일 → poi_ai_map.sql (test_poi.sql과 같이 쓰지 말 것)
--- description = 설명 첫 문장(카드), detail_description = 설명 전체. 운영 정보 칸은 NULL
+-- 새 DB 적재 순서: jeju_schema.sql → 이 파일 → POI_SOURCE_MAP + POI.ai_recommend.sql
+-- 현재 POI의 10개 입력 컬럼을 사용한다. hidden_at, deleted_at, ai_recommend는 기본값을 사용한다.
+-- 이미 적재된 DB에 다시 실행하면 poi_id 기본키가 중복된다.
 SET NAMES utf8mb4;
 START TRANSACTION;
 

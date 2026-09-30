@@ -33,8 +33,7 @@ public record AdminPoiResponse(
  /** 수정 화면: 전체 값 + AI 추천 대상 여부 + 연결된 AI 이름 + 쓰이는 곳 */
  public record Detail(Long poiId, String poiName, String address, BigDecimal latitude, BigDecimal longitude,
                       String categoryCode, Integer regionId, String description, String detailDescription,
-                      String imageUrl, String phone, String homepage, String openingHours, String closedDays,
-                      String fee, String parking, LocalDateTime hiddenAt, LocalDateTime deletedAt,
+                      String imageUrl, LocalDateTime hiddenAt, LocalDateTime deletedAt,
                       boolean aiRecommend, List<Mapping> mappings, Usage usage) {
  }
 

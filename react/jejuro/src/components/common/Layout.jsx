@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import '../../styles/account.css';
 import { errorMessage } from '../../api/client.js';
-import logoImg from '../../assets/jejuro-logo.jpg';
+import logoImg from '../../assets/jejuro-logo.png';
 
 export default function Layout() {
   const { user, logout } = useAuth();

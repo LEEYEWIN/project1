@@ -29,6 +29,8 @@
 -- 14. COMMUNITY_POST.travel_id: 후기에 첨부한 여행(게시판에 최종 경로 표시)
 -- 15. 관광지 분류 코드 POI_CAT (VISIT_AREA_TYPE_CD → category_code)
 -- 16. POI.detail_description: 세부 설명(한 줄 소개 description과 별도)
+-- 17. ACCOMMODATION: 숙소 종류·전화·사진 + 위경도 색인, 코드 ACCOM_TYPE (루트 주변 숙소 FR-26)
+-- 18. 커뮤니티: 게시글 사진 1장·조회수·삭제 표시, 대댓글(parent_comment_id), 좋아요(COMMUNITY_POST_LIKE)
 --     1 NATURE / 2 HISTORY / 3 CULTURE / 4 COMMERCIAL / 5 LEISURE / 6 THEME / 7 TRAIL / 8 FESTIVAL / 9 EXPERIENCE(원본 13)
 SET NAMES utf8mb4;
 
@@ -44,12 +46,14 @@ CREATE TABLE `USER` (
     `birth_date` DATE NOT NULL,
     `gender_code` TINYINT UNSIGNED NOT NULL,
     `status` VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',
+    `role` VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT 'USER 일반 / ADMIN 관리자',
     `withdrawn_at` DATETIME NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `pk_user` PRIMARY KEY (`user_id`),
     CONSTRAINT `uk_user_email` UNIQUE (`email`),
     CONSTRAINT `ck_user_gender_code` CHECK (`gender_code` IN (1, 2)),
+    CONSTRAINT `ck_user_role` CHECK (`role` IN ('USER', 'ADMIN')),
     CONSTRAINT `ck_user_status` CHECK (
         (`status` = 'ACTIVE' AND `withdrawn_at` IS NULL)
         OR
@@ -196,7 +200,6 @@ CREATE TABLE `PREFERENCE_OPTION` (
     `preference_id` BIGINT UNSIGNED NOT NULL,
     `option_value` INT UNSIGNED NOT NULL,
     `option_name` VARCHAR(100) NOT NULL,
-    `description` VARCHAR(500) NULL,
     CONSTRAINT `pk_preference_option` PRIMARY KEY (`option_id`),
     CONSTRAINT `uk_preference_option_natural` UNIQUE (`preference_id`, `option_value`),
     CONSTRAINT `fk_preference_option_preference`
@@ -217,6 +220,9 @@ CREATE TABLE `POI` (
     `description` TEXT NOT NULL COMMENT '한 줄 소개(카드용)',
     `detail_description` TEXT NULL COMMENT '세부 설명(관광공사·비짓제주 소개글 전체)',
     `image_url` VARCHAR(2048) NOT NULL,
+    `hidden_at` DATETIME NULL DEFAULT NULL COMMENT '관리자가 숨긴 시각(검색·AI 추천 제외)',
+    `deleted_at` DATETIME NULL DEFAULT NULL COMMENT '관리자가 삭제한 시각(화면에는 확인 불가로 표시)',
+    `ai_recommend` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'AI 추천 대상(AI가 학습한 275곳)=1 / 직접 선택만=0',
     CONSTRAINT `pk_poi` PRIMARY KEY (`poi_id`),
     CONSTRAINT `fk_poi_region`
         FOREIGN KEY (`region_id`) REFERENCES `REGION` (`region_id`)
@@ -241,6 +247,7 @@ CREATE TABLE `TRAVEL` (
     `age_group_snapshot` TINYINT UNSIGNED NOT NULL,
     `adopted_route_id` BIGINT UNSIGNED NULL,
     `adopted_at` DATETIME NULL,
+    `source_post_id` BIGINT UNSIGNED NULL COMMENT '커뮤니티 글의 경로를 가져와 만든 여행이면 그 글 번호',
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
@@ -335,7 +342,7 @@ CREATE TABLE `TRAVEL_PREFERENCE` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='여행별 설문 응답';
 
--- 16. POI_SOURCE_MAP
+-- 16. POI_SOURCE_MAP: AI 추천 결과 이름(place_name) → 관광지 번호. AI가 학습한 275곳만 연결 (poi_ai_map.sql)
 CREATE TABLE `POI_SOURCE_MAP` (
     `source_poi_id` VARCHAR(255) NOT NULL,
     `poi_id` BIGINT UNSIGNED NOT NULL,
@@ -354,7 +361,10 @@ CREATE TABLE `TRAVEL_BOOKMARK` (
     `bookmark_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `travel_id` BIGINT UNSIGNED NOT NULL,
     `poi_id` BIGINT UNSIGNED NOT NULL,
+    `source` VARCHAR(20) NOT NULL DEFAULT 'SEARCH' COMMENT 'RECOMMEND AI 추천 / SEARCH 관광지 검색 / IMPORT 경로 가져오기',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `pk_travel_bookmark` PRIMARY KEY (`bookmark_id`),
+    CONSTRAINT `ck_travel_bookmark_source` CHECK (`source` IN ('RECOMMEND', 'SEARCH', 'IMPORT')),
     CONSTRAINT `uk_travel_bookmark_natural` UNIQUE (`travel_id`, `poi_id`),
     CONSTRAINT `fk_travel_bookmark_travel`
         FOREIGN KEY (`travel_id`) REFERENCES `TRAVEL` (`travel_id`)
@@ -363,7 +373,7 @@ CREATE TABLE `TRAVEL_BOOKMARK` (
         FOREIGN KEY (`poi_id`) REFERENCES `POI` (`poi_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-  COMMENT='여행별 사용자가 찜한 관광지';
+  COMMENT='여행 장소: 여행 일정(루트)에 넣으려고 사용자가 추가한 관광지';
 
 -- 18. TRAVEL_ROUTE
 -- 실제 일정은 ROUTE_DAY / ROUTE_SPOT이 기준. 요약 문자열은 저장하지 않고 조회로 만든다.
@@ -375,11 +385,12 @@ CREATE TABLE `TRAVEL_ROUTE` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `pk_travel_route` PRIMARY KEY (`route_id`),
     CONSTRAINT `uk_travel_route_travel_route` UNIQUE (`travel_id`, `route_id`),
+    CONSTRAINT `uk_travel_route_one` UNIQUE (`travel_id`),              -- 여행당 경로 1개
     CONSTRAINT `fk_travel_route_travel`
         FOREIGN KEY (`travel_id`) REFERENCES `TRAVEL` (`travel_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-  COMMENT='찜 목록을 기반으로 만든 여행 루트';
+  COMMENT='여행 장소(TRAVEL_BOOKMARK)를 일차별로 배치한 여행 루트. 여행당 1개';
 
 -- 19. ROUTE_DAY
 -- 해당 날짜 = TRAVEL.start_date + (day_no - 1). day_no는 여행 일수 이하여야 한다(서비스 검사).
@@ -474,24 +485,96 @@ CREATE TABLE `TRAVEL_FEEDBACK_REASON` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   COMMENT='여행 루트를 일부 수행했거나 여행하지 못한 이유';
 
--- 23. ACCOMMODATION
+-- AI 추천 기록 (관리자 KPI·재학습)
+CREATE TABLE `RECOMMEND_REQUEST` (
+    `request_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `travel_id` BIGINT UNSIGNED NOT NULL,
+    `model_version` VARCHAR(20) NOT NULL,
+    `status` VARCHAR(10) NOT NULL,
+    `response_ms` INT UNSIGNED NULL,
+    `result_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    `unmapped_count` SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    `error_message` VARCHAR(200) NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `pk_recommend_request` PRIMARY KEY (`request_id`),
+    CONSTRAINT `fk_recommend_request_travel`
+        FOREIGN KEY (`travel_id`) REFERENCES `TRAVEL` (`travel_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `ck_recommend_request_status` CHECK (`status` IN ('SUCCESS', 'FAIL'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='AI 추천 요청 1건 (관리자 KPI·재학습 데이터)';
+
+CREATE INDEX `ix_recommend_request_created` ON `RECOMMEND_REQUEST` (`created_at`);
+CREATE INDEX `ix_recommend_request_travel` ON `RECOMMEND_REQUEST` (`travel_id`);
+
+CREATE TABLE `RECOMMEND_ITEM` (
+    `item_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `request_id` BIGINT UNSIGNED NOT NULL,
+    `rank_no` SMALLINT UNSIGNED NOT NULL,
+    `place_name` VARCHAR(200) NOT NULL,
+    `poi_id` BIGINT UNSIGNED NULL COMMENT '우리 관광지와 연결 안 되면 NULL (매핑 실패)',
+    `shown` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '화면에 보여 준 10곳이면 1',
+    CONSTRAINT `pk_recommend_item` PRIMARY KEY (`item_id`),
+    CONSTRAINT `uk_recommend_item_rank` UNIQUE (`request_id`, `rank_no`),
+    CONSTRAINT `fk_recommend_item_request`
+        FOREIGN KEY (`request_id`) REFERENCES `RECOMMEND_REQUEST` (`request_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_recommend_item_poi`
+        FOREIGN KEY (`poi_id`) REFERENCES `POI` (`poi_id`)
+        ON UPDATE RESTRICT ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='AI가 추천한 관광지 (순위 순)';
+
+CREATE INDEX `ix_recommend_item_poi` ON `RECOMMEND_ITEM` (`poi_id`);
+
+-- 후기의 관광지별 결과
+CREATE TABLE `TRAVEL_FEEDBACK_SPOT` (
+    `feedback_spot_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `feedback_id` BIGINT UNSIGNED NOT NULL,
+    `poi_id` BIGINT UNSIGNED NOT NULL,
+    `visited` TINYINT(1) NOT NULL,
+    `reaction` VARCHAR(10) NULL COMMENT 'LIKE 좋았어요 / DISLIKE 아쉬워요 / NULL 선택 안 함',
+    CONSTRAINT `pk_travel_feedback_spot` PRIMARY KEY (`feedback_spot_id`),
+    CONSTRAINT `uk_travel_feedback_spot` UNIQUE (`feedback_id`, `poi_id`),
+    CONSTRAINT `fk_travel_feedback_spot_feedback`
+        FOREIGN KEY (`feedback_id`) REFERENCES `TRAVEL_FEEDBACK` (`feedback_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_travel_feedback_spot_poi`
+        FOREIGN KEY (`poi_id`) REFERENCES `POI` (`poi_id`)
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
+    CONSTRAINT `ck_travel_feedback_spot_reaction` CHECK (
+        `reaction` IS NULL OR (`visited` = 1 AND `reaction` IN ('LIKE', 'DISLIKE'))
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='후기: 확정 일정의 관광지별 방문 여부와 반응';
+
+-- 23. ACCOMMODATION: 루트 주변 숙소 안내(FR-26)용. 예약·결제 정보 없음, 조회만
+--     source_id = 출처 접두어 + 원본 ID (TOUR:123 한국관광공사 / VJ:CNTS_… 비짓제주 / KAKAO:123 카카오)
 CREATE TABLE `ACCOMMODATION` (
     `accommodation_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `source_id` VARCHAR(255) NOT NULL,
     `name` VARCHAR(200) NOT NULL,
+    `accommodation_type` VARCHAR(20) NOT NULL DEFAULT 'ETC'
+        COMMENT 'CODE ACCOM_TYPE: HOTEL/RESORT/PENSION/GUESTHOUSE/MOTEL/CAMPING/ETC',
     `address` VARCHAR(500) NOT NULL,
     `latitude` DECIMAL(10, 7) NOT NULL,
     `longitude` DECIMAL(10, 7) NOT NULL,
+    `phone` VARCHAR(50) NULL,
+    `image_url` VARCHAR(2048) NULL,
     CONSTRAINT `pk_accommodation` PRIMARY KEY (`accommodation_id`),
     CONSTRAINT `uk_accommodation_source` UNIQUE (`source_id`),
     CONSTRAINT `ck_accommodation_latitude` CHECK (`latitude` BETWEEN -90 AND 90),
     CONSTRAINT `ck_accommodation_longitude` CHECK (`longitude` BETWEEN -180 AND 180)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-  COMMENT='지도 검색용 공용 숙소';
+  COMMENT='루트 주변 숙소 안내용 숙소(조회 전용)';
+
+-- 반경 검색: 위도·경도 범위로 먼저 좁힌다
+CREATE INDEX `ix_accommodation_lat_lng` ON `ACCOMMODATION` (`latitude`, `longitude`);
 
 -- 24. COMMUNITY_POST
 -- 작성자가 탈퇴(물리 삭제)되면 user_id가 NULL이 되고 글은 남는다. 화면에는 '탈퇴한 회원'으로 표시.
 -- travel_id: 후기(REVIEW)에 첨부한 여행. 게시판에서 그 여행의 최종 경로를 보여준다. 여행이 지워지면 NULL.
+-- image_url: 첨부 사진 1장(서버에 저장한 파일 주소). deleted_at: 삭제한 글(목록·상세에서 제외)
 CREATE TABLE `COMMUNITY_POST` (
     `post_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id` BIGINT UNSIGNED NULL,
@@ -499,8 +582,13 @@ CREATE TABLE `COMMUNITY_POST` (
     `post_type` VARCHAR(20) NOT NULL,
     `title` VARCHAR(200) NOT NULL,
     `content` TEXT NOT NULL,
+    `image_url` VARCHAR(500) NULL COMMENT '첨부 사진 1장',
+    `view_count` INT UNSIGNED NOT NULL DEFAULT 0,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NULL DEFAULT NULL,
+    `deleted_at` DATETIME NULL DEFAULT NULL COMMENT '삭제 시각(삭제된 글은 조회 제외)',
+    `hidden_at` DATETIME NULL DEFAULT NULL COMMENT '신고된 시각("신고된 게시글입니다", 관리자만 내용 확인). 반려하면 NULL',
+    `block_reason` VARCHAR(20) NULL DEFAULT NULL COMMENT '관리자 차단 사유(신고 사유 코드). NULL이면 차단 아님',
     CONSTRAINT `pk_community_post` PRIMARY KEY (`post_id`),
     CONSTRAINT `fk_community_post_user`
         FOREIGN KEY (`user_id`) REFERENCES `USER` (`user_id`)
@@ -508,6 +596,8 @@ CREATE TABLE `COMMUNITY_POST` (
     CONSTRAINT `fk_community_post_travel`
         FOREIGN KEY (`travel_id`) REFERENCES `TRAVEL` (`travel_id`)
         ON UPDATE RESTRICT ON DELETE SET NULL,
+    CONSTRAINT `ck_community_post_block_reason`
+        CHECK (`block_reason` IS NULL OR `block_reason` IN ('SEXUAL', 'PRIVACY', 'ABUSE', 'SPAM')),
     CONSTRAINT `ck_community_post_type` CHECK (
         `post_type` IN ('QUESTION', 'REVIEW')
     )
@@ -518,28 +608,107 @@ CREATE INDEX `ix_community_post_user_created`
     ON `COMMUNITY_POST` (`user_id`, `created_at`);
 
 CREATE INDEX `ix_community_post_type_created`
-    ON `COMMUNITY_POST` (`post_type`, `created_at`);
+    ON `COMMUNITY_POST` (`post_type`, `deleted_at`, `created_at`);
 
 -- 25. COMMUNITY_COMMENT
+-- parent_comment_id: 대댓글이면 원댓글 ID(한 단계만). 원댓글이 지워져도 대댓글이 있으면 "삭제된 댓글"로 남긴다.
 CREATE TABLE `COMMUNITY_COMMENT` (
     `comment_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     `post_id` BIGINT UNSIGNED NOT NULL,
+    `parent_comment_id` BIGINT UNSIGNED NULL COMMENT '대댓글의 원댓글',
     `user_id` BIGINT UNSIGNED NULL,
     `content` TEXT NOT NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NULL DEFAULT NULL,
+    `deleted_at` DATETIME NULL DEFAULT NULL,
+    `hidden_at` DATETIME NULL DEFAULT NULL COMMENT '신고된 시각("신고된 댓글입니다"). 반려하면 NULL',
+    `block_reason` VARCHAR(20) NULL DEFAULT NULL COMMENT '관리자 차단 사유(신고 사유 코드)',
     CONSTRAINT `pk_community_comment` PRIMARY KEY (`comment_id`),
     CONSTRAINT `fk_community_comment_post`
         FOREIGN KEY (`post_id`) REFERENCES `COMMUNITY_POST` (`post_id`)
         ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_community_comment_parent`
+        FOREIGN KEY (`parent_comment_id`) REFERENCES `COMMUNITY_COMMENT` (`comment_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
     CONSTRAINT `fk_community_comment_user`
         FOREIGN KEY (`user_id`) REFERENCES `USER` (`user_id`)
-        ON UPDATE RESTRICT ON DELETE SET NULL
+        ON UPDATE RESTRICT ON DELETE SET NULL,
+    CONSTRAINT `ck_community_comment_block_reason`
+        CHECK (`block_reason` IS NULL OR `block_reason` IN ('SEXUAL', 'PRIVACY', 'ABUSE', 'SPAM'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-  COMMENT='커뮤니티 게시글 댓글. 탈퇴 회원 댓글은 user_id NULL';
+  COMMENT='커뮤니티 게시글 댓글·대댓글. 탈퇴 회원 댓글은 user_id NULL';
 
 CREATE INDEX `ix_community_comment_post_created`
     ON `COMMUNITY_COMMENT` (`post_id`, `created_at`);
+
+-- 26. COMMUNITY_POST_LIKE: 회원 1명이 글 1개에 좋아요 1번
+CREATE TABLE `COMMUNITY_POST_LIKE` (
+    `post_id` BIGINT UNSIGNED NOT NULL,
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `pk_community_post_like` PRIMARY KEY (`post_id`, `user_id`),
+    CONSTRAINT `fk_community_post_like_post`
+        FOREIGN KEY (`post_id`) REFERENCES `COMMUNITY_POST` (`post_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_community_post_like_user`
+        FOREIGN KEY (`user_id`) REFERENCES `USER` (`user_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='게시글 좋아요';
+
+-- 27. REPORT: 게시글·댓글 신고. 같은 대상은 한 회원이 1번만. 처리 기준은 docs/17 참고
+CREATE TABLE `REPORT` (
+    `report_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `target_type` VARCHAR(10) NOT NULL COMMENT 'POST 글 / COMMENT 댓글',
+    `target_id` BIGINT UNSIGNED NOT NULL COMMENT 'post_id 또는 comment_id',
+    `target_user_id` BIGINT UNSIGNED NULL COMMENT '신고 당시 작성자',
+    `reporter_id` BIGINT UNSIGNED NOT NULL,
+    `reason_code` VARCHAR(20) NOT NULL,
+    `detail` VARCHAR(200) NULL COMMENT '신고한 회원이 적은 자세한 내용(선택)',
+    `status` VARCHAR(10) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING 대기 / ACCEPTED 조치 / REJECTED 문제 없음',
+    `action` VARCHAR(10) NULL COMMENT '처리 결과 KEEP 유지 / BLOCK 차단 / DELETE 삭제',
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `handled_at` DATETIME NULL,
+    `handled_by` BIGINT UNSIGNED NULL,
+    CONSTRAINT `pk_report` PRIMARY KEY (`report_id`),
+    CONSTRAINT `uk_report_once` UNIQUE (`target_type`, `target_id`, `reporter_id`),
+    CONSTRAINT `fk_report_reporter`
+        FOREIGN KEY (`reporter_id`) REFERENCES `USER` (`user_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_report_target_user`
+        FOREIGN KEY (`target_user_id`) REFERENCES `USER` (`user_id`)
+        ON UPDATE RESTRICT ON DELETE SET NULL,
+    CONSTRAINT `fk_report_handled_by`
+        FOREIGN KEY (`handled_by`) REFERENCES `USER` (`user_id`)
+        ON UPDATE RESTRICT ON DELETE SET NULL,
+    CONSTRAINT `ck_report_target_type` CHECK (`target_type` IN ('POST', 'COMMENT')),
+    CONSTRAINT `ck_report_reason` CHECK (`reason_code` IN ('SEXUAL', 'PRIVACY', 'ABUSE', 'SPAM')),
+    CONSTRAINT `ck_report_status` CHECK (`status` IN ('PENDING', 'ACCEPTED', 'REJECTED')),
+    CONSTRAINT `ck_report_action` CHECK (`action` IS NULL OR `action` IN ('KEEP', 'BLOCK', 'DELETE'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='게시글·댓글 신고';
+
+CREATE INDEX `ix_report_status_target` ON `REPORT` (`status`, `target_type`, `target_id`);
+CREATE INDEX `ix_report_target_user` ON `REPORT` (`target_user_id`, `status`);
+
+-- 28. (USER_SANCTION 회원 제재 이력은 migration_14에서 삭제 — 회원 제재 없이 글 차단만)
+
+-- 29. USER_POI_DISLIKE: 회원이 관심없음으로 표시한 관광지 (다음 AI 추천에서 제외, 모든 여행 공통)
+CREATE TABLE `USER_POI_DISLIKE` (
+    `user_id` BIGINT UNSIGNED NOT NULL,
+    `poi_id` BIGINT UNSIGNED NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `pk_user_poi_dislike` PRIMARY KEY (`user_id`, `poi_id`),
+    CONSTRAINT `fk_user_poi_dislike_user`
+        FOREIGN KEY (`user_id`) REFERENCES `USER` (`user_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE,
+    CONSTRAINT `fk_user_poi_dislike_poi`
+        FOREIGN KEY (`poi_id`) REFERENCES `POI` (`poi_id`)
+        ON UPDATE RESTRICT ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  COMMENT='회원이 관심없음으로 표시한 관광지 (AI 추천에서 제외)';
+
+CREATE INDEX `ix_community_post_like_user` ON `COMMUNITY_POST_LIKE` (`user_id`);
 
 -- 채택 경로: 복합 FK로 "존재 + 같은 여행 소속"을 함께 보장한다(소유권 트리거 불필요).
 -- adopted_route_id가 NULL이면 FK 검사를 하지 않으므로 미채택 상태가 허용된다.
@@ -550,6 +719,12 @@ ALTER TABLE `TRAVEL`
         REFERENCES `TRAVEL_ROUTE` (`travel_id`, `route_id`)
         ON UPDATE RESTRICT ON DELETE RESTRICT;
 
+-- 커뮤니티에서 가져온 여행: 글이 지워져도 여행은 남는다. (TRAVEL ↔ COMMUNITY_POST 순환 참조라 ALTER로 추가)
+ALTER TABLE `TRAVEL`
+    ADD CONSTRAINT `fk_travel_source_post`
+        FOREIGN KEY (`source_post_id`) REFERENCES `COMMUNITY_POST` (`post_id`)
+        ON UPDATE RESTRICT ON DELETE SET NULL;
+
 -- 기초 데이터: 질문 9개, 선택지 84개(스타일 6문항 × 7점 + 동기 9 + 테마 21 + 소득 12). 임의 관광지·예시 회원 데이터 없음.
 START TRANSACTION;
 
@@ -557,7 +732,8 @@ INSERT INTO `CODE_GROUP` (`group_code`, `group_name`) VALUES
     ('GEN', '성별'),
     ('AGE', '연령대'),
     ('TCR', '동행자 관계'),
-    ('POI_CAT', '관광지 분류');   -- POI.category_code. AI 학습 VISIT_AREA_TYPE_CD 1~8·9(원본 13) 기준
+    ('POI_CAT', '관광지 분류'),   -- POI.category_code. AI 학습 VISIT_AREA_TYPE_CD 1~8·9(원본 13) 기준
+    ('ACCOM_TYPE', '숙소 종류');  -- ACCOMMODATION.accommodation_type
 
 INSERT INTO `CODE` (`group_code`, `code_value`, `code_name`) VALUES
     ('GEN', '1', '남자'),
@@ -589,7 +765,14 @@ INSERT INTO `CODE` (`group_code`, `code_value`, `code_name`) VALUES
     ('POI_CAT', 'THEME', '테마시설'),
     ('POI_CAT', 'TRAIL', '산책로·둘레길'),
     ('POI_CAT', 'FESTIVAL', '지역 축제·행사'),
-    ('POI_CAT', 'EXPERIENCE', '체험 활동 관광지');
+    ('POI_CAT', 'EXPERIENCE', '체험 활동 관광지'),
+    ('ACCOM_TYPE', 'HOTEL', '호텔'),
+    ('ACCOM_TYPE', 'RESORT', '리조트·콘도'),
+    ('ACCOM_TYPE', 'PENSION', '펜션·풀빌라'),
+    ('ACCOM_TYPE', 'GUESTHOUSE', '게스트하우스·민박'),
+    ('ACCOM_TYPE', 'MOTEL', '모텔'),
+    ('ACCOM_TYPE', 'CAMPING', '캠핑·글램핑'),
+    ('ACCOM_TYPE', 'ETC', '기타 숙소');
 
 INSERT INTO `REGION` (`region_id`, `region_code`, `region_name`) VALUES
     (1, 'EAST', '동부'),
@@ -614,67 +797,67 @@ INSERT INTO `PREFERENCE` (`preference_id`, `preference_code`, `preference_name`,
     (202, 'USER_MISSION', '테마 선호도', 'MULTI_SELECT', 'THEME'),
     (203, 'INCOME_CODE', '월평균 소득 구간', 'SINGLE_SELECT', 'INCOME');
 
-INSERT INTO `PREFERENCE_OPTION` (`preference_id`, `option_value`, `option_name`, `description`) VALUES
+INSERT INTO `PREFERENCE_OPTION` (`preference_id`, `option_value`, `option_name`) VALUES
     -- 101. TRAVEL_STYL_1: 자연 ↔ 도시
-    (101, 1, '자연 매우 선호', NULL), (101, 2, '자연 중간 선호', NULL), (101, 3, '자연 약간 선호', NULL), (101, 4, '중립', NULL),
-    (101, 5, '도시 약간 선호', NULL), (101, 6, '도시 중간 선호', NULL), (101, 7, '도시 매우 선호', NULL),
+    (101, 1, '자연 매우 선호'), (101, 2, '자연 중간 선호'), (101, 3, '자연 약간 선호'), (101, 4, '중립'),
+    (101, 5, '도시 약간 선호'), (101, 6, '도시 중간 선호'), (101, 7, '도시 매우 선호'),
     -- 102. TRAVEL_STYL_3: 새로운 지역 ↔ 익숙한 지역
-    (102, 1, '새로운 지역 매우 선호', NULL), (102, 2, '새로운 지역 중간 선호', NULL), (102, 3, '새로운 지역 약간 선호', NULL), (102, 4, '중립', NULL),
-    (102, 5, '익숙한 지역 약간 선호', NULL), (102, 6, '익숙한 지역 중간 선호', NULL), (102, 7, '익숙한 지역 매우 선호', NULL),
+    (102, 1, '새로운 지역 매우 선호'), (102, 2, '새로운 지역 중간 선호'), (102, 3, '새로운 지역 약간 선호'), (102, 4, '중립'),
+    (102, 5, '익숙한 지역 약간 선호'), (102, 6, '익숙한 지역 중간 선호'), (102, 7, '익숙한 지역 매우 선호'),
     -- 103. TRAVEL_STYL_6: 숨은 명소 ↔ 유명 명소
-    (103, 1, '숨은 명소 매우 선호', NULL), (103, 2, '숨은 명소 중간 선호', NULL), (103, 3, '숨은 명소 약간 선호', NULL), (103, 4, '중립', NULL),
-    (103, 5, '유명 명소 약간 선호', NULL), (103, 6, '유명 명소 중간 선호', NULL), (103, 7, '유명 명소 매우 선호', NULL),
+    (103, 1, '숨은 명소 매우 선호'), (103, 2, '숨은 명소 중간 선호'), (103, 3, '숨은 명소 약간 선호'), (103, 4, '중립'),
+    (103, 5, '유명 명소 약간 선호'), (103, 6, '유명 명소 중간 선호'), (103, 7, '유명 명소 매우 선호'),
     -- 104. TRAVEL_STYL_5: 휴양·휴식 ↔ 체험·활동
-    (104, 1, '휴양·휴식 매우 선호', NULL), (104, 2, '휴양·휴식 중간 선호', NULL), (104, 3, '휴양·휴식 약간 선호', NULL), (104, 4, '중립', NULL),
-    (104, 5, '체험·활동 약간 선호', NULL), (104, 6, '체험·활동 중간 선호', NULL), (104, 7, '체험·활동 매우 선호', NULL),
+    (104, 1, '휴양·휴식 매우 선호'), (104, 2, '휴양·휴식 중간 선호'), (104, 3, '휴양·휴식 약간 선호'), (104, 4, '중립'),
+    (104, 5, '체험·활동 약간 선호'), (104, 6, '체험·활동 중간 선호'), (104, 7, '체험·활동 매우 선호'),
     -- 105. TRAVEL_STYL_8: 사진 촬영 중요하지 않음 ↔ 중요함
-    (105, 1, '사진 촬영 전혀 중요하지 않음', NULL), (105, 2, '사진 촬영 중요하지 않은 편', NULL), (105, 3, '사진 촬영 약간 중요하지 않음', NULL), (105, 4, '중립', NULL),
-    (105, 5, '사진 촬영 약간 중요함', NULL), (105, 6, '사진 촬영 중요한 편', NULL), (105, 7, '사진 촬영 매우 중요함', NULL),
+    (105, 1, '사진 촬영 전혀 중요하지 않음'), (105, 2, '사진 촬영 중요하지 않은 편'), (105, 3, '사진 촬영 약간 중요하지 않음'), (105, 4, '중립'),
+    (105, 5, '사진 촬영 약간 중요함'), (105, 6, '사진 촬영 중요한 편'), (105, 7, '사진 촬영 매우 중요함'),
     -- 106. TRAVEL_STYL_7: 계획에 따른 여행 ↔ 상황에 따른 여행
-    (106, 1, '계획에 따른 여행 매우 선호', NULL), (106, 2, '계획에 따른 여행 중간 선호', NULL), (106, 3, '계획에 따른 여행 약간 선호', NULL), (106, 4, '중립', NULL),
-    (106, 5, '상황에 따른 여행 약간 선호', NULL), (106, 6, '상황에 따른 여행 중간 선호', NULL), (106, 7, '상황에 따른 여행 매우 선호', NULL),
-    (201, 1, '일상 탈출·기분 전환', NULL),
-    (201, 2, '휴식·피로 회복', NULL),
-    (201, 3, '친목·유대감', NULL),
-    (201, 4, '자아 탐색·성찰', NULL),
-    (201, 5, 'SNS 공유·자랑', NULL),
-    (201, 6, '운동·건강', NULL),
-    (201, 7, '새로운 경험', NULL),
-    (201, 8, '역사·문화·배움', NULL),
-    (201, 9, '기념·특별한 목적', NULL),
-    (202, 1, '쇼핑', NULL),
-    (202, 2, '테마파크, 놀이시설, 동·식물원 방문', NULL),
-    (202, 3, '역사 유적지 방문', NULL),
-    (202, 4, '시티투어', NULL),
-    (202, 5, '야외 스포츠·레포츠 활동', NULL),
-    (202, 6, '지역 문화예술·공연·전시시설 관람', NULL),
-    (202, 7, '유흥·오락(나이트라이프)', NULL),
-    (202, 8, '캠핑', NULL),
-    (202, 9, '지역 축제·이벤트 참가', NULL),
-    (202, 10, '온천·스파', NULL),
-    (202, 11, '교육·체험 프로그램 참가', NULL),
-    (202, 12, '드라마 촬영지 방문', NULL),
-    (202, 13, '종교·성지 순례', NULL),
-    (202, 14, '웰니스 여행', NULL),
-    (202, 15, 'SNS 인생샷 여행', NULL),
-    (202, 16, '호캉스 여행', NULL),
-    (202, 17, '신규 여행지 발굴', NULL),
-    (202, 18, '반려동물 동반 여행', NULL),
-    (202, 19, '인플루언서 따라 하기 여행', NULL),
-    (202, 20, '친환경 여행', NULL),
-    (202, 21, '등반여행', NULL),
-    (203, 1, '소득 없음', NULL),
-    (203, 2, '월평균 100만 원 미만', NULL),
-    (203, 3, '월평균 100만 원 이상 ~ 200만 원 미만', NULL),
-    (203, 4, '월평균 200만 원 이상 ~ 300만 원 미만', NULL),
-    (203, 5, '월평균 300만 원 이상 ~ 400만 원 미만', NULL),
-    (203, 6, '월평균 400만 원 이상 ~ 500만 원 미만', NULL),
-    (203, 7, '월평균 500만 원 이상 ~ 600만 원 미만', NULL),
-    (203, 8, '월평균 600만 원 이상 ~ 700만 원 미만', NULL),
-    (203, 9, '월평균 700만 원 이상 ~ 800만 원 미만', NULL),
-    (203, 10, '월평균 800만 원 이상 ~ 900만 원 미만', NULL),
-    (203, 11, '월평균 900만 원 이상 ~ 1,000만 원 미만', NULL),
-    (203, 12, '월평균 1,000만 원 이상', NULL);
+    (106, 1, '계획에 따른 여행 매우 선호'), (106, 2, '계획에 따른 여행 중간 선호'), (106, 3, '계획에 따른 여행 약간 선호'), (106, 4, '중립'),
+    (106, 5, '상황에 따른 여행 약간 선호'), (106, 6, '상황에 따른 여행 중간 선호'), (106, 7, '상황에 따른 여행 매우 선호'),
+    (201, 1, '일상 탈출·기분 전환'),
+    (201, 2, '휴식·피로 회복'),
+    (201, 3, '친목·유대감'),
+    (201, 4, '자아 탐색·성찰'),
+    (201, 5, 'SNS 공유·자랑'),
+    (201, 6, '운동·건강'),
+    (201, 7, '새로운 경험'),
+    (201, 8, '역사·문화·배움'),
+    (201, 9, '기념·특별한 목적'),
+    (202, 1, '쇼핑'),
+    (202, 2, '테마파크, 놀이시설, 동·식물원 방문'),
+    (202, 3, '역사 유적지 방문'),
+    (202, 4, '시티투어'),
+    (202, 5, '야외 스포츠·레포츠 활동'),
+    (202, 6, '지역 문화예술·공연·전시시설 관람'),
+    (202, 7, '유흥·오락(나이트라이프)'),
+    (202, 8, '캠핑'),
+    (202, 9, '지역 축제·이벤트 참가'),
+    (202, 10, '온천·스파'),
+    (202, 11, '교육·체험 프로그램 참가'),
+    (202, 12, '드라마 촬영지 방문'),
+    (202, 13, '종교·성지 순례'),
+    (202, 14, '웰니스 여행'),
+    (202, 15, 'SNS 인생샷 여행'),
+    (202, 16, '호캉스 여행'),
+    (202, 17, '신규 여행지 발굴'),
+    (202, 18, '반려동물 동반 여행'),
+    (202, 19, '인플루언서 따라 하기 여행'),
+    (202, 20, '친환경 여행'),
+    (202, 21, '등반여행'),
+    (203, 1, '소득 없음'),
+    (203, 2, '월평균 100만 원 미만'),
+    (203, 3, '월평균 100만 원 이상 ~ 200만 원 미만'),
+    (203, 4, '월평균 200만 원 이상 ~ 300만 원 미만'),
+    (203, 5, '월평균 300만 원 이상 ~ 400만 원 미만'),
+    (203, 6, '월평균 400만 원 이상 ~ 500만 원 미만'),
+    (203, 7, '월평균 500만 원 이상 ~ 600만 원 미만'),
+    (203, 8, '월평균 600만 원 이상 ~ 700만 원 미만'),
+    (203, 9, '월평균 700만 원 이상 ~ 800만 원 미만'),
+    (203, 10, '월평균 800만 원 이상 ~ 900만 원 미만'),
+    (203, 11, '월평균 900만 원 이상 ~ 1,000만 원 미만'),
+    (203, 12, '월평균 1,000만 원 이상');
 
 COMMIT;
 
@@ -878,6 +1061,224 @@ SELECT
 
 FROM `TRAVEL` t
 JOIN `USER` u ON u.`user_id` = t.`user_id`;
+
+-- 재학습 데이터셋: 후기까지 끝난 여행의 (여행, AI 추천 관광지) 1줄
+--  - 대상 여행: 일정 확정 + 후기 작성(모두 다녀옴 / 일부만 다녀옴). 가지 않음·경로 가져온 여행은 제외
+--  - 대상 관광지: AI가 추천한 관광지 중 우리 관광지와 연결된 것(poi_id 있음). 화면에 안 보인 후보도 shown = 0으로 포함
+--    같은 여행에서 여러 번 추천됐으면 화면에 보인 것 우선, 같으면 가장 최근 추천 1줄
+--  - label: 3 방문 + 좋았어요 / 2 실제 방문 / 1 일정 확정(못 갔어요) / 0 추천만 (일정에 넣지 않음)
+CREATE OR REPLACE SQL SECURITY INVOKER VIEW `AI_TRAINING_DATASET` AS
+WITH done AS (
+    SELECT t.`travel_id`, t.`user_id`, t.`adopted_route_id`, f.`feedback_id`, f.`execution_status`
+      FROM `TRAVEL` t
+      JOIN `TRAVEL_FEEDBACK` f ON f.`travel_id` = t.`travel_id`
+     WHERE t.`adopted_route_id` IS NOT NULL
+       AND t.`source_post_id` IS NULL
+       AND f.`execution_status` IN ('COMPLETED', 'PARTIAL')
+),
+cand AS (
+    SELECT q.`travel_id`, i.`poi_id`, i.`place_name`, i.`rank_no`, i.`shown`, q.`model_version`,
+           ROW_NUMBER() OVER (PARTITION BY q.`travel_id`, i.`poi_id`
+                              ORDER BY i.`shown` DESC, q.`request_id` DESC) AS rn
+      FROM `RECOMMEND_REQUEST` q
+      JOIN `RECOMMEND_ITEM` i ON i.`request_id` = q.`request_id`
+     WHERE q.`status` = 'SUCCESS' AND i.`poi_id` IS NOT NULL
+),
+comp AS (
+    SELECT c.`travel_id`, c.`relation_code`, c.`gender_code`, c.`age_group_code`,
+           ROW_NUMBER() OVER (PARTITION BY c.`travel_id` ORDER BY c.`companion_seq`) AS slot
+      FROM `COMPANION` c
+),
+comp_slots AS (
+    SELECT `travel_id`,
+           MAX(CASE WHEN slot = 1 THEN relation_code END)  AS `COMPANION_1_REL`,
+           MAX(CASE WHEN slot = 1 THEN gender_code END)    AS `COMPANION_1_GENDER`,
+           MAX(CASE WHEN slot = 1 THEN age_group_code END) AS `COMPANION_1_AGE`,
+           MAX(CASE WHEN slot = 2 THEN relation_code END)  AS `COMPANION_2_REL`,
+           MAX(CASE WHEN slot = 2 THEN gender_code END)    AS `COMPANION_2_GENDER`,
+           MAX(CASE WHEN slot = 2 THEN age_group_code END) AS `COMPANION_2_AGE`,
+           MAX(CASE WHEN slot = 3 THEN relation_code END)  AS `COMPANION_3_REL`,
+           MAX(CASE WHEN slot = 3 THEN gender_code END)    AS `COMPANION_3_GENDER`,
+           MAX(CASE WHEN slot = 3 THEN age_group_code END) AS `COMPANION_3_AGE`,
+           MAX(CASE WHEN slot = 4 THEN relation_code END)  AS `COMPANION_4_REL`,
+           MAX(CASE WHEN slot = 4 THEN gender_code END)    AS `COMPANION_4_GENDER`,
+           MAX(CASE WHEN slot = 4 THEN age_group_code END) AS `COMPANION_4_AGE`,
+           MAX(CASE WHEN slot = 5 THEN relation_code END)  AS `COMPANION_5_REL`,
+           MAX(CASE WHEN slot = 5 THEN gender_code END)    AS `COMPANION_5_GENDER`,
+           MAX(CASE WHEN slot = 5 THEN age_group_code END) AS `COMPANION_5_AGE`,
+           MAX(CASE WHEN slot = 6 THEN relation_code END)  AS `COMPANION_6_REL`,
+           MAX(CASE WHEN slot = 6 THEN gender_code END)    AS `COMPANION_6_GENDER`,
+           MAX(CASE WHEN slot = 6 THEN age_group_code END) AS `COMPANION_6_AGE`,
+           MAX(CASE WHEN slot = 7 THEN relation_code END)  AS `COMPANION_7_REL`,
+           MAX(CASE WHEN slot = 7 THEN gender_code END)    AS `COMPANION_7_GENDER`,
+           MAX(CASE WHEN slot = 7 THEN age_group_code END) AS `COMPANION_7_AGE`,
+           MAX(CASE WHEN slot = 8 THEN relation_code END)  AS `COMPANION_8_REL`,
+           MAX(CASE WHEN slot = 8 THEN gender_code END)    AS `COMPANION_8_GENDER`,
+           MAX(CASE WHEN slot = 8 THEN age_group_code END) AS `COMPANION_8_AGE`,
+           MAX(CASE WHEN slot = 9 THEN relation_code END)  AS `COMPANION_9_REL`,
+           MAX(CASE WHEN slot = 9 THEN gender_code END)    AS `COMPANION_9_GENDER`,
+           MAX(CASE WHEN slot = 9 THEN age_group_code END) AS `COMPANION_9_AGE`,
+           MAX(CASE WHEN slot = 10 THEN relation_code END)  AS `COMPANION_10_REL`,
+           MAX(CASE WHEN slot = 10 THEN gender_code END)    AS `COMPANION_10_GENDER`,
+           MAX(CASE WHEN slot = 10 THEN age_group_code END) AS `COMPANION_10_AGE`,
+           MAX(CASE WHEN slot = 11 THEN relation_code END)  AS `COMPANION_11_REL`,
+           MAX(CASE WHEN slot = 11 THEN gender_code END)    AS `COMPANION_11_GENDER`,
+           MAX(CASE WHEN slot = 11 THEN age_group_code END) AS `COMPANION_11_AGE`,
+           MAX(CASE WHEN slot = 12 THEN relation_code END)  AS `COMPANION_12_REL`,
+           MAX(CASE WHEN slot = 12 THEN gender_code END)    AS `COMPANION_12_GENDER`,
+           MAX(CASE WHEN slot = 12 THEN age_group_code END) AS `COMPANION_12_AGE`,
+           MAX(CASE WHEN slot = 13 THEN relation_code END)  AS `COMPANION_13_REL`,
+           MAX(CASE WHEN slot = 13 THEN gender_code END)    AS `COMPANION_13_GENDER`,
+           MAX(CASE WHEN slot = 13 THEN age_group_code END) AS `COMPANION_13_AGE`,
+           MAX(CASE WHEN slot = 14 THEN relation_code END)  AS `COMPANION_14_REL`,
+           MAX(CASE WHEN slot = 14 THEN gender_code END)    AS `COMPANION_14_GENDER`,
+           MAX(CASE WHEN slot = 14 THEN age_group_code END) AS `COMPANION_14_AGE`,
+           MAX(CASE WHEN slot = 15 THEN relation_code END)  AS `COMPANION_15_REL`,
+           MAX(CASE WHEN slot = 15 THEN gender_code END)    AS `COMPANION_15_GENDER`,
+           MAX(CASE WHEN slot = 15 THEN age_group_code END) AS `COMPANION_15_AGE`,
+           MAX(CASE WHEN slot = 16 THEN relation_code END)  AS `COMPANION_16_REL`,
+           MAX(CASE WHEN slot = 16 THEN gender_code END)    AS `COMPANION_16_GENDER`,
+           MAX(CASE WHEN slot = 16 THEN age_group_code END) AS `COMPANION_16_AGE`,
+           MAX(CASE WHEN slot = 17 THEN relation_code END)  AS `COMPANION_17_REL`,
+           MAX(CASE WHEN slot = 17 THEN gender_code END)    AS `COMPANION_17_GENDER`,
+           MAX(CASE WHEN slot = 17 THEN age_group_code END) AS `COMPANION_17_AGE`,
+           MAX(CASE WHEN slot = 18 THEN relation_code END)  AS `COMPANION_18_REL`,
+           MAX(CASE WHEN slot = 18 THEN gender_code END)    AS `COMPANION_18_GENDER`,
+           MAX(CASE WHEN slot = 18 THEN age_group_code END) AS `COMPANION_18_AGE`
+      FROM comp
+     GROUP BY `travel_id`
+)
+SELECT
+    d.`travel_id`,
+    d.`user_id`,
+    v.`gender_code`          AS `GENDER`,
+    v.`age_group_code`       AS `AGE_GRP`,
+    v.`income_code`          AS `INCOME`,
+    v.`companion_count`      AS `TRAVEL_COMPANIONS_NUM`,
+    v.`style_nature_city`    AS `TRAVEL_STYL_1`,
+    v.`style_new_familiar`   AS `TRAVEL_STYL_3`,
+    v.`style_relax_activity` AS `TRAVEL_STYL_5`,
+    v.`style_hidden_famous`  AS `TRAVEL_STYL_6`,
+    v.`style_plan_free`      AS `TRAVEL_STYL_7`,
+    v.`photo_importance`     AS `TRAVEL_STYL_8`,
+    v.`travel_motive_1`      AS `TRAVEL_MOTIVE_1`,
+    v.`user_mission_1`       AS `TRAVEL_MISSION_PRIORITY_WEB`,
+    cs.`COMPANION_1_REL`, cs.`COMPANION_1_GENDER`, cs.`COMPANION_1_AGE`,
+    cs.`COMPANION_2_REL`, cs.`COMPANION_2_GENDER`, cs.`COMPANION_2_AGE`,
+    cs.`COMPANION_3_REL`, cs.`COMPANION_3_GENDER`, cs.`COMPANION_3_AGE`,
+    cs.`COMPANION_4_REL`, cs.`COMPANION_4_GENDER`, cs.`COMPANION_4_AGE`,
+    cs.`COMPANION_5_REL`, cs.`COMPANION_5_GENDER`, cs.`COMPANION_5_AGE`,
+    cs.`COMPANION_6_REL`, cs.`COMPANION_6_GENDER`, cs.`COMPANION_6_AGE`,
+    cs.`COMPANION_7_REL`, cs.`COMPANION_7_GENDER`, cs.`COMPANION_7_AGE`,
+    cs.`COMPANION_8_REL`, cs.`COMPANION_8_GENDER`, cs.`COMPANION_8_AGE`,
+    cs.`COMPANION_9_REL`, cs.`COMPANION_9_GENDER`, cs.`COMPANION_9_AGE`,
+    cs.`COMPANION_10_REL`, cs.`COMPANION_10_GENDER`, cs.`COMPANION_10_AGE`,
+    cs.`COMPANION_11_REL`, cs.`COMPANION_11_GENDER`, cs.`COMPANION_11_AGE`,
+    cs.`COMPANION_12_REL`, cs.`COMPANION_12_GENDER`, cs.`COMPANION_12_AGE`,
+    cs.`COMPANION_13_REL`, cs.`COMPANION_13_GENDER`, cs.`COMPANION_13_AGE`,
+    cs.`COMPANION_14_REL`, cs.`COMPANION_14_GENDER`, cs.`COMPANION_14_AGE`,
+    cs.`COMPANION_15_REL`, cs.`COMPANION_15_GENDER`, cs.`COMPANION_15_AGE`,
+    cs.`COMPANION_16_REL`, cs.`COMPANION_16_GENDER`, cs.`COMPANION_16_AGE`,
+    cs.`COMPANION_17_REL`, cs.`COMPANION_17_GENDER`, cs.`COMPANION_17_AGE`,
+    cs.`COMPANION_18_REL`, cs.`COMPANION_18_GENDER`, cs.`COMPANION_18_AGE`,
+    c.`poi_id`,
+    c.`place_name`           AS `VISIT_AREA_NM`,
+    p.`address`,
+    CASE p.`category_code`
+        WHEN 'NATURE' THEN 1 WHEN 'HISTORY' THEN 2 WHEN 'CULTURE' THEN 3 WHEN 'COMMERCIAL' THEN 4
+        WHEN 'LEISURE' THEN 5 WHEN 'THEME' THEN 6 WHEN 'TRAIL' THEN 7 WHEN 'FESTIVAL' THEN 8
+        WHEN 'EXPERIENCE' THEN 13 END AS `VISIT_AREA_TYPE_CD`,
+    p.`latitude`,
+    p.`longitude`,
+    r.`region_code`,
+    c.`rank_no`              AS `recommend_rank`,
+    c.`model_version`,
+    c.`shown`,
+    CASE
+        WHEN fs.`visited` = 1 AND fs.`reaction` = 'LIKE' THEN 3
+        WHEN fs.`visited` = 1 THEN 2
+        WHEN fs.`visited` = 0 THEN 1
+        -- 관광지별 결과가 없는 예전 후기: 확정 일정에 있으면 "모두 다녀옴"은 방문(2), 그 외는 일정 확정(1)
+        WHEN EXISTS (SELECT 1 FROM `ROUTE_DAY` rd
+                       JOIN `ROUTE_SPOT` s ON s.`route_day_id` = rd.`route_day_id`
+                      WHERE rd.`route_id` = d.`adopted_route_id` AND s.`poi_id` = c.`poi_id`)
+            THEN CASE WHEN d.`execution_status` = 'COMPLETED' THEN 2 ELSE 1 END
+        ELSE 0
+    END AS `label`
+FROM done d
+JOIN cand c ON c.`travel_id` = d.`travel_id` AND c.rn = 1
+JOIN `AI_TRAVEL_INPUT` v ON v.`travel_id` = d.`travel_id`
+JOIN `POI` p ON p.`poi_id` = c.`poi_id`
+JOIN `REGION` r ON r.`region_id` = p.`region_id`
+LEFT JOIN comp_slots cs ON cs.`travel_id` = d.`travel_id`
+LEFT JOIN `TRAVEL_FEEDBACK_SPOT` fs ON fs.`feedback_id` = d.`feedback_id` AND fs.`poi_id` = c.`poi_id`;
+
+-- 사용자 여정 퍼널: 여행 1개 = 1줄. 단계별 도달 여부(0/1) + 어디까지 갔나 + 어디서 이탈했나
+--  단계: CREATED 여행 생성 → SURVEYED 설문 → RECOMMENDED 추천 받음 → PLACED_ANY 장소 담음
+--        → PLACED_ALL 모두 배치 → ADOPTED 일정 확정 → REVIEWED 후기 작성 (SHARED 커뮤니티 공유는 선택 단계)
+--  funnel_status: DONE 후기까지 완료 / IN_PROGRESS 아직 진행 중 / DROPPED 이탈 확정
+--    이탈 확정 = 여행 종료일이 지났는데 일정 확정 전에 멈춤, 또는 확정했는데 종료일 + 14일까지 후기 없음
+--  drop_step: 이탈 확정일 때 넘어가지 못한 단계 (그 외 NULL)
+--  커뮤니티 경로를 가져와 만든 여행은 설문·추천이 없어 제외
+CREATE OR REPLACE SQL SECURITY INVOKER VIEW `TRAVEL_FUNNEL` AS
+WITH base AS (
+    SELECT t.`travel_id`, t.`user_id`, t.`created_at`, t.`start_date`, t.`end_date`,
+           EXISTS (SELECT 1 FROM `TRAVEL_PREFERENCE` tp WHERE tp.`travel_id` = t.`travel_id`) AS s_surveyed,
+           EXISTS (SELECT 1 FROM `RECOMMEND_REQUEST` q
+                    WHERE q.`travel_id` = t.`travel_id` AND q.`status` = 'SUCCESS') AS s_recommended,
+           (SELECT COUNT(*) FROM `TRAVEL_BOOKMARK` b WHERE b.`travel_id` = t.`travel_id`) AS place_count,
+           (SELECT COUNT(*) FROM `TRAVEL_BOOKMARK` b
+             WHERE b.`travel_id` = t.`travel_id`
+               AND EXISTS (SELECT 1 FROM `TRAVEL_ROUTE` rt
+                             JOIN `ROUTE_DAY` rd ON rd.`route_id` = rt.`route_id`
+                             JOIN `ROUTE_SPOT` s ON s.`route_day_id` = rd.`route_day_id`
+                            WHERE rt.`travel_id` = t.`travel_id` AND s.`poi_id` = b.`poi_id`)) AS placed_count,
+           t.`adopted_route_id` IS NOT NULL AS s_adopted,
+           EXISTS (SELECT 1 FROM `TRAVEL_FEEDBACK` f WHERE f.`travel_id` = t.`travel_id`) AS s_reviewed,
+           EXISTS (SELECT 1 FROM `COMMUNITY_POST` cp
+                    WHERE cp.`travel_id` = t.`travel_id` AND cp.`deleted_at` IS NULL) AS s_shared
+      FROM `TRAVEL` t
+     WHERE t.`source_post_id` IS NULL
+),
+steps AS (
+    SELECT b.*,
+           b.place_count > 0 AS s_placed_any,
+           b.place_count > 0 AND b.placed_count = b.place_count AS s_placed_all,
+           CASE
+               WHEN b.s_reviewed THEN 7
+               WHEN b.s_adopted THEN 6
+               WHEN b.place_count > 0 AND b.placed_count = b.place_count THEN 5
+               WHEN b.place_count > 0 THEN 4
+               WHEN b.s_recommended THEN 3
+               WHEN b.s_surveyed THEN 2
+               ELSE 1
+           END AS reached_no
+      FROM base b
+)
+SELECT
+    `travel_id`, `user_id`, `created_at`, `start_date`, `end_date`,
+    1 AS `step_created`,
+    s_surveyed    AS `step_surveyed`,
+    s_recommended AS `step_recommended`,
+    s_placed_any  AS `step_placed_any`,
+    s_placed_all  AS `step_placed_all`,
+    s_adopted     AS `step_adopted`,
+    s_reviewed    AS `step_reviewed`,
+    s_shared      AS `step_shared`,
+    place_count, placed_count,
+    ELT(reached_no, 'CREATED', 'SURVEYED', 'RECOMMENDED', 'PLACED_ANY', 'PLACED_ALL', 'ADOPTED', 'REVIEWED') AS `reached_step`,
+    CASE
+        WHEN reached_no = 7 THEN 'DONE'
+        WHEN reached_no < 6 AND `end_date` < CURRENT_DATE THEN 'DROPPED'
+        WHEN reached_no = 6 AND `end_date` < CURRENT_DATE - INTERVAL 14 DAY THEN 'DROPPED'
+        ELSE 'IN_PROGRESS'
+    END AS `funnel_status`,
+    CASE
+        WHEN (reached_no < 6 AND `end_date` < CURRENT_DATE)
+          OR (reached_no = 6 AND `end_date` < CURRENT_DATE - INTERVAL 14 DAY)
+        THEN ELT(reached_no, 'SURVEYED', 'RECOMMENDED', 'PLACED_ANY', 'PLACED_ALL', 'ADOPTED', 'REVIEWED')
+    END AS `drop_step`
+FROM steps;
 
 -- 서비스 처리 규칙
 -- 1. 회원가입은 이메일 인증 + 비밀번호로만. 소셜은 로그인 상태에서 연동(SOCIAL_ACCOUNT INSERT).
