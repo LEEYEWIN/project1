@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import Layout from './components/common/Layout.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import HomePage from './pages/HomePage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
 import WithdrawalPage from './pages/WithdrawalPage.jsx';
 import { RequireAuth } from './auth/AuthContext.jsx';
 import TravelCreatePage from './pages/TravelCreatePage.jsx';
@@ -54,6 +55,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route element={<RequireAuth />}>
+        <Route path="/account/profile" element={<ProfilePage />} />
         <Route path="/account/withdraw" element={<WithdrawalPage />} />
         <Route path="/travels" element={<MyTravelsPage />} />
         <Route path="/travels/new" element={<TravelCreatePage />} />

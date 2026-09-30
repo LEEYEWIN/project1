@@ -40,12 +40,17 @@ export function AuthProvider({ children }) {
     setUser(null);
     clearAccountCache();
   }
+  async function updateNickname(nickname) {
+    await client.patch('/me/profile/nickname', { nickname });
+    setUser(user => user ? { ...user, nickname } : user);
+  }
+  function clearSession() { setUser(null); clearAccountCache(); }
   async function logout() {
     await client.post('/auth/logout');
     setUser(null);
     clearAccountCache();
   }
-  return <AuthContext.Provider value={{ user, loading, error, refresh, authenticate, logout, withdraw }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, error, refresh, authenticate, logout, withdraw, clearSession, updateNickname }}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => useContext(AuthContext);
 

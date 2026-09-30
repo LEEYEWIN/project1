@@ -21,13 +21,14 @@ public class ActiveAccountFilter extends OncePerRequestFilter {
      if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
          boolean active;
          try { active = users.findById(Long.valueOf(auth.getName()))
-                 .map(user -> "ACTIVE".equals(user.getStatus())).orElse(false); }
+                 .map(user -> "ACTIVE".equals(user.getStatus()) && request.getSession(false) != null
+                     && java.util.Objects.equals(user.getPasswordHash(), request.getSession(false).getAttribute("credentialStamp"))).orElse(false); }
          catch (NumberFormatException ex) { active = false; }
          if (!active) {
              new SecurityContextLogoutHandler().logout(request, response, auth);
              response.setStatus(401);
              response.setContentType("application/json;charset=UTF-8");
-             response.getWriter().write("{\"message\":\"탈퇴 요청된 계정입니다. 계정 이용이 중단되었습니다.\"}");
+             response.getWriter().write("{\"message\":\"로그인 정보가 변경되었거나 계정 이용이 중단되었습니다. 다시 로그인해 주세요.\"}");
              return;
          }
      }

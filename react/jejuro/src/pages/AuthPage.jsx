@@ -64,6 +64,7 @@ export default function AuthPage({ signup = false }) {
         <h2>{signup ? '회원가입' : '로그인'}</h2>
         <p className="auth-intro">{signup ? '이메일 인증 후 계정을 만들 수 있습니다.' : '저장한 여행과 새로운 발견이 기다리고 있어요.'}</p>
         {!signup && location.state?.withdrawn && <p className="auth-withdrawn" role="status">탈퇴 요청이 완료되었습니다. 계정 이용이 중단되었어요.</p>}
+        {!signup && location.state?.passwordChanged && <p className="auth-withdrawn" role="status">비밀번호를 변경했습니다. 새 비밀번호로 로그인해 주세요.</p>}
         <form onSubmit={submit} className="auth-form" aria-busy={busy}>
           {signup ? <>
             <div className="auth-field">
