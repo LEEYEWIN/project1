@@ -73,6 +73,9 @@ public class User {
  }
  public LocalDateTime getWithdrawnAt() { return withdrawnAt; }
 
+ public void changeNickname(String nickname) { this.nickname = nickname; }
+ public void changePassword(String encodedPassword) { this.passwordHash = encodedPassword; }
+
  public Long getUserId() { return userId; }
  public String getEmail() { return email; }
  public String getNickname() { return nickname; }

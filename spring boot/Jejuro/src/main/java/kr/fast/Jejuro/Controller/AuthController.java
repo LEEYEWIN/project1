@@ -74,6 +74,8 @@ public class AuthController {
          SecurityContextHolder.setContext(context);
          contexts.saveContext(context, request, response);
          var user = users.findById(Long.valueOf(auth.getName())).orElseThrow();
+         request.getSession().setAttribute("loginMethod", "EMAIL");
+         request.getSession().setAttribute("credentialStamp", user.getPasswordHash());
          return new MeResponse(user.getUserId(), user.getNickname(), user.getRole());
      } catch (AuthenticationException ex) {
          throw new ApiException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요.");

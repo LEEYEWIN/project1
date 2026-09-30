@@ -32,6 +32,8 @@ export default function Layout() {
           <button type="button" className="account-name account-trigger" aria-expanded={accountOpen} aria-controls="account-dropdown"
             onClick={() => setAccountOpen(!accountOpen)} onMouseEnter={() => setAccountOpen(true)}> {user.nickname}님 <span aria-hidden="true">⌄</span></button>
           <div id="account-dropdown" className={`account-dropdown ${accountOpen ? 'is-open' : ''}`} onMouseLeave={() => setAccountOpen(false)}>
+            <NavLink to="/account/profile" onClick={() => setAccountOpen(false)}>내 정보 수정하기</NavLink>
+            {user.role === 'ADMIN' && <NavLink to="/admin/kpi" onClick={() => setAccountOpen(false)}>관리자 페이지</NavLink>}
             <NavLink to="/account/withdraw" onClick={() => setAccountOpen(false)}>탈퇴하기</NavLink>
           </div>
         </div><button className="btn small" onClick={signOut} disabled={busy}>{busy ? '로그아웃 중…' : '로그아웃'}</button></>
