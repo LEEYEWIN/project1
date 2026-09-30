@@ -32,12 +32,14 @@ class AuthControllerTest {
  @Autowired MockMvc mvc;
  @Autowired PasswordEncoder encoder;
  @MockitoBean UserRepository users;
+ @MockitoBean kr.fast.Jejuro.Service.EmailVerificationService emailVerification;
  private final AtomicReference<User> stored = new AtomicReference<>();
  private static final String SIGNUP = """
      {"email":"hello@example.com","password":"correct-horse-123","nickname":"제주여행자","birthDate":"2000-05-14","genderCode":2}
      """;
  @BeforeEach void setup() {
      stored.set(null);
+     when(emailVerification.isVerified(anyString())).thenReturn(true);
      when(users.existsByEmailIgnoreCase(anyString())).thenAnswer(call -> stored.get() != null);
      when(users.findByEmailIgnoreCase(anyString())).thenAnswer(call -> Optional.ofNullable(stored.get()));
      when(users.findByIdForUpdate(anyLong())).thenAnswer(call -> Optional.ofNullable(stored.get()));
