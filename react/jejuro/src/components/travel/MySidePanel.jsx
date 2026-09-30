@@ -68,8 +68,11 @@ export default function MySidePanel({ me, travels }) {
             <dd>{reviews}</dd>
           </div>
         </dl>
-        <Link className="btn ghost small side-dislikes" to="/dislikes">
-          관심없음 관광지 관리
+        <Link className="btn primary small side-new" to="/travels/new">
+          + 새 여행 만들기
+        </Link>
+        <Link className="side-link" to="/dislikes">
+          🙅 관심없음 관광지 관리
         </Link>
       </section>
 
