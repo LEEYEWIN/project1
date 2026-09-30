@@ -21,11 +21,11 @@ import kr.fast.Jejuro.Entity.PostType;
 
 public interface CommunityPostRepository extends JpaRepository<CommunityPost, Long> {
 
- /** 최신순: 삭제·신고로 가려지지 않은 글을 글 번호 내림차순으로 (페이지 단위) */
- Page<CommunityPost> findByPostTypeAndDeletedAtIsNullAndHiddenAtIsNullOrderByPostIdDesc(PostType postType, Pageable pageable);
+ /** 최신순: 삭제·차단되지 않은 글(신고 검토 중인 글 포함)을 글 번호 내림차순으로 (페이지 단위) */
+ Page<CommunityPost> findByPostTypeAndDeletedAtIsNullAndBlockReasonIsNullOrderByPostIdDesc(PostType postType, Pageable pageable);
 
  /** 좋아요순에서 전체 개수(페이지 수 계산용) */
- long countByPostTypeAndDeletedAtIsNullAndHiddenAtIsNull(PostType postType);
+ long countByPostTypeAndDeletedAtIsNullAndBlockReasonIsNull(PostType postType);
 
  /**
   * 좋아요순: 좋아요 수가 많은 순, 같으면 최신 글 먼저. 이 페이지에 들어갈 글 번호만 돌려준다.
@@ -36,7 +36,7 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
            FROM COMMUNITY_POST p
           WHERE p.post_type = :type
             AND p.deleted_at IS NULL
-            AND p.hidden_at IS NULL
+            AND p.block_reason IS NULL
           ORDER BY (SELECT COUNT(*) FROM COMMUNITY_POST_LIKE l WHERE l.post_id = p.post_id) DESC,
                    p.post_id DESC
           LIMIT :size OFFSET :offset

@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.DynamicUpdate;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -48,6 +49,12 @@ public class Poi {
  private LocalDateTime hiddenAt;
  /** 관리자가 삭제한 시각 (화면에는 확인 불가) */
  private LocalDateTime deletedAt;
+ /**
+  * AI 추천 대상 (AI가 학습한 275곳만 true). false = AI 추천에는 나오지 않고 검색해서 직접 담기만 가능.
+  * 관리자가 새로 추가한 관광지는 false (모델이 모르는 곳). 값은 DB(migration_14)에서만 바꾼다.
+  */
+ @Column(name = "ai_recommend", nullable = false)
+ private boolean aiRecommend;
 
  /** 삭제된 관광지를 여행 장소·경로·후기에 보여 줄 이름 */
  public static final String UNAVAILABLE_NAME = "확인 불가 (삭제된 관광지)";
@@ -134,4 +141,5 @@ public class Poi {
  public String getParking() { return parking; }
  public LocalDateTime getHiddenAt() { return hiddenAt; }
  public LocalDateTime getDeletedAt() { return deletedAt; }
+ public boolean isAiRecommend() { return aiRecommend; }
 }

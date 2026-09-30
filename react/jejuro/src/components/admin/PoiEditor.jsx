@@ -45,7 +45,7 @@ const TEXT_FIELDS = [
 
 /**
  * 관리자 관광지 편집 창 (오른쪽)
- * poiId = null 이면 새 관광지. 저장하면 편집 모드로 바뀌어 AI 이름을 연결할 수 있다.
+ * poiId = null 이면 새 관광지(= 직접 선택만, AI 추천 대상 아님). 저장하면 편집 모드로 바뀐다.
  */
 export default function PoiEditor({ poiId, options, onClose, onSaved }) {
   const [form, setForm] = useState(poiId ? null : EMPTY);
@@ -109,7 +109,7 @@ export default function PoiEditor({ poiId, options, onClose, onSaved }) {
         onSaved();
       } else {
         const { poiId: newId } = await createPoi(payload);
-        onSaved(newId); // 편집 모드로 바꿔 AI 이름을 연결할 수 있게
+        onSaved(newId); // 편집 모드로 바꿈
       }
     }, poiId ? '저장했어요.' : '');
   };
@@ -180,6 +180,11 @@ export default function PoiEditor({ poiId, options, onClose, onSaved }) {
         <p className="adm-muted">
           여행 장소 {detail.usage.bookmarks} · 경로 {detail.usage.routeSpots} · AI 추천 노출 {detail.usage.recommended} · 후기{' '}
           {detail.usage.feedbackSpots}
+          {detail.aiRecommend ? (
+            <span className="adm-badge ok">AI 추천 대상</span>
+          ) : (
+            <span className="adm-badge">직접 선택만 (AI 추천 제외)</span>
+          )}
           {detail.hiddenAt && <span className="adm-badge">숨김 {dt(detail.hiddenAt)}</span>}
           {detail.deletedAt && <span className="adm-badge bad">삭제됨 {dt(detail.deletedAt)}</span>}
         </p>
@@ -281,38 +286,47 @@ export default function PoiEditor({ poiId, options, onClose, onSaved }) {
 
       {detail && (
         <>
-          <h3 className="adm-panel-h">AI 이름 연결</h3>
-          <p className="adm-muted">
-            AI가 추천 결과로 주는 장소 이름(학습 데이터 VISIT_AREA_NM)을 이 관광지와 연결해요. 연결이 없으면 AI 추천에 나오지
-            않습니다.
-          </p>
-          {aiNames.length === 0 ? (
-            <p className="adm-badge bad">연결된 AI 이름 없음</p>
+          <h3 className="adm-panel-h">AI 추천</h3>
+          {!detail.aiRecommend ? (
+            <p className="adm-muted">
+              AI가 학습하지 않은 관광지라 <b>AI 추천에는 나오지 않고</b>, 회원이 관광지 목록·검색에서 직접 골라 담을 수만 있어요.
+              (새로 추가한 관광지도 여기에 해당)
+            </p>
           ) : (
-            <ul className="adm-chips">
-              {aiNames.map((m) => (
-                <li key={m.sourcePoiId}>
-                  {m.sourcePoiId}
-                  <button type="button" aria-label={`${m.sourcePoiId} 연결 빼기`} disabled={busy} onClick={() => removeMap(m.sourcePoiId)}>
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="adm-muted">
+                AI가 학습한 관광지(275곳 중 하나)예요. AI가 추천 결과로 주는 장소 이름(VISIT_AREA_NM)이 아래 이름으로 이 관광지와
+                연결됩니다. 연결이 모두 빠지면 AI 추천에 나오지 않아요.
+              </p>
+              {aiNames.length === 0 ? (
+                <p className="adm-badge bad">연결된 AI 이름 없음</p>
+              ) : (
+                <ul className="adm-chips">
+                  {aiNames.map((m) => (
+                    <li key={m.sourcePoiId}>
+                      {m.sourcePoiId}
+                      <button type="button" aria-label={`${m.sourcePoiId} 연결 빼기`} disabled={busy} onClick={() => removeMap(m.sourcePoiId)}>
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form className="adm-sanction" onSubmit={addMap}>
+                <input
+                  className="adm-input"
+                  value={mapName}
+                  maxLength={255}
+                  placeholder="예) 성산일출봉"
+                  aria-label="연결할 AI 장소 이름"
+                  onChange={(e) => setMapName(e.target.value)}
+                />
+                <button type="submit" className="adm-btn" disabled={busy}>
+                  연결
+                </button>
+              </form>
+            </>
           )}
-          <form className="adm-sanction" onSubmit={addMap}>
-            <input
-              className="adm-input"
-              value={mapName}
-              maxLength={255}
-              placeholder="예) 성산일출봉"
-              aria-label="연결할 AI 장소 이름"
-              onChange={(e) => setMapName(e.target.value)}
-            />
-            <button type="submit" className="adm-btn" disabled={busy}>
-              연결
-            </button>
-          </form>
           {sourceIds.length > 0 && (
             <p className="adm-muted">원본 데이터 ID: {sourceIds.map((m) => m.sourcePoiId).join(', ')}</p>
           )}

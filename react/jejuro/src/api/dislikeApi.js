@@ -16,3 +16,9 @@ export async function addDislike(poiId) {
 export async function removeDislike(poiId) {
   await client.delete(`/me/dislikes/${poiId}`);
 }
+
+/** 이전에 추천받은 관광지 (내 모든 여행) → [{ poi, disliked, lastRecommendedAt, times }] */
+export async function fetchRecommendedPois() {
+  const { data } = await client.get('/me/dislikes/recommended');
+  return data;
+}

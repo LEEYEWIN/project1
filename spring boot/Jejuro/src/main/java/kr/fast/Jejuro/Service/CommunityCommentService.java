@@ -80,10 +80,9 @@ public class CommunityCommentService {
 
  @Transactional
  public Long create(Long postId, Long userId, CommentCreateRequest req) {
-     userStatusService.checkCanWrite(userId);
      CommunityPost post = communityService.getReadable(postId, userId);
      if (post.isHidden()) {
-         throw ApiException.badRequest("신고로 가려진 글에는 댓글을 달 수 없습니다.");
+         throw ApiException.badRequest("신고된 게시글에는 댓글을 달 수 없습니다.");
      }
      Long parentId = null;
      if (req.parentCommentId() != null) {
@@ -94,7 +93,7 @@ public class CommunityCommentService {
              throw ApiException.badRequest("삭제된 댓글에는 답글을 달 수 없습니다.");
          }
          if (parent.isHidden()) {
-             throw ApiException.badRequest("신고로 가려진 댓글에는 답글을 달 수 없습니다.");
+             throw ApiException.badRequest("신고된 댓글에는 답글을 달 수 없습니다.");
          }
          parentId = parent.isReply() ? parent.getParentCommentId() : parent.getCommentId();   // 한 단계만
      }
@@ -108,7 +107,9 @@ public class CommunityCommentService {
      if (c.isBlocked()) {
          throw ApiException.badRequest("관리자가 차단한 댓글은 수정할 수 없습니다.");
      }
-     userStatusService.checkCanWrite(userId);
+     if (c.isHidden()) {
+         throw new ApiException(HttpStatus.CONFLICT, "신고된 댓글은 관리자 확인이 끝난 뒤 수정할 수 있습니다.");
+     }
      c.edit(req.content().trim(), LocalDateTime.now());
  }
 
@@ -142,8 +143,8 @@ public class CommunityCommentService {
      boolean mine = c.isWrittenBy(v.loginUserId());
      boolean reported = v.reported().contains(c.getCommentId());
      String blockLabel = c.isBlocked() ? ReportPolicy.label(c.getBlockReason()) : null;
-     // 차단: 관리자만 내용 확인 (작성자 포함) / 자동 가림: 작성자·관리자만
-     if ((c.isBlocked() && !v.admin()) || (c.isHidden() && !mine && !v.admin())) {
+     // 차단·신고 검토 중: 관리자만 내용 확인 (작성자 포함 다른 회원은 "신고된 댓글입니다" / 차단 안내)
+     if (c.isHidden() && !v.admin()) {
          return new CommentResponse(c.getCommentId(), c.getParentCommentId(), null, null,
                  c.getCreatedAt(), null, false, false, true, reported, blockLabel, replies);
      }

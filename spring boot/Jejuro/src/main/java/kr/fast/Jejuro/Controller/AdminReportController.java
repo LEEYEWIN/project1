@@ -1,7 +1,7 @@
 package kr.fast.Jejuro.Controller;
 
 
-//[관리자 신고 처리]
+// [관리자 신고 처리]
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,42 +25,42 @@ import kr.fast.Jejuro.Service.ReportService;
 @RequestMapping("/api/admin/reports")
 public class AdminReportController {
 
- private final ReportService reportService;
- private final AdminGuard adminGuard;
- private final CurrentUser currentUser;
+    private final ReportService reportService;
+    private final AdminGuard adminGuard;
+    private final CurrentUser currentUser;
 
- public AdminReportController(ReportService reportService, AdminGuard adminGuard, CurrentUser currentUser) {
-     this.reportService = reportService;
-     this.adminGuard = adminGuard;
-     this.currentUser = currentUser;
- }
+    public AdminReportController(ReportService reportService, AdminGuard adminGuard, CurrentUser currentUser) {
+        this.reportService = reportService;
+        this.adminGuard = adminGuard;
+        this.currentUser = currentUser;
+    }
 
- /** GET /api/admin/reports?status=PENDING|DONE&type=POST|COMMENT&page=0 (신고된 글·댓글 단위) */
- @GetMapping
- public AdminReportResponse list(@RequestParam(name = "status", defaultValue = "PENDING") String status,
-                                 @RequestParam(name = "type", required = false) String type,
-                                 @RequestParam(name = "page", defaultValue = "0") int page) {
-     adminGuard.check();
-     return reportService.list(status, type, page);
- }
+    /** GET /api/admin/reports?status=PENDING|DONE&type=POST|COMMENT&page=0 (신고된 글·댓글 단위) */
+    @GetMapping
+    public AdminReportResponse list(@RequestParam(name = "status", defaultValue = "PENDING") String status,
+                                    @RequestParam(name = "type", required = false) String type,
+                                    @RequestParam(name = "page", defaultValue = "0") int page) {
+        adminGuard.check();
+        return reportService.list(status, type, page);
+    }
 
- /** 차단 해제: POST /api/admin/reports/POST/12/unblock */
- @PostMapping("/{targetType}/{targetId}/unblock")
- @ResponseStatus(HttpStatus.NO_CONTENT)
- public void unblock(@PathVariable("targetType") String targetType, @PathVariable("targetId") Long targetId) {
-     adminGuard.check();
-     reportService.unblock(targetType.toUpperCase(), targetId);
- }
+    /** 차단 해제: POST /api/admin/reports/POST/12/unblock */
+    @PostMapping("/{targetType}/{targetId}/unblock")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unblock(@PathVariable("targetType") String targetType, @PathVariable("targetId") Long targetId) {
+        adminGuard.check();
+        reportService.unblock(targetType.toUpperCase(), targetId);
+    }
 
- /**
-  * 처리: POST /api/admin/reports/POST/12/handle
-  * 본문 { "action": "DELETE", "sanction": "WARNING", "memo": "" }
-  */
- @PostMapping("/{targetType}/{targetId}/handle")
- @ResponseStatus(HttpStatus.NO_CONTENT)
- public void handle(@PathVariable("targetType") String targetType, @PathVariable("targetId") Long targetId,
-                    @Valid @RequestBody ReportHandleRequest req) {
-     adminGuard.check();
-     reportService.handle(currentUser.id(), targetType.toUpperCase(), targetId, req);
- }
+    /**
+     * 처리: POST /api/admin/reports/POST/12/handle
+     * 본문 { "action": "BLOCK", "blockReason": "ABUSE" } 또는 { "action": "KEEP" } (반려)
+     */
+    @PostMapping("/{targetType}/{targetId}/handle")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void handle(@PathVariable("targetType") String targetType, @PathVariable("targetId") Long targetId,
+                       @Valid @RequestBody ReportHandleRequest req) {
+        adminGuard.check();
+        reportService.handle(currentUser.id(), targetType.toUpperCase(), targetId, req);
+    }
 }

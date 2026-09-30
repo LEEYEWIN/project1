@@ -751,3 +751,27 @@ button.leg-link { border: 0; background: none; padding: 0; font: inherit; font-s
 .receipt-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .side-link { display: block; margin-top: 10px; font-size: 13px; font-weight: 600; text-align: center; }
 
+/* ===== 20차: 관광지별 날씨 · 관심없음 되돌리기 · 확정 후 장소 추가 막기 · 신고된 게시글 ===== */
+.spot-weather { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #F3F1EC; font-size: 13px; line-height: 1.6; vertical-align: middle; white-space: nowrap; }
+.spot-weather .sw-part { display: inline-flex; align-items: center; gap: 2px; }
+.spot-weather small { font-size: 11px; color: var(--sub); }
+.spot-weather .sw-temp { font-variant-numeric: tabular-nums; color: var(--sub); }
+.spot-weather .sw-temp .lo { color: #1c64c8; }
+.spot-weather .sw-temp .hi { color: #c8431c; }
+.locked-note { margin: 12px 0; padding: 12px 14px; border-radius: 12px; background: #FFF4E5; font-size: 14px; }
+.poi-card.disliked .poi-img > :first-child { filter: grayscale(1); opacity: .5; }
+.poi-card.disliked .poi-body { opacity: .6; }
+.poi-card .dislike-btn.on { background: #E8590C; }
+.poi-card .dislike-btn.on:hover { background: #c94c0a; }
+.poi-card .dislike-btn:disabled { opacity: .6; cursor: wait; }
+.tabs { display: flex; gap: 6px; margin: 16px 0 12px; border-bottom: 1px solid var(--line); }
+.tabs .tab { font: inherit; font-weight: 600; padding: 10px 14px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--sub); cursor: pointer; }
+.tabs .tab.on { color: inherit; border-bottom-color: currentColor; }
+.cm-reported { display: flex; flex-direction: column; gap: 4px; margin: 16px 0; padding: 28px 20px; border-radius: 12px; background: #F3F1EC; text-align: center; color: var(--sub); }
+.cm-reported b { font-size: 17px; color: inherit; }
+.cm-card-title.reported a { color: var(--sub); }
+
+/* 그리고 19차 블록의 .cal-weather, .cal-weather-text 두 줄은 지우세요 (달력 날씨 삭제) */
+
+.poi-card .dislike-btn:disabled { opacity: .45; cursor: not-allowed; }
+

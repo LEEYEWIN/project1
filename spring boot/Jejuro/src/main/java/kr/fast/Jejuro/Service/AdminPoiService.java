@@ -1,5 +1,6 @@
 package kr.fast.Jejuro.Service;
 
+
 //[관리자 관광지 관리 - 목록·점검·추가·수정·숨김·AI 이름 연결]
 
 import java.math.BigDecimal;
@@ -46,10 +47,12 @@ public class AdminPoiService {
  /** 데이터 점검 조건 (목록 필터와 숫자에 같이 사용) */
  private static final String NO_IMAGE = "(p.image_url IS NULL OR TRIM(p.image_url) = '')";
  private static final String NO_DESC = "(p.description IS NULL OR TRIM(p.description) = '')";
- private static final String NO_AI = "NOT EXISTS (SELECT 1 FROM POI_SOURCE_MAP m WHERE m.poi_id = p.poi_id AND m.source_poi_id NOT LIKE '%:%')";
+ /** AI 추천 대상(학습한 275곳) / 직접 선택만(그 밖) — POI.ai_recommend */
+ private static final String AI = "p.ai_recommend = 1";
+ private static final String MANUAL = "p.ai_recommend = 0";
  private static final String OUT_JEJU = "NOT (p.latitude BETWEEN 33.0 AND 34.1 AND p.longitude BETWEEN 126.0 AND 127.1)";
  private static final Map<String, String> ISSUES = Map.of(
-         "NO_IMAGE", NO_IMAGE, "NO_DESC", NO_DESC, "NO_AI", NO_AI, "OUT_OF_JEJU", OUT_JEJU);
+         "NO_IMAGE", NO_IMAGE, "NO_DESC", NO_DESC, "AI", AI, "MANUAL", MANUAL, "OUT_OF_JEJU", OUT_JEJU);
 
  private final JdbcTemplate jdbc;
  private final PoiRepository poiRepository;
@@ -84,7 +87,7 @@ public class AdminPoiService {
 
  /**
   * @param visibility ALL / VISIBLE / HIDDEN
-  * @param issue      NO_IMAGE / NO_DESC / NO_AI / OUT_OF_JEJU (생략 가능)
+  * @param issue      AI(AI 추천 대상) / MANUAL(직접 선택만) / NO_IMAGE / NO_DESC / OUT_OF_JEJU (생략 가능)
   */
  @Transactional(readOnly = true)
  public AdminPoiResponse list(String keyword, Integer regionId, String category, String visibility,
@@ -132,17 +135,17 @@ public class AdminPoiService {
              .collect(Collectors.toMap(Region::getRegionId, Region::getRegionName));
      List<AdminPoiResponse.Row> rows = jdbc.query("""
              SELECT p.poi_id, p.poi_name, p.address, p.category_code, p.region_id, p.image_url, p.hidden_at, p.deleted_at,
-                    %s AS no_image, %s AS no_desc, %s AS no_ai, %s AS out_jeju,
+                    p.ai_recommend, %s AS no_image, %s AS no_desc, %s AS out_jeju,
                     (SELECT COUNT(*) FROM TRAVEL_BOOKMARK b WHERE b.poi_id = p.poi_id) AS bookmark_count,
                     (SELECT COUNT(*) FROM RECOMMEND_ITEM i WHERE i.poi_id = p.poi_id AND i.shown = 1) AS recommend_count
                FROM POI p
-             """.formatted(NO_IMAGE, NO_DESC, NO_AI, OUT_JEJU) + where + " ORDER BY p.poi_id DESC LIMIT ? OFFSET ?",
+             """.formatted(NO_IMAGE, NO_DESC, OUT_JEJU) + where + " ORDER BY p.poi_id DESC LIMIT ? OFFSET ?",
              (rs, n) -> new AdminPoiResponse.Row(rs.getLong("poi_id"), rs.getString("poi_name"),
                      rs.getString("address"), rs.getString("category_code"),
                      catNames.getOrDefault(rs.getString("category_code"), rs.getString("category_code")),
                      rs.getInt("region_id"), regionNames.get(rs.getInt("region_id")), rs.getString("image_url"),
                      rs.getTimestamp("hidden_at") != null, rs.getTimestamp("deleted_at") != null,
-                     rs.getBoolean("no_image"), rs.getBoolean("no_desc"), rs.getBoolean("no_ai"),
+                     rs.getBoolean("ai_recommend"), rs.getBoolean("no_image"), rs.getBoolean("no_desc"),
                      rs.getBoolean("out_jeju"), rs.getLong("bookmark_count"), rs.getLong("recommend_count")),
              pageArgs.toArray());
 
@@ -151,12 +154,13 @@ public class AdminPoiService {
              SELECT COUNT(*) AS total,
                     (SELECT COUNT(*) FROM POI h WHERE h.hidden_at IS NOT NULL AND h.deleted_at IS NULL) AS hidden,
                     (SELECT COUNT(*) FROM POI d WHERE d.deleted_at IS NOT NULL) AS deleted,
-                    COALESCE(SUM(%s), 0) AS no_image, COALESCE(SUM(%s), 0) AS no_desc,
-                    COALESCE(SUM(%s), 0) AS no_ai, COALESCE(SUM(%s), 0) AS out_jeju
+                    COALESCE(SUM(%s), 0) AS ai, COALESCE(SUM(%s), 0) AS manual,
+                    COALESCE(SUM(%s), 0) AS no_image, COALESCE(SUM(%s), 0) AS no_desc, COALESCE(SUM(%s), 0) AS out_jeju
                FROM POI p WHERE p.hidden_at IS NULL AND p.deleted_at IS NULL
-             """.formatted(NO_IMAGE, NO_DESC, NO_AI, OUT_JEJU),
+             """.formatted(AI, MANUAL, NO_IMAGE, NO_DESC, OUT_JEJU),
              (rs, n) -> new AdminPoiResponse.Checks(rs.getLong("total"), rs.getLong("hidden"), rs.getLong("deleted"),
-                     rs.getLong("no_image"), rs.getLong("no_desc"), rs.getLong("no_ai"), rs.getLong("out_jeju")))
+                     rs.getLong("ai"), rs.getLong("manual"),
+                     rs.getLong("no_image"), rs.getLong("no_desc"), rs.getLong("out_jeju")))
              .get(0);
 
      return new AdminPoiResponse(safePage, (int) Math.ceil(total / (double) PAGE_SIZE), total, checks, rows);
@@ -180,7 +184,7 @@ public class AdminPoiService {
      return new AdminPoiResponse.Detail(p.getPoiId(), p.getPoiName(), p.getAddress(), p.getLatitude(),
              p.getLongitude(), p.getCategoryCode(), p.getRegionId(), p.getDescription(), p.getDetailDescription(),
              p.getImageUrl(), p.getPhone(), p.getHomepage(), p.getOpeningHours(), p.getClosedDays(), p.getFee(),
-             p.getParking(), p.getHiddenAt(), p.getDeletedAt(), mappings, usage);
+             p.getParking(), p.getHiddenAt(), p.getDeletedAt(), p.isAiRecommend(), mappings, usage);
  }
 
  // ------------------------------------------------------------------ 추가·수정·숨김
@@ -218,7 +222,9 @@ public class AdminPoiService {
 
  @Transactional
  public void addMapping(Long poiId, String sourcePoiId) {
-     get(poiId);
+     if (!get(poiId).isAiRecommend()) {
+         throw ApiException.badRequest("AI가 학습하지 않은 관광지(직접 선택만)는 AI 이름을 연결할 수 없습니다.");
+     }
      String name = sourcePoiId.trim();
      sourceMapRepository.findById(name).ifPresent(m -> {
          String owner = poiRepository.findById(m.getPoiId()).map(Poi::getPoiName).orElse("?");

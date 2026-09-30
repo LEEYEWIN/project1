@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchJejuWeather } from '../../api/weatherApi.js';
-import { weatherInfo, weatherText } from '../../utils/weather.js';
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 const COLORS = 5; // .cal-c0 ~ .cal-c4 (styles.css)
@@ -23,25 +21,12 @@ function initialMonth(travels) {
  * 내 여행 달력 (월 단위)
  * - 여행 기간을 색 막대로 표시 (여행마다 색이 다름). 막대에는 첫날·일요일에만 여행 이름
  * - 날짜를 누르면 아래에 그날 일정(N일차 방문지)을 보여 줌
- * - 날씨: 여행이 있는 날짜에만 이모지로 (제주 예보, 오늘부터 16일까지. 그 뒤 날짜는 표시 안 함)
  * travels: TravelSummaryResponse[]  { travelId, travelName, startDate, endDate, days: [{ dayNo, date, spots }] }
  */
 export default function TravelCalendar({ travels }) {
   const [month, setMonth] = useState(() => initialMonth(travels));
   const [selected, setSelected] = useState(null); // 'YYYY-MM-DD'
-  const [weather, setWeather] = useState(() => new Map()); // 'YYYY-MM-DD' → 예보
   const today = toIso(new Date());
-
-  // 날씨는 실패해도 달력은 그대로 (조용히 무시)
-  useEffect(() => {
-    let alive = true;
-    fetchJejuWeather()
-      .then((res) => alive && setWeather(new Map(res.days.map((d) => [d.date, d]))))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   // 여행마다 고정 색 (시작일 순서)
   const colorOf = useMemo(() => {
@@ -117,14 +102,7 @@ export default function TravelCalendar({ travels }) {
             .join(' ');
           return (
             <button key={iso} type="button" className={cls} role="gridcell" aria-label={`${iso} 여행 ${list.length}개`} onClick={() => setSelected(iso)}>
-              <span className="cal-num">
-                {d.getDate()}
-                {list.length > 0 && weather.has(iso) && (
-                  <span className="cal-weather" title={weatherText(weather.get(iso))} aria-label={weatherText(weather.get(iso))}>
-                    {weatherInfo(weather.get(iso).code).emoji}
-                  </span>
-                )}
-              </span>
+              <span className="cal-num">{d.getDate()}</span>
               {list.slice(0, 2).map((t) => {
                 const isStart = iso === t.startDate;
                 const isEnd = iso === t.endDate;
@@ -149,12 +127,6 @@ export default function TravelCalendar({ travels }) {
         <div className="cal-day" aria-live="polite">
           <h3>
             {Number(selected.slice(5, 7))}월 {Number(selected.slice(8, 10))}일 일정
-            {selectedTravels.length > 0 && weather.has(selected) && (
-              <small className="cal-weather-text">
-                {' '}
-                {weatherInfo(weather.get(selected).code).emoji} {weatherText(weather.get(selected))}
-              </small>
-            )}
           </h3>
           {selectedTravels.length === 0 ? (
             <p className="muted">이 날은 여행 일정이 없어요.</p>

@@ -4,7 +4,7 @@ import { fetchReports, handleReport, unblockReport } from '../../api/adminApi.js
 import { errorMessage } from '../../api/client.js';
 import Loading from '../../components/common/Loading.jsx';
 import { Forbidden, Pager, dt } from '../../components/admin/AdminCommon.jsx';
-import { ACTION_LABEL, REASON_LABEL, REPORT_REASONS, SANCTION_LABEL, suspendText } from '../../utils/report.js';
+import { ACTION_LABEL, REASON_LABEL, REPORT_REASONS } from '../../utils/report.js';
 
 const TYPES = [
   { value: '', label: '전체' },
@@ -15,8 +15,8 @@ const TYPES = [
 /**
  * 관리자: 게시글·댓글 신고 처리 (/admin/reports)
  * - 신고 1건씩이 아니라 신고된 글·댓글 단위로 묶어서, 신고 많은 순으로 보여 준다
- * - 처리: 유지(다시 보이기) / 차단(사유 선택 → 모든 회원에게 차단 안내) / 삭제 + 작성자 제재(경고·7일·30일·영구)
- * - 사유별 권장 처리(처리 기준)를 함께 보여 주고 [권장대로]로 한 번에 채울 수 있다
+ * - 처리: 차단(사유 선택 → 모든 회원에게 "○○ 등의 사유로 차단되었습니다." 알림 후 목록으로) / 반려(정상 표시)
+ * - 회원 제재(정지·경고)는 하지 않는다 — 글·댓글만 처리
  */
 export default function AdminReportsPage() {
   const [status, setStatus] = useState('PENDING');
@@ -52,7 +52,7 @@ export default function AdminReportsPage() {
       <header className="adm-header">
         <div>
           <h1>게시글·신고</h1>
-          <p className="adm-muted">신고된 글·댓글을 확인하고 유지·차단·삭제와 작성자 제재를 정합니다.</p>
+          <p className="adm-muted">신고된 글·댓글을 확인하고 차단 또는 반려합니다.</p>
         </div>
         <div className="adm-filters">
           <button type="button" className={status === 'PENDING' ? 'on' : ''} onClick={() => changeStatus('PENDING')}>
@@ -111,62 +111,40 @@ function PolicyCard() {
       <table className="adm-tbl">
         <thead>
           <tr>
-            <th>대표 사유</th>
-            <th>권장 처리</th>
-            <th>작성자 제재</th>
+            <th>상태</th>
+            <th>회원에게 보이는 것</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>음란·불법</td>
-            <td>차단</td>
-            <td>30일 정지 · 이전에 조치받은 적 있으면 영구 정지</td>
+            <td>신고됨 (처리 대기)</td>
+            <td>목록·상세 제목 자리에 "신고된 게시글입니다" (내용·사진·경로 가림, 댓글은 "신고된 댓글입니다")</td>
           </tr>
           <tr>
-            <td>개인정보 노출</td>
             <td>차단</td>
-            <td>경고</td>
+            <td>글을 열면 "[선택한 사유] 등의 사유로 차단되었습니다." 알림 → 목록으로. 목록에서도 빠짐 (작성자 포함, 관리자만 내용 확인)</td>
           </tr>
           <tr>
-            <td>욕설·비방</td>
-            <td>차단</td>
-            <td>경고 (경고 3회마다 자동 7일 정지)</td>
-          </tr>
-          <tr>
-            <td>스팸·광고</td>
-            <td>차단</td>
-            <td>경고 · 이전 조치 2회 이상이면 7일 정지</td>
-          </tr>
-          <tr>
-            <td>기타</td>
-            <td>내용 보고 판단</td>
-            <td>없음</td>
+            <td>반려</td>
+            <td>원래대로 정상 표시</td>
           </tr>
         </tbody>
       </table>
       <p className="adm-note">
-        <b>자동 가림</b>: 처리 대기 신고가 5명 이상(음란·개인정보는 2명 이상)이면 관리자 확인 전까지 다른 회원에게 가려집니다.
+        <b>신고 사유</b>: 음란·불법 / 개인정보 노출 / 욕설·비방 / 스팸·광고. 차단 사유 기본값은 가장 많이 받은 사유(같으면 더 무거운 사유)이고 바꿀 수 있어요.
         <br />
-        <b>대표 사유</b>: 가장 많이 받은 사유, 같으면 더 무거운 사유. 권장은 참고용이고 최종 결정은 관리자가 합니다.
-        <br />
-        <b>유지</b> = 신고 반려 + 가림 해제, <b>차단</b> = 작성자 포함 모든 회원에게 "'사유' 등의 사유로 게시글이 차단되었습니다." 알림 후 목록으로(관리자만 내용 확인),{' '}
-        <b>삭제</b> = 삭제 표시(복구 불가).
-        정지된 회원은 글·댓글 쓰기와 신고를 할 수 없고, 읽기·여행 기능은 그대로 씁니다.
+        회원 제재(정지·경고)는 하지 않고 글·댓글만 처리합니다. 잘못 차단했으면 [처리 완료]에서 [차단 해제].
       </p>
     </details>
   );
 }
 
 function ReportCard({ target: t, onHandled }) {
-  const [action, setAction] = useState(t.recommend.action);
-  const mainReason = t.reasons[0]?.code ?? 'OTHER'; // 가장 많이 받은 사유
-  const [blockReason, setBlockReason] = useState(mainReason);
-  const [sanction, setSanction] = useState(t.recommend.sanction);
-  const [memo, setMemo] = useState('');
+  const [blockReason, setBlockReason] = useState(t.mainReason ?? t.reasons[0]?.code ?? 'ABUSE');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pending = t.status === 'PENDING';
-  const canSanction = action !== 'KEEP' && t.authorId != null;
+  const what = t.targetType === 'POST' ? '글' : '댓글';
 
   const unblock = async () => {
     if (!window.confirm('차단을 풀고 다시 모든 회원에게 보이게 할까요?')) return;
@@ -182,28 +160,17 @@ function ReportCard({ target: t, onHandled }) {
     }
   };
 
-  const applyRecommend = () => {
-    setAction(t.recommend.action);
-    setSanction(t.recommend.sanction);
-    setBlockReason(mainReason);
-  };
-
-  const submit = async () => {
-    const s = canSanction ? sanction : 'NONE';
-    const how = action === 'BLOCK' ? `"${REASON_LABEL[blockReason]}" 사유로 차단` : `"${ACTION_LABEL[action]}"(으)로 처리`;
-    const msg = `${t.targetType === 'POST' ? '글' : '댓글'}을(를) ${how}${
-      s !== 'NONE' ? `하고 ${t.authorName}님에게 "${SANCTION_LABEL[s]}"을(를) 줄까요?` : '할까요?'
-    }`;
+  /** action: BLOCK 차단 / KEEP 반려 */
+  const submit = async (action) => {
+    const msg =
+      action === 'BLOCK'
+        ? `이 ${what}을(를) "${REASON_LABEL[blockReason]}" 사유로 차단할까요?\n회원에게 "${REASON_LABEL[blockReason]} 등의 사유로 차단되었습니다." 알림이 나갑니다.`
+        : `신고를 반려하고 이 ${what}을(를) 다시 정상으로 보이게 할까요?`;
     if (!window.confirm(msg)) return;
     setBusy(true);
     setError('');
     try {
-      await handleReport(t.targetType, t.targetId, {
-        action,
-        blockReason: action === 'BLOCK' ? blockReason : null,
-        sanction: s,
-        memo: memo.trim(),
-      });
+      await handleReport(t.targetType, t.targetId, { action, blockReason: action === 'BLOCK' ? blockReason : null });
       await onHandled();
     } catch (e) {
       setError(errorMessage(e));
@@ -215,16 +182,16 @@ function ReportCard({ target: t, onHandled }) {
   return (
     <article className="adm-card adm-report">
       <div className="adm-report-head">
-        <span className="adm-badge">{t.targetType === 'POST' ? '글' : '댓글'} #{t.targetId}</span>
+        <span className="adm-badge">{what} #{t.targetId}</span>
         <b className="num">신고 {t.reportCount}건</b>
         {t.reasons.map((r) => (
           <span key={r.code} className={r.code === 'SEXUAL' || r.code === 'PRIVACY' ? 'adm-badge bad' : 'adm-badge warn'}>
-            {r.label} {r.count}
+            {REASON_LABEL[r.code] ?? r.label} {r.count}
           </span>
         ))}
         {t.deleted && <span className="adm-badge">삭제됨</span>}
         {!t.deleted && t.blockReason && <span className="adm-badge bad">차단됨 · {REASON_LABEL[t.blockReason] ?? t.blockReason}</span>}
-        {!t.deleted && t.hidden && !t.blockReason && <span className="adm-badge bad">자동 가림</span>}
+        {!t.deleted && t.hidden && !t.blockReason && <span className="adm-badge warn">신고된 {what === '글' ? '게시글' : '댓글'}로 표시 중</span>}
         <span className="adm-muted">
           {dt(t.firstReportedAt)}
           {t.lastReportedAt !== t.firstReportedAt && ` ~ ${dt(t.lastReportedAt)}`}
@@ -256,74 +223,32 @@ function ReportCard({ target: t, onHandled }) {
 
       <p className="adm-report-author">
         작성자 <b>{t.authorName}</b>
-        {t.authorId && <span className="adm-muted"> #{t.authorId}</span>} · 경고 {t.authorWarningCount}회 · 이전 조치{' '}
-        {t.authorPriorAccepted}건
-        {t.authorSuspendedUntil && <span className="adm-badge bad">{suspendText(t.authorSuspendedUntil)}</span>}
+        {t.authorId && <span className="adm-muted"> #{t.authorId}</span>} · 이전 차단 {t.authorPriorAccepted}건
       </p>
 
       {pending ? (
         <div className="adm-report-form">
-          <p className="adm-recommend">
-            권장: <b>{ACTION_LABEL[t.recommend.action]}</b>
-            {t.recommend.sanction !== 'NONE' && (
-              <>
-                {' '}
-                + <b>{SANCTION_LABEL[t.recommend.sanction]}</b>
-              </>
-            )}{' '}
-            <span className="adm-muted">— {t.recommend.note}</span>{' '}
-            <button type="button" className="adm-link" onClick={applyRecommend}>
-              권장대로
-            </button>
-          </p>
           <div className="adm-report-controls">
-            <div className="adm-tabs" role="radiogroup" aria-label="처리">
-              {['KEEP', 'BLOCK', 'DELETE'].map((a) => (
-                <button
-                  key={a}
-                  type="button"
-                  role="radio"
-                  aria-checked={action === a}
-                  className={action === a ? 'on' : ''}
-                  onClick={() => setAction(a)}
-                >
-                  {ACTION_LABEL[a]}
-                </button>
-              ))}
-            </div>
-            {action === 'BLOCK' && (
-              <label>
-                차단 사유
-                <select value={blockReason} onChange={(e) => setBlockReason(e.target.value)}>
-                  {REPORT_REASONS.map((r) => (
-                    <option key={r.code} value={r.code}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
             <label>
-              작성자 제재
-              <select value={canSanction ? sanction : 'NONE'} disabled={!canSanction} onChange={(e) => setSanction(e.target.value)}>
-                {['NONE', 'WARNING', 'SUSPEND_7D', 'SUSPEND_30D', 'BAN'].map((s) => (
-                  <option key={s} value={s}>
-                    {SANCTION_LABEL[s]}
+              차단 사유
+              <select value={blockReason} onChange={(e) => setBlockReason(e.target.value)}>
+                {REPORT_REASONS.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.label}
                   </option>
                 ))}
               </select>
             </label>
-            <input
-              className="adm-input"
-              value={memo}
-              maxLength={150}
-              placeholder="제재 사유 메모 (비우면 신고 사유)"
-              onChange={(e) => setMemo(e.target.value)}
-            />
-            <button type="button" className="adm-btn dark" disabled={busy} onClick={submit}>
-              처리
+            <button type="button" className="adm-btn dark" disabled={busy} onClick={() => submit('BLOCK')}>
+              차단
+            </button>
+            <button type="button" className="adm-btn" disabled={busy} onClick={() => submit('KEEP')}>
+              반려 (정상 표시)
             </button>
           </div>
+          <p className="adm-muted small">
+            차단하면 회원에게 “{REASON_LABEL[blockReason]} 등의 사유로 차단되었습니다.” 알림 후 목록으로 이동해요.
+          </p>
           {error && <p className="adm-error">{error}</p>}
         </div>
       ) : (

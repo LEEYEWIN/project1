@@ -7,6 +7,7 @@ import { formatDate } from '../utils/format.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import ReceiptButton from '../components/travel/ReceiptButton.jsx';
+import SpotWeather, { useRouteWeather } from '../components/travel/SpotWeather.jsx';
 
 const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', NOT_TAKEN: '가지 않음' };
 
@@ -16,6 +17,8 @@ const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', 
  * - 일정 확정(= 최종 경로 채택)은 여행 장소가 모두 배치되어야 가능. 확정하면 경로·장소를 바꿀 수 없다
  * - 확정 전에는 지금 경로를 아래에서 미리 보고 확정
  * - 커뮤니티에서 가져온 여행은 설문이 없어 AI 추천 목록 링크를 숨긴다
+ * - 확정한 일정·지금 경로 미리보기: 관광지 이름 옆에 그 관광지 위치·그날 날짜 기준 오전/오후 날씨 이모지 + 최저/최고 기온
+ *   (지난 31일 ~ 앞으로 16일. 지난 날짜는 실제 날씨)
  */
 export default function TravelDetailPage() {
   const { travelId } = useParams();
@@ -24,6 +27,7 @@ export default function TravelDetailPage() {
   const [route, setRoute] = useState(null); // 확정 전 경로 미리보기
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const weather = useRouteWeather(travel?.adoptedRoute ?? route); // 확정한 일정·지금 경로의 관광지별 날씨 (위치·날짜 기준)
 
   const load = useCallback(() => {
     fetchTravelDetail(travelId)
@@ -178,6 +182,7 @@ export default function TravelDetailPage() {
                     <li key={s.poi.poiId} className={result?.visited === false ? 'spot-missed' : ''}>
                       <span className="order small">{s.visitOrder}</span> <span className="spot-name">{s.poi.name}</span>
                       <small className="muted"> · {s.poi.regionName}</small>
+                      <SpotWeather weather={weather.get(`${d.dayNo}-${s.poi.poiId}`)} />
                       {result?.visited === false && <span className="tag">못 감</span>}
                       {result?.reaction === 'LIKE' && <span className="tag on">좋았어요</span>}
                       {result?.reaction === 'DISLIKE' && <span className="tag">아쉬워요</span>}

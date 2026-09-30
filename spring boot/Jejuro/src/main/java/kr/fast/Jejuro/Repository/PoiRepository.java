@@ -42,4 +42,8 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
  /** 이 중 관리자가 숨기거나 삭제한 관광지 번호 (AI 추천 결과·경로 가져오기에서 빼기) */
  @Query("select p.poiId from Poi p where p.poiId in :ids and (p.hiddenAt is not null or p.deletedAt is not null)")
  List<Long> findHiddenIds(@Param("ids") Collection<Long> ids);
+
+ /** 이 중 AI 추천에 내보내면 안 되는 관광지 번호: 숨김·삭제 + AI 추천 대상이 아닌 곳(직접 선택만) */
+ @Query("select p.poiId from Poi p where p.poiId in :ids and (p.hiddenAt is not null or p.deletedAt is not null or p.aiRecommend = false)")
+ List<Long> findNotRecommendableIds(@Param("ids") Collection<Long> ids);
 }

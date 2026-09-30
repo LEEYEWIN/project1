@@ -16,10 +16,10 @@ export function weatherInfo(code) {
   return { emoji: '🌡️', label: '날씨' };
 }
 
-/** "맑음 · 24° / 18° · 비 10%" */
-export function weatherText(day) {
-  const { label } = weatherInfo(day.code);
-  const temp = day.tempMax != null && day.tempMin != null ? ` · ${Math.round(day.tempMax)}° / ${Math.round(day.tempMin)}°` : '';
-  const rain = day.rainChance != null ? ` · 비 ${day.rainChance}%` : '';
-  return `${label}${temp}${rain}`;
+/** 오전/오후 날씨 한 줄 설명: "오전 맑음 · 오후 비 · 최저 18° / 최고 24°" */
+export function spotWeatherText(w) {
+  const am = w.amCode != null ? `오전 ${weatherInfo(w.amCode).label}` : '';
+  const pm = w.pmCode != null ? `오후 ${weatherInfo(w.pmCode).label}` : '';
+  const temp = w.tempMin != null && w.tempMax != null ? `최저 ${Math.round(w.tempMin)}° / 최고 ${Math.round(w.tempMax)}°` : '';
+  return [am, pm, temp].filter(Boolean).join(' · ');
 }

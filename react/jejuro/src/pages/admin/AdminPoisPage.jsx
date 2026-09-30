@@ -7,7 +7,8 @@ import PoiEditor from '../../components/admin/PoiEditor.jsx';
 
 /** 데이터 점검 카드 (누르면 그 문제만 보기) */
 const CHECKS = [
-  { key: 'noAiName', issue: 'NO_AI', label: 'AI 이름 없음', hint: 'AI 추천에 절대 안 나와요' },
+  { key: 'aiRecommend', issue: 'AI', label: 'AI 추천 대상', hint: 'AI가 학습한 곳 · 추천 + 직접 선택', info: true },
+  { key: 'manualOnly', issue: 'MANUAL', label: '직접 선택만', hint: 'AI 추천에는 안 나와요 · 검색해서 담기만', info: true },
   { key: 'noImage', issue: 'NO_IMAGE', label: '사진 없음', hint: '카드에 기본 그림' },
   { key: 'noDescription', issue: 'NO_DESC', label: '소개 없음', hint: '카드 설명이 비어요' },
   { key: 'outOfJeju', issue: 'OUT_OF_JEJU', label: '좌표 오류', hint: '지도·동선 계산이 틀려요' },
@@ -22,7 +23,8 @@ const VIS = [
 
 /**
  * 관리자: 관광지 데이터 관리 (/admin/pois)
- * - 데이터 점검(AI 이름 없음·사진 없음·소개 없음·좌표 오류) → 눌러서 해당 관광지만
+ * - AI 추천 대상(학습한 275곳) / 직접 선택만(그 밖, AI 추천에 안 나옴) 숫자 — POI.ai_recommend
+ * - 데이터 점검(사진 없음·소개 없음·좌표 오류) → 눌러서 해당 관광지만
  * - 검색·권역·분류·보임/숨김 필터, 20곳씩
  * - [수정]·[+ 새 관광지] → 오른쪽 편집 창 (운영 정보, AI 이름 연결, 숨기기)
  */
@@ -88,7 +90,7 @@ export default function AdminPoisPage() {
             <button
               key={c.key}
               type="button"
-              className={`${filters.issue === c.issue ? 'on' : ''} ${data.checks[c.key] > 0 ? 'bad' : ''}`}
+              className={`${filters.issue === c.issue ? 'on' : ''} ${!c.info && data.checks[c.key] > 0 ? 'bad' : ''}`}
               onClick={() => set({ issue: filters.issue === c.issue ? '' : c.issue })}
             >
               <span>{c.label}</span>
@@ -193,11 +195,15 @@ export default function AdminPoisPage() {
                         </td>
                         <td>
                           <div className="adm-badges">
-                            {p.noAiName && <span className="adm-badge bad">AI 이름 없음</span>}
+                            {p.aiRecommend ? (
+                              <span className="adm-badge ok">AI 추천</span>
+                            ) : (
+                              <span className="adm-badge">직접 선택만</span>
+                            )}
                             {p.outOfJeju && <span className="adm-badge bad">좌표 오류</span>}
                             {p.noImage && <span className="adm-badge warn">사진 없음</span>}
                             {p.noDescription && <span className="adm-badge warn">소개 없음</span>}
-                            {!p.noAiName && !p.outOfJeju && !p.noImage && !p.noDescription && (
+                            {!p.outOfJeju && !p.noImage && !p.noDescription && (
                               <span className="adm-badge ok">정상</span>
                             )}
                           </div>

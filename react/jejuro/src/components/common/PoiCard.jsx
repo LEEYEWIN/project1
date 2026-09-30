@@ -11,9 +11,10 @@ import PoiImage from '../poi/PoiImage.jsx';
  * children: 카드 아래쪽에 넣을 버튼(루트에 추가 등)
  * linkState: 상세로 갈 때 함께 넘길 값 (예: AI 추천 목록에서 왔음 { source: 'RECOMMEND' })
  * 세부 설명은 카드에서 펼치지 않고 상세 화면에서 본다.
+ * dimmed: 흐리게 (관심없음으로 표시한 관광지)
  * poi.unavailable: 관리자가 삭제한 관광지 → "확인 불가"로 보이고 상세로 가지 않음
  */
-export default function PoiCard({ poi, to: link, right, left, children, linkState }) {
+export default function PoiCard({ poi, to: link, right, left, children, linkState, dimmed = false }) {
   const navigate = useNavigate();
   const to = poi.unavailable ? null : link;
 
@@ -25,7 +26,7 @@ export default function PoiCard({ poi, to: link, right, left, children, linkStat
   };
 
   return (
-    <article className={`poi-card${to ? ' clickable' : ''}${poi.unavailable ? ' unavailable' : ''}`} onClick={openDetail}>
+    <article className={`poi-card${to ? ' clickable' : ''}${poi.unavailable ? ' unavailable' : ''}${dimmed ? ' disliked' : ''}`} onClick={openDetail}>
       <div className="poi-img">
         <PoiImage src={poi.imageUrl} alt={poi.name} />
         {left}

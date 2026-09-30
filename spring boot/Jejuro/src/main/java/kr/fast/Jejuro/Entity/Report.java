@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 
 /**
 * 신고 1건 = 회원 1명이 글 또는 댓글 1개를 신고. (같은 대상은 한 번만 — DB UNIQUE)
-* status: PENDING 대기 → 관리자가 처리하면 ACCEPTED(숨김·삭제) / REJECTED(문제 없음, 유지)
+* status: PENDING 대기(신고된 게시글) → 관리자가 처리하면 ACCEPTED(차단) / REJECTED(반려, 정상 표시)
 */
 @Entity
 @Table(name = "REPORT")
@@ -29,7 +29,7 @@ public class Report {
  public static final String ACCEPTED = "ACCEPTED";
  public static final String REJECTED = "REJECTED";
 
- /** 처리 결과 */
+ /** 처리 결과: KEEP 반려 / BLOCK 차단 (DELETE는 예전 기록 표시용, 지금은 고를 수 없음) */
  public static final String KEEP = "KEEP";
  public static final String BLOCK = "BLOCK";
  public static final String DELETE = "DELETE";
@@ -65,7 +65,7 @@ public class Report {
      this.status = PENDING;
  }
 
- /** 관리자 처리: KEEP이면 REJECTED, BLOCK·DELETE면 ACCEPTED */
+ /** 관리자 처리: KEEP(반려)이면 REJECTED, BLOCK(차단)이면 ACCEPTED */
  public void handle(String action, Long adminId, LocalDateTime now) {
      this.action = action;
      this.status = KEEP.equals(action) ? REJECTED : ACCEPTED;

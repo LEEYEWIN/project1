@@ -59,7 +59,7 @@ export default function CommentSection({ postId, locked = false, onCountChange }
   const actions = {
     busy,
     locked,
-    reported: () => load().catch(() => {}), // 신고로 가려졌을 수 있어 목록 다시 읽기
+    reported: () => load().catch(() => {}), // 신고되면 "신고된 댓글입니다"로 바뀌므로 목록 다시 읽기
     reply: (parentCommentId, content) => run(() => createComment(postId, { content, parentCommentId })),
     edit: (commentId, content) => run(() => updateComment(commentId, content)),
     remove: (commentId) => {
@@ -130,7 +130,7 @@ function CommentItem({ comment, actions, replyTo }) {
   if (comment.hidden && comment.content == null) {
     return (
       <div className="cm-comment deleted">
-        {comment.blockReason ? `'${comment.blockReason}' 등의 사유로 차단된 댓글입니다.` : '신고로 가려진 댓글입니다.'}
+        {comment.blockReason ? `${comment.blockReason} 등의 사유로 차단된 댓글입니다.` : '신고된 댓글입니다.'}
       </div>
     );
   }
@@ -162,11 +162,11 @@ function CommentItem({ comment, actions, replyTo }) {
 
       {mode === 'edit' ? null : <p className="cm-comment-body">{comment.content}</p>}
       {comment.hidden && comment.blockReason && (
-        <p className="cm-hidden-note small">'{comment.blockReason}' 사유로 차단된 댓글이에요 (관리자라서 보이는 중)</p>
+        <p className="cm-hidden-note small">{comment.blockReason} 등의 사유로 차단된 댓글이에요 (관리자라서 보이는 중)</p>
       )}
       {comment.hidden && !comment.blockReason && (
         <p className="cm-hidden-note small">
-          신고로 다른 회원에게는 가려진 댓글이에요{comment.mine ? '. 관리자가 확인 후 처리합니다.' : ' (관리자라서 보이는 중)'}
+          신고된 댓글이에요. 다른 회원에게는 &quot;신고된 댓글입니다&quot;로 보여요 (관리자라서 보이는 중)
         </p>
       )}
 
@@ -182,7 +182,7 @@ function CommentItem({ comment, actions, replyTo }) {
               targetType="COMMENT"
               targetId={comment.commentId}
               reported={comment.reportedByMe}
-              onReported={(hidden) => hidden && actions.reported()}
+              onReported={() => actions.reported()}
             />
           )}
           {comment.mine && (

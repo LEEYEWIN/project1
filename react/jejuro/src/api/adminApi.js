@@ -57,7 +57,7 @@ export async function fetchReports({ status = 'PENDING', type = '', page = 0 } =
   return data;
 }
 
-/** 처리 { action: KEEP|BLOCK|DELETE, blockReason?: SEXUAL|PRIVACY|ABUSE|SPAM|OTHER, sanction: NONE|WARNING|SUSPEND_7D|SUSPEND_30D|BAN, memo } */
+/** 처리 { action: BLOCK(차단)|KEEP(반려), blockReason?: SEXUAL|PRIVACY|ABUSE|SPAM } */
 export async function handleReport(targetType, targetId, payload) {
   await client.post(`/admin/reports/${targetType}/${targetId}/handle`, payload);
 }
@@ -65,30 +65,6 @@ export async function handleReport(targetType, targetId, payload) {
 /** 차단 해제 (잘못 차단했을 때) */
 export async function unblockReport(targetType, targetId) {
   await client.post(`/admin/reports/${targetType}/${targetId}/unblock`);
-}
-
-// ------------------------------------------------------------------ 회원 관리
-
-/** 회원 목록 { page, totalPages, totalCount, counts, items } filter: ALL|SUSPENDED|REPORTED|ADMIN */
-export async function fetchUsers({ keyword = '', filter = 'ALL', page = 0 } = {}) {
-  const params = { filter, page };
-  if (keyword.trim()) params.keyword = keyword.trim();
-  const { data } = await client.get('/admin/users', { params });
-  return data;
-}
-
-export async function fetchUserDetail(userId) {
-  const { data } = await client.get(`/admin/users/${userId}`);
-  return data;
-}
-
-/** 제재 { type: WARNING|SUSPEND_7D|SUSPEND_30D|BAN|RELEASE, reason } */
-export async function sanctionUser(userId, payload) {
-  await client.post(`/admin/users/${userId}/sanctions`, payload);
-}
-
-export async function changeUserRole(userId, role) {
-  await client.put(`/admin/users/${userId}/role`, { role });
 }
 
 // ------------------------------------------------------------------ 관광지 관리

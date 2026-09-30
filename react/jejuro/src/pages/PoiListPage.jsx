@@ -42,7 +42,7 @@ export default function PoiListPage() {
   const [result, setResult] = useState(null);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
-  const { bookmarks, isBookmarked, toggle, ensure, pending, error: bookmarkError } = useBookmarks(travelId);
+  const { bookmarks, isBookmarked, toggle, ensure, pending, locked, error: bookmarkError } = useBookmarks(travelId);
 
   useEffect(() => {
     fetchPoiCategories()
@@ -170,12 +170,13 @@ export default function PoiListPage() {
                     <PlaceButton
                       on={isBookmarked(poi.poiId)}
                       disabled={pending.has(poi.poiId)}
+                      locked={locked}
                       onClick={() => toggle(poi)}
                     />
                   )
                 }
               >
-                {travelMode && <AddToRouteButton travelId={travelId} poi={poi} ensureBookmarked={ensure} />}
+                {travelMode && !locked && <AddToRouteButton travelId={travelId} poi={poi} ensureBookmarked={ensure} />}
               </PoiCard>
             ))}
           </div>

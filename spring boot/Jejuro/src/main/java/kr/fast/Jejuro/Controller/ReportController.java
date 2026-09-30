@@ -39,8 +39,8 @@ public class ReportController {
     }
 
     /**
-     * 신고하기 → { "hidden": true } (이번 신고로 자동 가림이 되었으면 true)
-     * 409: 이미 신고함 / 400: 내 글·기타 사유 내용 없음 / 403: 이용 정지
+     * 신고하기 → { "hidden": true } (신고되면 관리자 확인 전까지 "신고된 게시글입니다"로 표시)
+     * 409: 이미 신고함·이미 차단됨 / 400: 내 글
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

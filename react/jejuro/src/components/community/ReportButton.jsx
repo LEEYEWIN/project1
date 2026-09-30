@@ -6,7 +6,7 @@ import { REPORT_REASONS } from '../../utils/report.js';
 /**
  * [커뮤니티] 글·댓글 신고 버튼 + 사유 고르는 창
  * - reported: 이미 신고함 → "신고함" (누를 수 없음)
- * - onReported(hidden): 신고 완료. hidden = 신고가 쌓여 이번에 자동으로 가려짐
+ * - onReported(hidden): 신고 완료. 신고되면 관리자 확인 전까지 "신고된 게시글입니다"로 표시 (hidden = true)
  * 같은 대상은 한 번만, 내 글은 신고 불가(버튼을 아예 안 보여 줌), 정지 회원은 서버가 막음
  */
 export default function ReportButton({ targetType, targetId, reported, onReported, className = 'cm-text-btn' }) {
@@ -63,19 +63,11 @@ function ReportDialog({ targetType, targetId, onClose, onDone }) {
       setError('신고 사유를 골라 주세요.');
       return;
     }
-    if (reason === 'OTHER' && !detail.trim()) {
-      setError('기타 사유는 자세한 내용을 적어 주세요.');
-      return;
-    }
     setBusy(true);
     setError('');
     try {
       const { hidden } = await reportContent({ targetType, targetId, reasonCode: reason, detail: detail.trim() });
-      window.alert(
-        hidden
-          ? `신고가 접수되었어요. 신고가 여러 건 쌓여 이 ${what}은(는) 관리자 확인 전까지 가려집니다.`
-          : '신고가 접수되었어요. 관리자가 확인 후 처리합니다.',
-      );
+      window.alert(`신고가 접수되었어요. 관리자가 확인할 때까지 이 ${what}은(는) "신고된 ${what === '글' ? '게시글' : what}입니다"로 표시됩니다.`);
       onDone(hidden);
     } catch (err) {
       setError(errorMessage(err));
@@ -111,7 +103,7 @@ function ReportDialog({ targetType, targetId, onClose, onDone }) {
           ))}
         </fieldset>
         <label className="cm-field">
-          <span>자세한 내용 {reason === 'OTHER' ? '(필수)' : '(선택)'}</span>
+          <span>자세한 내용 (선택)</span>
           <textarea
             rows={3}
             maxLength={200}

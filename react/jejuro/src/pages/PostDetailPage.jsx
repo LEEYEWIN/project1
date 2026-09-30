@@ -17,9 +17,10 @@ import '../styles/community.css';
  * - 조회수 / 좋아요(누르기·취소) / 댓글 수
  * - 첨부된 최종 경로(일차별, 펼치면 지도) + [경로 링크 공유]·[내 여행으로 가져오기]
  * - 댓글·대댓글
- * - 신고: 남의 글·댓글에 [신고] (같은 대상은 한 번). 신고로 가려진 글은 작성자·관리자만 열 수 있고 상단에 안내
- * - 관리자가 차단한 글: 작성자 포함 모두 서버가 410 → "'욕설·비방' 등의 사유로 게시글이 차단되었습니다." 알림 후 목록으로
- * 조회수는 브라우저 탭마다 글 하나당 한 번만 올린다(sessionStorage). 새로고침으로 늘지 않음.
+ * - 신고: 남의 글·댓글에 [신고] (같은 대상은 한 번). 신고되면 관리자 확인 전까지 "신고된 게시글입니다" (관리자만 내용 확인)
+ * - 관리자가 차단한 글: 작성자 포함 모두 서버가 410 → "욕설·비방 등의 사유로 차단되었습니다." 알림 후 목록으로
+ * - 관리자가 반려한 글: 원래대로 정상 표시
+ * 조회수는 글에 들어올 때마다 +1 (목록에서 다시 들어오거나 새로고침해도 올라감).
  */
 export default function PostDetailPage() {
   const { postId } = useParams();
@@ -27,7 +28,8 @@ export default function PostDetailPage() {
   const [post, setPost] = useState(null);
   const [error, setError] = useState('');
   const [liking, setLiking] = useState(false);
-  const viewedRef = useRef(false);
+  const [version, setVersion] = useState(0); // 신고 뒤 다시 읽기
+  const viewedRef = useRef(null); // 이 화면에서 조회수를 올린 글 번호 (StrictMode 두 번 실행·신고 후 다시 읽기에서 중복 방지)
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +38,9 @@ export default function PostDetailPage() {
       .then(async (p) => {
         if (cancelled) return;
         setPost(p);
-        if (!viewedRef.current && markViewed(postId)) {
-          viewedRef.current = true;
+        // 글에 들어올 때마다 조회수 +1 (같은 회원이 다시 들어와도 올라감)
+        if (viewedRef.current !== postId) {
+          viewedRef.current = postId;
           const { viewCount } = await increaseView(postId);
           if (!cancelled) setPost((cur) => cur && { ...cur, viewCount });
         }
@@ -55,7 +58,7 @@ export default function PostDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [postId, navigate]);
+  }, [postId, navigate, version]);
 
   const toggleLike = async () => {
     setLiking(true);
@@ -104,9 +107,12 @@ export default function PostDetailPage() {
         </button>
         {post.mine ? (
           <div className="cm-owner">
-            <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
-              수정
-            </Link>
+            {/* 신고 처리 전에는 수정 불가 (삭제는 가능) */}
+            {!post.hidden && (
+              <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
+                수정
+              </Link>
+            )}
             <button type="button" className="cm-text-btn danger" onClick={remove}>
               삭제
             </button>
@@ -117,7 +123,7 @@ export default function PostDetailPage() {
               targetType="POST"
               targetId={post.postId}
               reported={post.reportedByMe}
-              onReported={(hidden) => hidden && navigate('/community', { replace: true })}
+              onReported={() => setVersion((v) => v + 1)}
             />
           </div>
         )}
@@ -125,15 +131,12 @@ export default function PostDetailPage() {
 
       {post.blockReason && (
         <p className="cm-hidden-note" role="status">
-          '{post.blockReason}' 사유로 차단된 글이에요. 관리자만 볼 수 있고, 다른 회원에게는 차단 안내가 나갑니다.
+          {post.blockReason} 등의 사유로 차단된 글이에요. 관리자만 볼 수 있고, 다른 회원에게는 차단 안내 후 목록으로 이동합니다.
         </p>
       )}
-      {post.hidden && !post.blockReason && (
+      {post.hidden && !post.blockReason && post.content != null && (
         <p className="cm-hidden-note" role="status">
-          신고가 접수되어 다른 회원에게는 가려진 글이에요.{' '}
-          {post.mine
-            ? '관리자가 확인한 뒤 다시 보이거나 삭제됩니다. 문제가 되는 부분을 고치면 확인에 도움이 돼요.'
-            : '(관리자라서 보이는 중)'}
+          신고된 게시글이에요. 다른 회원에게는 "신고된 게시글입니다"로 보여요. [게시글·신고]에서 차단 또는 반려해 주세요. (관리자라서 보이는 중)
         </p>
       )}
 
@@ -143,6 +146,12 @@ export default function PostDetailPage() {
         {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
       </p>
 
+      {post.hidden && post.content == null ? (
+        <div className="cm-reported" role="status">
+          <b>신고된 게시글입니다.</b>
+          <span>관리자가 확인 중이에요. 문제가 없으면 다시 정상으로 보여요.</span>
+        </div>
+      ) : (
       <div className={post.imageUrl ? 'cm-body with-image' : 'cm-body'}>
         {post.imageUrl && <img className="cm-photo" src={post.imageUrl} alt={`${post.title} 첨부 사진`} />}
         <div className="cm-content-card">
@@ -155,6 +164,7 @@ export default function PostDetailPage() {
           )}
         </div>
       </div>
+      )}
 
       <div className="cm-statbar">
         <span>조회 {post.viewCount}</span>
@@ -187,16 +197,4 @@ export default function PostDetailPage() {
       <CommentSection postId={post.postId} locked={post.hidden} onCountChange={setCommentCount} />
     </main>
   );
-}
-
-/** 이 탭에서 처음 보는 글이면 true (그리고 본 것으로 표시) */
-function markViewed(postId) {
-  const key = `viewed-post-${postId}`;
-  try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, '1');
-  } catch {
-    // 저장소를 못 쓰는 브라우저: 매번 올림
-  }
-  return true;
 }
