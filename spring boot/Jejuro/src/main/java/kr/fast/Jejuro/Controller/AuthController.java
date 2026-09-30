@@ -23,6 +23,7 @@ import kr.fast.Jejuro.RequestDTO.LoginRequest;
 import kr.fast.Jejuro.RequestDTO.SignupRequest;
 import kr.fast.Jejuro.ResponseDTO.MeResponse;
 import kr.fast.Jejuro.Service.AuthService;
+import kr.fast.Jejuro.Service.EmailVerificationService;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,12 +33,22 @@ public class AuthController {
  private final SecurityContextRepository contexts;
  private final SessionAuthenticationStrategy sessions;
  private final UserRepository users;
- public AuthController(AuthService service, AuthenticationManager authentication, SecurityContextRepository contexts,
-                       SessionAuthenticationStrategy sessions, UserRepository users) {
-     this.service = service; this.authentication = authentication; this.contexts = contexts;
-     this.sessions = sessions; this.users = users;
- }
-
+ private final EmailVerificationService emailVerificationService;
+ public AuthController(
+	        AuthService service,
+	        AuthenticationManager authentication,
+	        SecurityContextRepository contexts,
+	        SessionAuthenticationStrategy sessions,
+	        UserRepository users,
+	        EmailVerificationService emailVerificationService
+	) {
+	    this.service = service;
+	    this.authentication = authentication;
+	    this.contexts = contexts;
+	    this.sessions = sessions;
+	    this.users = users;
+	    this.emailVerificationService = emailVerificationService;
+	}
  @GetMapping("/csrf")
  public Map<String, String> csrf(CsrfToken token) {
      return Map.of("headerName", token.getHeaderName(), "token", token.getToken());
@@ -54,11 +65,30 @@ public class AuthController {
 
  @PostMapping("/signup")
  @ResponseStatus(HttpStatus.CREATED)
- public MeResponse signup(@Valid @RequestBody SignupRequest body, HttpServletRequest request, HttpServletResponse response) {
-     service.signup(body);
-     return signIn(body.email(), body.password(), request, response);
- }
+ public MeResponse signup(
+         @Valid @RequestBody SignupRequest body,
+         HttpServletRequest request,
+         HttpServletResponse response
+ ) {
 
+     if (!emailVerificationService.isVerified(body.email())) {
+         throw new ApiException(
+                 HttpStatus.BAD_REQUEST,
+                 "이메일 인증을 완료해 주세요."
+         );
+     }
+
+     service.signup(body);
+
+     emailVerificationService.consumeVerification(body.email());
+
+     return signIn(
+             body.email(),
+             body.password(),
+             request,
+             response
+     );
+ }
  @PostMapping("/login")
  public MeResponse login(@Valid @RequestBody LoginRequest body, HttpServletRequest request, HttpServletResponse response) {
      return signIn(body.email(), body.password(), request, response);

@@ -61,7 +61,7 @@ public class SecurityConfig {
          .csrf(csrf -> csrf.csrfTokenRepository(tokens))
          .authorizeHttpRequests(auth -> auth
              .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-             .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup").permitAll()
+             .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup", "/api/auth/email/**").permitAll()
              .requestMatchers(HttpMethod.GET, "/api/pois/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
              .requestMatchers("/api/admin/**").access((authentication, context) -> {
                  var principal = authentication.get();
