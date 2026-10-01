@@ -13,7 +13,7 @@ const W = 720;
 const PAD = 48;
 const FONT = "'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif";
 const INK = '#1B2430';
-const SUB = '#6B7280';
+const SUB = '#596270';
 
 const won = (n) => `${Number(n).toLocaleString()}원`;
 
@@ -73,21 +73,21 @@ function drawReceipt(travel, route, dirs) {
     rows.push({ kind: 'day', text: `${d.dayNo}일차`, right: formatDate(d.date) });
     d.spots.forEach((s, j) => {
       totalSpots += 1;
-      rows.push({ kind: 'spot', text: `${s.visitOrder}. ${s.poi.name}` });
+      rows.push({ kind: 'spot', order: s.visitOrder, text: s.poi.name });
       const leg = legs[j];
       if (leg && j < d.spots.length - 1) {
         totalDistance += leg.distanceM;
         totalFare += leg.taxiFare ?? 0;
-        rows.push({ kind: 'leg', text: `   ↓ ${formatDistance(leg.distanceM)}`, right: leg.taxiFare ? `택시 약 ${won(leg.taxiFare)}` : '' });
+        rows.push({ kind: 'leg', text: `↓ ${formatDistance(leg.distanceM)}`, right: leg.taxiFare ? `택시 약 ${won(leg.taxiFare)}` : '' });
       }
     });
-    if (d.spots.length === 0) rows.push({ kind: 'leg', text: '   (방문지 없음)' });
+    if (d.spots.length === 0) rows.push({ kind: 'leg', text: '(방문지 없음)' });
     rows.push({ kind: 'gap' });
   });
 
-  const lineH = { day: 40, spot: 30, leg: 24, gap: 10 };
+  const lineH = { day: 54, spot: 39, leg: 28, gap: 12 };
   const bodyH = rows.reduce((h, r) => h + lineH[r.kind], 0);
-  const H = 330 + bodyH + 250;
+  const H = 620 + bodyH;
 
   // 2) 캔버스 (선명하게 2배)
   const scale = 2;
@@ -139,56 +139,61 @@ function drawReceipt(travel, route, dirs) {
   // 머리글
   text('JEJURO', W / 2, y, { size: 30, weight: 800, align: 'center' });
   y += 30;
-  text('제주 여행 일정 영수증', W / 2, y, { size: 15, color: SUB, align: 'center' });
+  text('제주 여행 일정 영수증', W / 2, y, { size: 17, color: SUB, align: 'center' });
   y += 34;
   dashed(y);
-  y += 38;
-  text(fit(travel.travelName, W - PAD * 2, 22, 700), PAD, y, { size: 22, weight: 700 });
-  y += 30;
-  text(`${formatDate(travel.startDate)} ~ ${formatDate(travel.endDate)} · ${travel.tripDays}일`, PAD, y, { size: 15, color: SUB });
-  y += 24;
-  const who = travel.companions.length > 0 ? `동반 ${travel.companions.length}명` : '혼자';
-  text(fit(`${who} · ${travel.regionNames.join(', ')}`, W - PAD * 2, 15), PAD, y, { size: 15, color: SUB });
+  y += 42;
+  text(fit(travel.travelName, W - PAD * 2, 24, 700), PAD, y, { size: 24, weight: 700 });
+  y += 34;
+  text(`${formatDate(travel.startDate)} ~ ${formatDate(travel.endDate)} · ${travel.tripDays}일`, PAD, y, { size: 17, color: SUB });
   y += 26;
+  const who = travel.companions.length > 0 ? `동반 ${travel.companions.length}명` : '혼자';
+  text(fit(`${who} · ${travel.regionNames.join(', ')}`, W - PAD * 2, 16), PAD, y, { size: 16, color: SUB });
+  y += 29;
   dashed(y);
   y += 16;
 
   // 본문
   rows.forEach((r) => {
     if (r.kind === 'day') {
-      y += 28;
-      text(r.text, PAD, y, { size: 17, weight: 700 });
-      text(r.right, W - PAD, y, { size: 15, color: SUB, align: 'right' });
-      y += 12;
+      y += 43;
+      ctx.fillStyle = '#F5F3EF';
+      ctx.fillRect(PAD, y - 31, W - PAD * 2, 45);
+      text(r.text, PAD + 15, y, { size: 18, weight: 700 });
+      text(r.right, W - PAD - 15, y, { size: 16, color: SUB, align: 'right' });
+      y += 11;
     } else if (r.kind === 'spot') {
-      y += 30;
-      text(fit(r.text, W - PAD * 2 - 10, 16), PAD + 6, y, { size: 16 });
+      y += 39;
+      text(`${r.order}.`, PAD + 8, y, { size: 16, weight: 700, color: SUB });
+      text(fit(r.text, W - PAD * 2 - 45, 17, 600), PAD + 40, y, { size: 17, weight: 600 });
     } else if (r.kind === 'leg') {
-      y += 24;
-      text(r.text, PAD + 6, y, { size: 13, color: SUB });
-      if (r.right) text(r.right, W - PAD, y, { size: 13, color: SUB, align: 'right' });
+      y += 28;
+      text(r.text, PAD + 40, y, { size: 15, color: SUB });
+      if (r.right) text(r.right, W - PAD - 6, y, { size: 15, color: SUB, align: 'right' });
     } else {
-      y += 10;
+      y += 12;
     }
   });
 
   // 합계
-  y += 14;
+  y += 18;
   dashed(y);
   const sum = [
     ['방문지', `${totalSpots}곳`],
     ['자동차 이동 거리', totalDistance ? formatDistance(totalDistance) : '-'],
   ];
   sum.forEach(([k, v]) => {
-    y += 30;
-    text(k, PAD, y, { size: 15, color: SUB });
-    text(v, W - PAD, y, { size: 15, align: 'right' });
+    y += 34;
+    text(k, PAD, y, { size: 16, color: SUB });
+    text(v, W - PAD, y, { size: 17, weight: 600, align: 'right' });
   });
-  y += 38;
-  text('예상 택시비 합계', PAD, y, { size: 18, weight: 700 });
-  text(totalFare ? won(totalFare) : '-', W - PAD, y, { size: 22, weight: 800, align: 'right' });
-  y += 22;
-  text('제주 중형택시 거리요금 기준 · 구간마다 따로 탄다고 가정 · 심야할증 제외', PAD, y, { size: 11, color: SUB });
+  y += 43;
+  text('예상 택시비 합계', PAD, y, { size: 19, weight: 700 });
+  text(totalFare ? won(totalFare) : '-', W - PAD, y, { size: 25, weight: 800, align: 'right' });
+  y += 25;
+  text('제주 중형택시 거리요금 기준 · 구간마다 따로 탄다고 가정', PAD, y, { size: 13, color: SUB });
+  y += 19;
+  text('심야할증 제외', PAD, y, { size: 13, color: SUB });
 
   // 바코드 모양 + 발행일
   y += 30;
@@ -204,7 +209,7 @@ function drawReceipt(travel, route, dirs) {
   y += 66;
   const now = new Date();
   text(`발행 ${now.getFullYear()}.${now.getMonth() + 1}.${now.getDate()} · 여행 #${travel.travelId} · jejuro`, W / 2, y, {
-    size: 12,
+    size: 14,
     color: SUB,
     align: 'center',
   });

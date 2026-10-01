@@ -100,35 +100,14 @@ export default function PostDetailPage() {
   if (!post) return <main className="page wide cm"><Loading /></main>;
 
   return (
-    <main className="page wide cm">
+    <main className="page wide cm cm-post-detail">
       <div className="cm-detail-top">
         <button type="button" className="cm-text-btn" onClick={backToList}>
           ‹ 목록으로
         </button>
-        {post.mine ? (
-          <div className="cm-owner">
-            {/* 신고 처리 전에는 수정 불가 (삭제는 가능) */}
-            {!post.hidden && (
-              <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
-                수정
-              </Link>
-            )}
-            <button type="button" className="cm-text-btn danger" onClick={remove}>
-              삭제
-            </button>
-          </div>
-        ) : (
-          <div className="cm-owner">
-            <ReportButton
-              targetType="POST"
-              targetId={post.postId}
-              reported={post.reportedByMe}
-              onReported={() => setVersion((v) => v + 1)}
-            />
-          </div>
-        )}
       </div>
 
+      <article className="cm-post-article">
       {post.blockReason && (
         <p className="cm-hidden-note" role="status">
           {post.blockReason} 등의 사유로 차단된 글이에요. 관리자만 볼 수 있고, 다른 회원에게는 차단 안내 후 목록으로 이동합니다.
@@ -140,11 +119,38 @@ export default function PostDetailPage() {
         </p>
       )}
 
-      <h1 className="cm-title">{post.title}</h1>
-      <p className="cm-meta">
-        {post.authorName} · {formatDateTime(post.createdAt)} · {post.postType === 'REVIEW' ? '여행 후기' : '질문'}
-        {post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}
-      </p>
+      <header className="cm-post-header">
+        <p className="cm-post-category">{post.postType === 'REVIEW' ? '여행 후기' : '질문'} 게시판</p>
+        <h1 className="cm-title">{post.title}</h1>
+        <div className="cm-post-byline">
+          <div className="cm-post-author">
+            <strong>{post.authorName}</strong>
+            <span>{formatDateTime(post.createdAt)} · 조회 {post.viewCount}{post.updatedAt && ` · 수정 ${formatDateTime(post.updatedAt)}`}</span>
+          </div>
+          {post.mine ? (
+            <div className="cm-owner">
+              {/* 신고 처리 전에는 수정 불가 (삭제는 가능) */}
+              {!post.hidden && (
+                <Link className="cm-text-btn" to={`/community/posts/${post.postId}/edit`}>
+                  수정
+                </Link>
+              )}
+              <button type="button" className="cm-text-btn danger" onClick={remove}>
+                삭제
+              </button>
+            </div>
+          ) : (
+            <div className="cm-owner">
+              <ReportButton
+                targetType="POST"
+                targetId={post.postId}
+                reported={post.reportedByMe}
+                onReported={() => setVersion((v) => v + 1)}
+              />
+            </div>
+          )}
+        </div>
+      </header>
 
       {post.hidden && post.content == null ? (
         <div className="cm-reported" role="status">
@@ -152,7 +158,7 @@ export default function PostDetailPage() {
           <span>관리자가 확인 중이에요. 문제가 없으면 다시 정상으로 보여요.</span>
         </div>
       ) : (
-      <div className={post.imageUrl ? 'cm-body with-image' : 'cm-body'}>
+      <div className="cm-body">
         {post.imageUrl && <img className="cm-photo" src={post.imageUrl} alt={`${post.title} 첨부 사진`} />}
         <div className="cm-content-card">
           <p className="cm-content">{post.content}</p>
@@ -166,21 +172,6 @@ export default function PostDetailPage() {
       </div>
       )}
 
-      <div className="cm-statbar">
-        <span>조회 {post.viewCount}</span>
-        <button
-          type="button"
-          className={post.liked ? 'cm-like on' : 'cm-like'}
-          aria-pressed={post.liked}
-          aria-label={post.liked ? '좋아요 취소' : '좋아요'}
-          disabled={liking || (post.hidden && !post.liked)}
-          onClick={toggleLike}
-        >
-          {post.liked ? '♥' : '♡'} {post.likeCount}
-        </button>
-        <span>댓글 {post.commentCount}</span>
-      </div>
-
       <ErrorBox message={error} />
 
       {post.route && post.route.days.length > 0 && (
@@ -193,6 +184,21 @@ export default function PostDetailPage() {
           <RouteShareActions post={post} />
         </section>
       )}
+
+      <div className="cm-statbar">
+        <button
+          type="button"
+          className={post.liked ? 'cm-like on' : 'cm-like'}
+          aria-pressed={post.liked}
+          aria-label={post.liked ? '좋아요 취소' : '좋아요'}
+          disabled={liking || (post.hidden && !post.liked)}
+          onClick={toggleLike}
+        >
+          {post.liked ? '♥' : '♡'} 좋아요 {post.likeCount}
+        </button>
+        <a href="#cm-comments-title" className="cm-comments-link">댓글 {post.commentCount}</a>
+      </div>
+      </article>
 
       <CommentSection postId={post.postId} locked={post.hidden} onCountChange={setCommentCount} />
     </main>

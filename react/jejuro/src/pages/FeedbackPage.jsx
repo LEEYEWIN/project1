@@ -145,49 +145,57 @@ export default function FeedbackPage() {
   }
 
   return (
-    <main className="page">
+    <main className="page feedback-page">
       <h1>{travel.travelName} 다녀온 후기</h1>
 
-      <section className="card">
-        <h2>여행은 어떠셨나요?</h2>
-        <div className="chips column">
+      <section className="card feedback-main">
+        <div className="feedback-section feedback-status-section">
+          <h2>여행은 어떠셨나요?</h2>
+          <p>이번 여행의 결과를 선택해 주세요.</p>
+          <div className="chips column">
           {STATUSES.map((s) => (
             <button
               key={s.value}
               type="button"
               className={status === s.value ? 'chip on' : 'chip'}
+              aria-pressed={status === s.value}
               onClick={() => setStatus(s.value)}
             >
               {s.label}
             </button>
           ))}
+          </div>
         </div>
 
         {needScore && (
-          <div className="field">
-            만족도
+          <div className="feedback-section feedback-rating-section">
+            <h2>여행 만족도</h2>
+            <p>별을 눌러 여행 전체의 만족도를 알려 주세요.</p>
             <StarRating value={score} onChange={setScore} />
+            <span className="feedback-score-caption">{score ? `${score}점 선택됨` : '별점을 선택해 주세요'}</span>
           </div>
         )}
 
         {status === 'PARTIAL' && travel.adoptedRoute && (
-          <div className="field">
-            어디를 못 가셨나요? <small className="muted">못 간 곳을 눌러 주세요. 간 곳은 좋았어요/아쉬워요도 남길 수 있어요(선택).</small>
+          <div className="feedback-section feedback-spot-section">
+            <h2>관광지별 방문 기록</h2>
+            <p>못 간 곳을 눌러 주세요. 다녀온 곳은 좋았어요·아쉬워요도 선택할 수 있어요.</p>
             <SpotChecklist route={travel.adoptedRoute} value={spots} onChange={setSpots} canMiss />
           </div>
         )}
 
         {status === 'COMPLETED' && travel.adoptedRoute && (
-          <div className="field">
-            <button type="button" className="link-btn" aria-expanded={rateEach} onClick={() => setRateEach((v) => !v)}>
-              {rateEach ? '관광지별 평가 접기 ▲' : '관광지별로 평가하기 (선택) ▼'}
+          <div className="feedback-section feedback-spot-section">
+            <button type="button" className="feedback-spot-toggle" aria-expanded={rateEach} onClick={() => setRateEach((v) => !v)}>
+              <span>관광지별 평가 <small>선택 사항</small></span>
+              <span>{rateEach ? '접기 ▲' : '평가하기 ▼'}</span>
             </button>
             {rateEach && <SpotChecklist route={travel.adoptedRoute} value={spots} onChange={setSpots} canMiss={false} />}
           </div>
         )}
 
         {needReason && (
-          <div className="field">
+          <div className="field feedback-reasons-section">
             {status === 'PARTIAL' ? '일부만 다녀온 이유' : '가지 못한 이유'} (여러 개 선택)
             <div className="chips">
               {REASONS.map((r) => (
@@ -195,6 +203,7 @@ export default function FeedbackPage() {
                   key={r.value}
                   type="button"
                   className={r.value in reasons ? 'chip on' : 'chip'}
+                  aria-pressed={r.value in reasons}
                   onClick={() => toggleReason(r.value)}
                 >
                   {r.label}
@@ -214,7 +223,7 @@ export default function FeedbackPage() {
         )}
       </section>
 
-      <section className="card">
+      <section className="card feedback-share-card">
         <label className="check">
           <input type="checkbox" checked={share} onChange={(e) => setShare(e.target.checked)} />
           후기 게시판에도 글 올리기 <small className="muted">(최종 경로가 함께 공개됩니다)</small>

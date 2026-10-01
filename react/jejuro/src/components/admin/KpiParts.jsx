@@ -107,7 +107,7 @@ export function TrendChart({ trend }) {
         >
           {ticks.map((t) => (
             <g key={t}>
-              <line x1={x0} x2={x1} y1={y(t)} y2={y(t)} stroke="#ECE8DF" />
+              <line x1={x0} x2={x1} y1={y(t)} y2={y(t)} stroke="#F0DED0" />
               <text x={x0 - 12} y={y(t) + 4} textAnchor="end" className="adm-axis">
                 {Math.round(t * 100)}%
               </text>
@@ -116,12 +116,12 @@ export function TrendChart({ trend }) {
           <polyline
             points={pts.map((p) => `${x(p.i)},${y(p.adoptionRate)}`).join(' ')}
             fill="none"
-            stroke="#2F6FDB"
-            strokeWidth="2"
+            stroke="#E96325"
+            strokeWidth="3"
             strokeLinejoin="round"
           />
           {pts.map((p) => (
-            <circle key={p.i} cx={x(p.i)} cy={y(p.adoptionRate)} r="5" fill="#2F6FDB" stroke="#fff" strokeWidth="2">
+            <circle key={p.i} cx={x(p.i)} cy={y(p.adoptionRate)} r="5" fill="#E96325" stroke="#fff" strokeWidth="2">
               <title>
                 {p.weekStart} 주 · {pct(p.adoptionRate)} (추천 {p.items}곳)
               </title>
@@ -159,10 +159,10 @@ const LEVEL = {
   LOW_DATA: { text: '데이터 부족', cls: 'muted' },
 };
 
-/** 채택률이 높을수록 진한 파랑 (한 색 단계) */
+/** 채택률이 높을수록 진한 주황 (한 색 단계) */
 function heat(v) {
-  if (v == null) return '#F3F1EC';
-  const steps = ['#EEF3FC', '#DCE8FB', '#CFDDF8', '#BCD0F5', '#A9C3F2', '#95B5EE'];
+  if (v == null) return '#F6F0EA';
+  const steps = ['#FFF1E7', '#FFE6D4', '#FFD7BA', '#FFC69B', '#FFB37D', '#F99C5B'];
   return steps[Math.min(steps.length - 1, Math.floor(v * 100 / 8))];
 }
 

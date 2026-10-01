@@ -40,7 +40,11 @@ export default function LegList({ legs, mode }) {
       {total > 0 && (
         <p className="leg-taxi-total">
           🚕 예상 택시비 합계 <b>약 {won(total)}</b>
-          <small className="muted"> · 제주 중형택시 거리요금 기준(기본 4,300원/2km, 126m당 100원), 구간마다 따로 탄다고 가정 · 심야할증 제외</small>
+          <small className="muted">
+            · 제주 중형택시 거리요금 기준(기본 4,300원/2km, 126m당 100원)
+            <br />
+            구간마다 따로 탄다고 가정 · 심야할증 제외
+          </small>
         </p>
       )}
     </>

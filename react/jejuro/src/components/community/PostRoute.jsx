@@ -35,9 +35,11 @@ export default function PostRoute({ travelName, route, defaultOpen = true }) {
       {open && (
         <div className="cm-route-box">
           <div className="cm-route-line">
-            <span>
-              {travelName ?? '여행'} · {route.tripDays}일 · 방문지 {spotCount}곳
-            </span>
+            <div className="cm-route-summary">
+              <strong>{travelName ?? '여행'}</strong>
+              <span>{route.tripDays}일</span>
+              <span>방문지 {spotCount}곳</span>
+            </div>
             <button type="button" className="cm-text-btn" onClick={() => setShowMap((v) => !v)}>
               {showMap ? '지도 닫기' : '지도 보기'}
             </button>
@@ -58,7 +60,7 @@ export default function PostRoute({ travelName, route, defaultOpen = true }) {
                 ))}
               </div>
               <KakaoMap points={points} path={points} height={260} />
-              <p className="cm-route-names">{day?.spots.map((s) => s.poi.name).join(' → ')}</p>
+              <p className="cm-route-names"><b>방문 순서</b>{day?.spots.map((s) => s.poi.name).join(' → ')}</p>
             </div>
           )}
         </div>

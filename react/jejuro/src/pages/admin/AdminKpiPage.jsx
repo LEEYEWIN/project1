@@ -83,7 +83,7 @@ export default function AdminKpiPage() {
         <>
           <SummaryTiles s={data.summary} />
 
-          <FunnelPanel steps={data.funnel} days={days} />
+          <FunnelPanel steps={data.funnel} />
 
           <TrendChart trend={data.trend} />
 

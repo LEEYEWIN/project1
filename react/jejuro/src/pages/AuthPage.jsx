@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { errorMessage } from '../api/client.js';
-import { sendEmailCode, verifyEmailCode } from '../api/authApi.js';
+import {
+  getSocialProviders,
+  sendEmailCode,
+  socialErrorMessage,
+  socialLoginUrl,
+  socialName,
+  verifyEmailCode,
+} from '../api/authApi.js';
 import '../styles/auth.css';
+
+const CODE_VALID_MS = 5 * 60 * 1000; // 서버와 같은 5분
+
+// 남은 밀리초 → 4:59
+function formatRemaining(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const min = Math.floor(total / 60);
+  const sec = String(total % 60).padStart(2, '0');
+  return `${min}:${sec}`;
+}
 
 function PasswordInput({
   id,
@@ -79,6 +96,48 @@ export default function AuthPage({ signup = false }) {
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [expiresAt, setExpiresAt] = useState(null);
+  const [now, setNow] = useState(Date.now());
+  const [socialProviders, setSocialProviders] = useState([]);
+
+  const remaining = expiresAt ? expiresAt - now : 0;
+  const codeExpired = codeSent && remaining <= 0;
+
+  // 인증번호를 보낸 뒤 1초마다 남은 시간을 다시 그린다.
+  useEffect(() => {
+    if (!expiresAt) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  // 5분이 지나면 서버에서도 인증이 풀리므로 화면도 처음 상태로 돌린다.
+  useEffect(() => {
+    if (!codeExpired) return;
+    setVerified(false);
+    setCode('');
+    setNotice('');
+  }, [codeExpired]);
+
+  // 로그인 화면: 키가 설정된 소셜 로그인 버튼만 보여 준다.
+  useEffect(() => {
+    if (signup) return undefined;
+    let active = true;
+    getSocialProviders()
+      .then((list) => active && setSocialProviders(list))
+      .catch(() => active && setSocialProviders([]));
+    return () => {
+      active = false;
+    };
+  }, [signup]);
+
+  // 소셜 로그인 후 서버가 ?socialError= 로 돌려보낸 경우
+  const params = new URLSearchParams(location.search);
+  const socialError = params.get('socialError');
+  const socialErrorText = socialError
+    ? socialErrorMessage(socialError, params.get('provider'))
+    : '';
 
   const change = (key) => (event) => {
     setValues((old) => ({
@@ -97,6 +156,8 @@ export default function AuthPage({ signup = false }) {
     setCodeSent(false);
     setCode('');
     setError('');
+    setNotice('');
+    setExpiresAt(null);
   };
 
   const target =
@@ -119,16 +180,28 @@ export default function AuthPage({ signup = false }) {
       return;
     }
 
+    if (sending) return;
+
     setError('');
+    setNotice('');
+    setSending(true);
 
     try {
       await sendEmailCode(email);
 
+      const sentAt = Date.now();
       setCodeSent(true);
       setVerified(false);
       setCode('');
+      setNow(sentAt);
+      setExpiresAt(sentAt + CODE_VALID_MS);
+      setNotice(
+        `${email}로 인증번호를 보냈어요. 메일함(스팸함 포함)을 확인해 주세요.`
+      );
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setSending(false);
     }
   }
 
@@ -138,6 +211,11 @@ export default function AuthPage({ signup = false }) {
 
     if (!verificationCode) {
       setError('인증번호를 입력해 주세요.');
+      return;
+    }
+
+    if (codeExpired) {
+      setError('인증 시간이 지났어요. 인증번호를 다시 받아 주세요.');
       return;
     }
 
@@ -151,6 +229,7 @@ export default function AuthPage({ signup = false }) {
 
       if (result?.verified) {
         setVerified(true);
+        setNotice('');
       } else {
         setVerified(false);
         setError('인증번호가 올바르지 않습니다.');
@@ -269,6 +348,11 @@ export default function AuthPage({ signup = false }) {
             )}
 
           {!signup && location.state?.passwordChanged && <p className="auth-withdrawn" role="status">비밀번호를 변경했습니다. 새 비밀번호로 로그인해 주세요.</p>}
+          {!signup && socialErrorText && (
+            <div className="auth-error" role="alert">
+              {socialErrorText}
+            </div>
+          )}
           <form
             onSubmit={submit}
             className="auth-form"
@@ -299,12 +383,14 @@ export default function AuthPage({ signup = false }) {
                       className="auth-mini-btn"
                       onClick={sendCode}
                       disabled={
-                        !values.email || verified
+                        !values.email || verified || sending
                       }
                     >
-                      {codeSent
-                        ? '재전송'
-                        : '인증번호 받기'}
+                      {sending
+                        ? '전송 중…'
+                        : codeSent
+                          ? '재전송'
+                          : '인증번호 받기'}
                     </button>
                   </div>
                 </div>
@@ -330,7 +416,7 @@ export default function AuthPage({ signup = false }) {
                       maxLength={6}
                       placeholder="인증번호를 입력해주세요"
                       disabled={
-                        !codeSent || verified
+                        !codeSent || verified || codeExpired
                       }
                     />
 
@@ -341,6 +427,7 @@ export default function AuthPage({ signup = false }) {
                       disabled={
                         !codeSent ||
                         verified ||
+                        codeExpired ||
                         !code
                       }
                     >
@@ -348,10 +435,35 @@ export default function AuthPage({ signup = false }) {
                     </button>
                   </div>
 
+                  {notice && (
+                    <p
+                      className="auth-notice"
+                      role="status"
+                    >
+                      {notice}
+                    </p>
+                  )}
+
                   {verified ? (
-                    <small>
-                      이메일 인증이
-                      완료되었습니다.
+                    <small className="auth-timer">
+                      이메일 인증이 완료되었습니다.{' '}
+                      <strong>
+                        {formatRemaining(remaining)}
+                      </strong>{' '}
+                      안에 가입을 마쳐 주세요.
+                    </small>
+                  ) : codeExpired ? (
+                    <small className="auth-timer auth-timer-expired">
+                      인증 시간이 지났어요.
+                      인증번호를 다시 받아 주세요.
+                    </small>
+                  ) : codeSent ? (
+                    <small className="auth-timer">
+                      남은 시간{' '}
+                      <strong>
+                        {formatRemaining(remaining)}
+                      </strong>{' '}
+                      · 인증번호는 5분간 유효합니다.
                     </small>
                   ) : (
                     <small>
@@ -523,6 +635,31 @@ export default function AuthPage({ signup = false }) {
                   : '로그인'}
             </button>
           </form>
+
+          {!signup && socialProviders.length > 0 && (
+            <div className="auth-social">
+              <p className="auth-social-title">
+                연동한 소셜 계정으로 로그인
+              </p>
+
+              <div className="auth-social-buttons">
+                {socialProviders.map((provider) => (
+                  <a
+                    key={provider}
+                    className={`auth-social-btn auth-social-${provider.toLowerCase()}`}
+                    href={socialLoginUrl(provider)}
+                  >
+                    {socialName(provider)}로 로그인
+                  </a>
+                ))}
+              </div>
+
+              <small>
+                소셜 계정은 회원가입 후 내 정보 수정에서
+                연동하면 사용할 수 있어요.
+              </small>
+            </div>
+          )}
 
           {!signup && (
             <Link

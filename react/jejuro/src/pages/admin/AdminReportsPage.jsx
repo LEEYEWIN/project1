@@ -145,6 +145,17 @@ function ReportCard({ target: t, onHandled }) {
   const [error, setError] = useState('');
   const pending = t.status === 'PENDING';
   const what = t.targetType === 'POST' ? '글' : '댓글';
+  const currentStatus = t.deleted
+    ? '삭제됨'
+    : t.blockReason
+      ? '차단됨'
+      : t.hidden
+        ? `신고된 ${what === '글' ? '게시글' : '댓글'}로 표시 중`
+        : pending
+          ? '처리 대기'
+          : t.action === 'KEEP'
+            ? '정상 표시'
+            : '처리 완료';
 
   const unblock = async () => {
     if (!window.confirm('차단을 풀고 다시 모든 회원에게 보이게 할까요?')) return;
@@ -182,18 +193,12 @@ function ReportCard({ target: t, onHandled }) {
   return (
     <article className="adm-card adm-report">
       <div className="adm-report-head">
-        <span className="adm-badge">{what} #{t.targetId}</span>
-        <b className="num">신고 {t.reportCount}건</b>
-        {t.reasons.map((r) => (
-          <span key={r.code} className={r.code === 'SEXUAL' || r.code === 'PRIVACY' ? 'adm-badge bad' : 'adm-badge warn'}>
-            {REASON_LABEL[r.code] ?? r.label} {r.count}
-          </span>
-        ))}
-        {t.deleted && <span className="adm-badge">삭제됨</span>}
-        {!t.deleted && t.blockReason && <span className="adm-badge bad">차단됨 · {REASON_LABEL[t.blockReason] ?? t.blockReason}</span>}
-        {!t.deleted && t.hidden && !t.blockReason && <span className="adm-badge warn">신고된 {what === '글' ? '게시글' : '댓글'}로 표시 중</span>}
-        <span className="adm-muted">
-          {dt(t.firstReportedAt)}
+        <div className="adm-report-count">
+          <span>{what} 신고</span>
+          <strong className="num">{t.reportCount}건</strong>
+        </div>
+        <span className="adm-report-date">
+          접수 {dt(t.firstReportedAt)}
           {t.lastReportedAt !== t.firstReportedAt && ` ~ ${dt(t.lastReportedAt)}`}
         </span>
       </div>
@@ -211,6 +216,17 @@ function ReportCard({ target: t, onHandled }) {
             )}
           </p>
         )}
+        <dl className="adm-report-facts">
+          <div><dt>{what} 번호</dt><dd className="num">#{t.targetId}</dd></div>
+          <div className="adm-report-fact-reasons">
+            <dt>신고 사유</dt>
+            <dd>{t.reasons.length ? t.reasons.map((r) => `${REASON_LABEL[r.code] ?? r.label} ${r.count}건`).join(' · ') : '확인된 사유 없음'}</dd>
+          </div>
+          <div><dt>현재 상태</dt><dd>{currentStatus}</dd></div>
+          <div><dt>이전 차단</dt><dd className="num">{t.authorPriorAccepted ?? 0}건</dd></div>
+          <div><dt>작성자</dt><dd>{t.authorName}{t.authorId ? ` #${t.authorId}` : ''}</dd></div>
+        </dl>
+        <p className="adm-report-content-label">신고 대상 내용</p>
         <blockquote>{t.content ?? '(내용 없음)'}</blockquote>
         {t.details.length > 0 && (
           <ul className="adm-report-details">
@@ -220,11 +236,6 @@ function ReportCard({ target: t, onHandled }) {
           </ul>
         )}
       </div>
-
-      <p className="adm-report-author">
-        작성자 <b>{t.authorName}</b>
-        {t.authorId && <span className="adm-muted"> #{t.authorId}</span>} · 이전 차단 {t.authorPriorAccepted}건
-      </p>
 
       {pending ? (
         <div className="adm-report-form">

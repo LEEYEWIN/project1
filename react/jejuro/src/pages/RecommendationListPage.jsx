@@ -58,16 +58,13 @@ export default function RecommendationListPage() {
   if (!pois) return <main className="page"><Loading /></main>;
 
   return (
-    <main className="page wide">
+    <main className="page wide recommendations-page">
       <div className="title-row">
         <h1>AI 추천 관광지 {pois.length}곳</h1>
         <div className="actions">
           <button type="button" className="btn ghost" onClick={() => navigate(`/travels/${travelId}/recommending`)}>
             다시 추천 받기
           </button>
-          <Link className="btn ghost" to={`/travels/${travelId}/pois`}>
-            전체 관광지 보기
-          </Link>
         </div>
       </div>
 
@@ -79,6 +76,22 @@ export default function RecommendationListPage() {
           🔒 일정을 확정한 여행이에요. 추천 목록은 볼 수 있지만 여행 장소를 추가하거나 뺄 수는 없어요.
         </p>
       )}
+
+      <aside className="more-places-guide" aria-labelledby="more-places-title">
+        <div>
+          <h2 id="more-places-title">
+            {locked ? '제주의 다른 관광지도 둘러보세요' : '추천 외의 관광지도 여행에 추가할 수 있어요'}
+          </h2>
+          <p id="more-places-description">
+            {locked
+              ? '관광지 더보기에서 다른 장소도 살펴보세요. 일정이 확정되어 장소 추가는 할 수 없어요.'
+              : '다른 관광지도 추가하고 싶다면 관광지 더보기에서 찾아보세요. 마음에 드는 곳의 [+ 장소 추가]를 누르면 이 여행의 여행 장소에 함께 담겨요.'}
+          </p>
+        </div>
+        <Link className="btn ghost" to={`/travels/${travelId}/pois`} aria-describedby="more-places-description">
+          관광지 더보기 <span aria-hidden="true">→</span>
+        </Link>
+      </aside>
 
       <RegionFilter regions={regions} value={region} onChange={setRegion} />
       <ErrorBox message={bookmarkError} />

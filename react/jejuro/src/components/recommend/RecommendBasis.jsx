@@ -39,11 +39,11 @@ export default function RecommendBasis({ travel, count }) {
           <dd>{companions}</dd>
         </div>
         {ranked.map((s) => (
-          <div key={s.preferenceId}>
+          <div key={s.preferenceId} className="basis-preference">
             <dt>{s.question} 1순위</dt>
             <dd>
               <b>{s.answers[0]}</b>
-              {s.answers.length > 1 && <small> (2·3순위: {s.answers.slice(1).join(', ')})</small>}
+              {s.answers.length > 1 && <small>2·3순위 · {s.answers.slice(1).join(', ')}</small>}
             </dd>
           </div>
         ))}

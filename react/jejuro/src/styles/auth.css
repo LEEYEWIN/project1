@@ -100,3 +100,18 @@
   border: 1px solid #ee7539; background: #fff; color: #ee7539; font-weight: 600;
 }
 .auth-mini-btn:disabled { opacity: .4; cursor: default; }
+/* 인증번호 전송 안내 · 남은 시간 */
+.auth-notice { margin: 4px 0 0; padding: 10px 12px; background: #eef6ef; border: 1px solid #cfe5d4; border-radius: 8px; color: #2f6b45; font-size: 12px; line-height: 1.5; }
+.auth-timer strong { color: #ee7539; font-variant-numeric: tabular-nums; }
+.auth-timer-expired { color: #a33f34 !important; }
+
+/* 소셜 로그인 (연동한 계정만) */
+.auth-social { margin-top: 28px; padding-top: 22px; border-top: 1px solid #ececec; display: flex; flex-direction: column; gap: 10px; }
+.auth-social-title { margin: 0; font-size: 13px; font-weight: 700; color: #555; text-align: center; }
+.auth-social-buttons { display: flex; flex-direction: column; gap: 8px; }
+.auth-social-btn { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 10px; text-decoration: none; font-size: 15px; font-weight: 700; border: 1px solid transparent; }
+.auth-social-kakao { background: #fee500; color: #191919; }
+.auth-social-naver { background: #03c75a; color: #fff; }
+.auth-social-google { background: #fff; color: #333; border-color: #d7d8dd; }
+.auth-social-btn:hover { filter: brightness(.96); }
+.auth-social small { font-size: 11px; color: #8a8f96; text-align: center; }

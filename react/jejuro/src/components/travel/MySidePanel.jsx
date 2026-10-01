@@ -51,9 +51,14 @@ export default function MySidePanel({ me, travels }) {
   return (
     <aside className="side">
       <section className="side-box profile">
-        <p className="side-hello">
-          <b>{me?.nickname ?? '여행자'}</b> 님의 제주
-        </p>
+        <div className="side-profile-head">
+          <p className="side-hello">
+            <b>{me?.nickname ?? '여행자'}</b> 님의 제주
+          </p>
+          <Link className="btn primary small side-new" to="/travels/new">
+            + 새 여행 만들기
+          </Link>
+        </div>
         <dl className="side-stats">
           <div>
             <dt>계획·진행 중</dt>
@@ -68,12 +73,11 @@ export default function MySidePanel({ me, travels }) {
             <dd>{reviews}</dd>
           </div>
         </dl>
-        <Link className="btn primary small side-new" to="/travels/new">
-          + 새 여행 만들기
-        </Link>
-        <Link className="side-link" to="/dislikes">
-          🙅 관심없음 관광지 관리
-        </Link>
+        <div className="side-actions">
+          <Link className="btn small side-dislikes" to="/dislikes">
+            관심 없음 관광지 관리
+          </Link>
+        </div>
       </section>
 
       <section className="side-box">

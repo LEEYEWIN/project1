@@ -26,6 +26,9 @@ export default function AdminLayout() {
   return (
     <div className="adm">
       <nav className="adm-nav" aria-label="관리자 메뉴">
+        <NavLink to="/travels" className="adm-back">
+          ← 서비스 화면으로
+        </NavLink>
         <div className="adm-logo">
           제주로 <span>ADMIN</span>
         </div>
@@ -37,9 +40,6 @@ export default function AdminLayout() {
         <div className="adm-user">
           <span>{user?.nickname}님</span>
         </div>
-        <NavLink to="/travels" className="adm-back">
-          ← 서비스 화면으로
-        </NavLink>
       </nav>
       <main className="adm-main">
         <Outlet />

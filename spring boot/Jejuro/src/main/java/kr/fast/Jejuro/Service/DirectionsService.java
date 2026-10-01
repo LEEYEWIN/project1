@@ -17,6 +17,7 @@ import kr.fast.Jejuro.Service.KakaoMobilityClient.CarRoute;
 import kr.fast.Jejuro.ResponseDTO.DirectionsResponse;
 import kr.fast.Jejuro.ResponseDTO.DirectionsResponse.LatLng;
 import kr.fast.Jejuro.ResponseDTO.DirectionsResponse.Leg;
+import kr.fast.Jejuro.ResponseDTO.DirectionsResponse.PlaceNote;
 import kr.fast.Jejuro.ResponseDTO.OptimizeResponse;
 import kr.fast.Jejuro.Config.ApiException;
 import kr.fast.Jejuro.Entity.Poi;
@@ -57,40 +58,42 @@ public DirectionsService(RouteService routeService, RouteDayRepository dayReposi
 
 /** 6페이지: 저장된 경로의 N일차 동선 */
 public DirectionsResponse directions(Long routeId, int dayNo, TravelMode mode, Long userId) {
-   return compute(loadDayPoints(routeId, dayNo, userId), mode);
+   return compute(loadDayPois(routeId, dayNo, userId), mode);
 }
 
 /** 5페이지 미리보기: 아직 저장하지 않은 방문 순서(poiIds 순서 그대로)로 동선 계산 */
 public DirectionsResponse preview(List<Long> poiIds, TravelMode mode) {
-   return compute(loadPoints(poiIds), mode);
+   return compute(loadPois(poiIds), mode);
 }
 
 /** 5페이지 미리보기: 저장 전 순서로 효율적인 순서 제안 (1번 고정, fixEnd면 마지막도 고정) */
 public OptimizeResponse previewOptimize(List<Long> poiIds, boolean fixEnd) {
-   return optimizeOf(loadPoints(poiIds), fixEnd);
+   return optimizeOf(points(loadPois(poiIds)), fixEnd);
 }
 
-private DirectionsResponse compute(List<GeoPoint> points, TravelMode mode) {
+private DirectionsResponse compute(List<Poi> pois, TravelMode mode) {
+   List<GeoPoint> points = points(pois);
+   List<PlaceNote> notes = placeNotes(pois);
    if (points.size() < 2) {
-       return new DirectionsResponse(mode.name(), false, 0, 0, List.of(), toPath(points), null, 0);
+       return new DirectionsResponse(mode.name(), false, 0, 0, List.of(), toPath(points), null, 0, notes);
    }
    if (mode == TravelMode.CAR && kakaoClient.isConfigured()) {
        if (points.size() > KakaoMobilityClient.MAX_POINTS) {
            throw ApiException.badRequest("하루 방문지는 최대 " + KakaoMobilityClient.MAX_POINTS + "곳까지 길찾기를 할 수 있습니다.");
        }
        try {
-           return carByKakao(points);
+           return carByKakao(points, notes);
        } catch (ApiException e) {
            // 카카오 호출이 실패해도 화면이 멈추지 않게 추정값으로 대신하고, 실패 이유를 함께 보낸다
-           return estimate(points, mode, CAR_SPEED_MPS, e.getMessage() + " (직선거리 추정값으로 표시)");
+           return estimate(points, mode, CAR_SPEED_MPS, failureNotice(e.getMessage(), points, notes), notes);
        }
    }
    double speed = mode == TravelMode.WALK ? WALK_SPEED_MPS : CAR_SPEED_MPS;
-   return estimate(points, mode, speed, null);
+   return estimate(points, mode, speed, null, notes);
 }
 
 public OptimizeResponse optimize(Long routeId, int dayNo, boolean fixEnd, Long userId) {
-   return optimizeOf(loadDayPoints(routeId, dayNo, userId), fixEnd);
+   return optimizeOf(points(loadDayPois(routeId, dayNo, userId)), fixEnd);
 }
 
 private OptimizeResponse optimizeOf(List<GeoPoint> points, boolean fixEnd) {
@@ -115,9 +118,8 @@ private static long factorial(int n) {
    return f;
 }
 
-/** 경로 소유권 확인 → N일차 방문지를 방문 순서대로 좌표로 변환 */
-/** 관광지 ID 목록 → 좌표 (요청한 순서 유지) */
-private List<GeoPoint> loadPoints(List<Long> poiIds) {
+/** 관광지 ID 목록 → 관광지 (요청한 순서 유지) */
+private List<Poi> loadPois(List<Long> poiIds) {
    Map<Long, Poi> pois = poiRepository.findAllById(poiIds).stream()
            .collect(Collectors.toMap(Poi::getPoiId, Function.identity()));
    return poiIds.stream()
@@ -126,27 +128,58 @@ private List<GeoPoint> loadPoints(List<Long> poiIds) {
                if (p == null) {
                    throw ApiException.notFound("관광지를 찾을 수 없습니다: " + id);
                }
-               return new GeoPoint(p.getPoiId(), p.displayName(),
-                       p.getLatitude().doubleValue(), p.getLongitude().doubleValue());
+               return p;
            })
            .toList();
 }
 
-private List<GeoPoint> loadDayPoints(Long routeId, int dayNo, Long userId) {
+/** 경로 소유권 확인 → N일차 방문지를 방문 순서대로 */
+private List<Poi> loadDayPois(Long routeId, int dayNo, Long userId) {
    routeService.getOwnedRoute(routeId, userId);
    RouteDay day = dayRepository.findByRouteIdAndDayNo(routeId, dayNo)
            .orElseThrow(() -> ApiException.notFound(dayNo + "일차 일정이 없습니다."));
    List<RouteSpot> spots = spotRepository.findByRouteDayIdOrderByVisitOrder(day.getRouteDayId());
    Map<Long, Poi> pois = poiRepository.findAllById(spots.stream().map(RouteSpot::getPoiId).toList()).stream()
            .collect(Collectors.toMap(Poi::getPoiId, Function.identity()));
-   return spots.stream()
-           .map(s -> pois.get(s.getPoiId()))
+   return spots.stream().map(s -> pois.get(s.getPoiId())).toList();
+}
+
+private static List<GeoPoint> points(List<Poi> pois) {
+   return pois.stream()
            .map(p -> new GeoPoint(p.getPoiId(), p.displayName(),
                    p.getLatitude().doubleValue(), p.getLongitude().doubleValue()))
            .toList();
 }
 
-private DirectionsResponse carByKakao(List<GeoPoint> points) {
+/** 섬(배편)·산(주차·등산) 안내. 방문 순서는 1부터 */
+private static List<PlaceNote> placeNotes(List<Poi> pois) {
+   List<PlaceNote> notes = new ArrayList<>();
+   for (int i = 0; i < pois.size(); i++) {
+       Poi p = pois.get(i);
+       int order = i + 1;
+       PlaceAccess.of(p.displayName(), p.getAddress(), p.getCategoryCode()).ifPresent(kind ->
+               notes.add(new PlaceNote(order, p.displayName(), kind.name(), PlaceAccess.message(kind))));
+   }
+   return notes;
+}
+
+/** 카카오 실패 메시지("도착 지점 주변의 도로를 탐색할 수 없음" 등)를 사용자가 이해할 수 있게 풀어 쓴다 */
+private static String failureNotice(String raw, List<GeoPoint> points, List<PlaceNote> notes) {
+   String msg = raw == null ? "" : raw;
+   String where = null;
+   if (msg.contains("도착")) where = "도착 지점(" + points.get(points.size() - 1).name() + ")";
+   else if (msg.contains("출발") || msg.contains("시작")) where = "출발 지점(" + points.get(0).name() + ")";
+   else if (msg.contains("경유")) where = "경유지";
+   if (where == null || !msg.contains("도로")) {
+       return msg + " (직선거리 추정값으로 표시)";
+   }
+   return "자동차 경로를 찾지 못했어요. " + where + " 주변에 차가 다닐 수 있는 도로가 없어요. "
+           + "섬이나 산 정상·탐방로처럼 차로 바로 갈 수 없는 곳이 있으면 이렇게 돼요. "
+           + "그래서 지도 선과 거리·시간·택시비는 직선거리로 계산한 추정값이에요."
+           + (notes.isEmpty() ? "" : " 아래 관광지 안내를 확인하세요.");
+}
+
+private DirectionsResponse carByKakao(List<GeoPoint> points, List<PlaceNote> notes) {
    CarRoute car = kakaoClient.route(points);
    List<Leg> legs = new ArrayList<>();
    int totalD = 0;
@@ -158,10 +191,11 @@ private DirectionsResponse carByKakao(List<GeoPoint> points) {
        totalT += s.durationSec();
    }
    List<LatLng> path = car.path().stream().map(p -> new LatLng(p[0], p[1])).toList();
-   return new DirectionsResponse(TravelMode.CAR.name(), false, totalD, totalT, legs, path, null, totalFare(legs));
+   return new DirectionsResponse(TravelMode.CAR.name(), false, totalD, totalT, legs, path, null, totalFare(legs), notes);
 }
 
-private DirectionsResponse estimate(List<GeoPoint> points, TravelMode mode, double speedMps, String notice) {
+private DirectionsResponse estimate(List<GeoPoint> points, TravelMode mode, double speedMps, String notice,
+                                   List<PlaceNote> notes) {
    List<Leg> legs = new ArrayList<>();
    int totalD = 0;
    int totalT = 0;
@@ -172,7 +206,7 @@ private DirectionsResponse estimate(List<GeoPoint> points, TravelMode mode, doub
        totalD += d;
        totalT += t;
    }
-   return new DirectionsResponse(mode.name(), true, totalD, totalT, legs, toPath(points), notice, totalFare(legs));
+   return new DirectionsResponse(mode.name(), true, totalD, totalT, legs, toPath(points), notice, totalFare(legs), notes);
 }
 
 private Leg leg(List<GeoPoint> points, int i, int distanceM, int durationSec) {

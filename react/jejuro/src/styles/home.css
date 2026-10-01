@@ -28,7 +28,7 @@
 .home-destination:hover { transform: translateY(-5px); }
 .home-destination-image { position: relative; aspect-ratio: 1.06; overflow: hidden; border-radius: 11px; }
 .home-destination-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.home-card-arrow { position: absolute; right: 0; top: 0; width: 43px; height: 43px; background: var(--card-bg); color: #ed793e; border-radius: 0 0 0 24px; display: grid; place-items: center; font-size: 27px; }
+.home-card-arrow { position: absolute; right: 0; top: 0; width: 43px; height: 43px; background: var(--card-bg); color: #ed793e; border-radius: 0 0 0 24px; display: grid; place-items: center; font-size: 27px; font-weight: 700; -webkit-text-stroke: .35px currentColor; }
 .home-destination h3 { font-size: 20px; line-height: 1.4; margin: 20px 0 8px; word-break: keep-all; color: #252821; }
 .home-destination p { font-size: 13px; color: #727d6e; line-height: 1.7; margin: 0; word-break: keep-all; }
 .home-image-fallback { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #ffffff77; color: #8c947e; font-size: 14px; }

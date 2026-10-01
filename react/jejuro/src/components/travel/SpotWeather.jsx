@@ -5,7 +5,7 @@ import { spotWeatherText, weatherInfo } from '../../utils/weather.js';
 /**
  * 확정한 일정·지금 경로의 관광지별 날씨
  * - 관광지 좌표 + 그 관광지를 가는 날짜(일차 날짜)로 서버에 한 번에 요청 (Open-Meteo, 지난 31일 ~ 앞으로 16일)
- * - 범위 밖 날짜(32일 전·16일 뒤)나 실패하면 아무것도 표시하지 않는다
+ * - 범위 밖 날짜는 일차 제목 옆 DayWeatherNote가 안내한다 (16일 뒤: "M/D부터 날씨를 볼 수 있어요", 31일 전: "지난 날씨 정보가 없어요")
  * route: RouteDetailResponse { days: [{ dayNo, date, spots: [{ poi }] }] } (null이면 요청 안 함)
  * → Map('일차-관광지번호' → { amCode, pmCode, tempMin, tempMax })
  */
@@ -66,4 +66,40 @@ export default function SpotWeather({ weather: w }) {
       )}
     </span>
   );
+}
+
+/** 날씨를 받을 수 있는 범위: 오늘 기준 지난 31일 ~ 앞으로 15일(오늘 포함 16일) — 서버 WeatherService와 같게 */
+const PAST_DAYS = 31;
+const FORECAST_DAYS = 16;
+
+/** 'YYYY-MM-DD' → 그날 0시(내 PC 시간) */
+function toDay(ymd) {
+  const [y, m, d] = String(ymd).slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function addDays(day, n) {
+  const x = new Date(day);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+/**
+ * 일차 제목 옆 안내 (범위 안이면 아무것도 표시하지 않음 → 관광지 옆 SpotWeather가 날씨를 보여 줌)
+ * - 16일 뒤 일정: "🌤 10/2부터 날씨를 볼 수 있어요" (그 날짜 = 일차 날짜 − 15일)
+ * - 31일보다 전에 다녀온 일정: "지난 날씨 정보가 없어요"
+ */
+export function DayWeatherNote({ date }) {
+  if (!date) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = toDay(date);
+  if (day > addDays(today, FORECAST_DAYS - 1)) {
+    const from = addDays(day, -(FORECAST_DAYS - 1));
+    return <span className="day-weather-note">🌤 {from.getMonth() + 1}/{from.getDate()}부터 날씨를 볼 수 있어요</span>;
+  }
+  if (day < addDays(today, -PAST_DAYS)) {
+    return <span className="day-weather-note">지난 날씨 정보가 없어요</span>;
+  }
+  return null;
 }

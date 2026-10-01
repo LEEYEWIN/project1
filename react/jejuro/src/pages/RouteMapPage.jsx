@@ -9,6 +9,8 @@ import LegList from '../components/map/LegList.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import LodgingPanel from '../components/route/LodgingPanel.jsx';
+import RouteEstimateNotice from '../components/route/RouteEstimateNotice.jsx';
+import PlaceAccessNotes from '../components/route/PlaceAccessNotes.jsx';
 
 /**
  * 6페이지: 카카오맵으로 일차별 동선과 이동수단별 시간 보기
@@ -87,7 +89,7 @@ export default function RouteMapPage() {
   }
 
   return (
-    <main className="page wide">
+    <main className="page wide route-map-page">
       <div className="title-row">
         <h1>{route.routeName ?? '여행 경로'} · 동선</h1>
         {route.locked ? (
@@ -99,29 +101,36 @@ export default function RouteMapPage() {
         )}
       </div>
 
-      <div className="day-tabs">
-        {route.days.map((d) => (
-          <button
-            key={d.dayNo}
-            type="button"
-            className={d.dayNo === dayNo ? 'day-tab on' : 'day-tab'}
-            onClick={() => setDayNo(d.dayNo)}
-          >
-            <strong>{d.dayNo}일차</strong>
-            <small>
-              {formatDate(d.date)} · {d.spots.length}곳
-            </small>
-          </button>
-        ))}
-      </div>
-
-      <div className="chips">
-        <button type="button" className={mode === 'CAR' ? 'chip on' : 'chip'} onClick={() => setMode('CAR')}>
-          🚗 자동차
-        </button>
-        <button type="button" className={mode === 'WALK' ? 'chip on' : 'chip'} onClick={() => setMode('WALK')}>
-          🚶 도보
-        </button>
+      <div className="route-map-controls">
+        <div className="route-map-control-group">
+          <span className="route-map-control-label">여행 날짜</span>
+          <div className="day-tabs">
+            {route.days.map((d) => (
+              <button
+                key={d.dayNo}
+                type="button"
+                className={d.dayNo === dayNo ? 'day-tab on' : 'day-tab'}
+                onClick={() => setDayNo(d.dayNo)}
+              >
+                <strong>{d.dayNo}일차</strong>
+                <small>
+                  {formatDate(d.date)} · {d.spots.length}곳
+                </small>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="route-map-control-group">
+          <span className="route-map-control-label">이동 수단</span>
+          <div className="chips">
+            <button type="button" className={mode === 'CAR' ? 'chip on' : 'chip'} onClick={() => setMode('CAR')}>
+              🚗 자동차
+            </button>
+            <button type="button" className={mode === 'WALK' ? 'chip on' : 'chip'} onClick={() => setMode('WALK')}>
+              🚶 도보
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="map-layout">
@@ -133,7 +142,7 @@ export default function RouteMapPage() {
           onSelectLodging={setSelectedLodgingId}
         />
 
-        <section className="card">
+        <section className="card route-map-panel">
           <div className="panel-tabs">
             <button type="button" className={panel === 'route' ? 'on' : ''} onClick={() => setPanel('route')}>
               이동 정보
@@ -160,19 +169,29 @@ export default function RouteMapPage() {
               <Loading text="이동 정보를 계산하는 중…" />
             ) : (
               <>
-                <p className="total">
-                  총 {formatDuration(dir.totalDurationSec)} · {formatDistance(dir.totalDistanceM)}
-                  {dir.estimated && <span className="badge">추정값</span>}
-                </p>
-                {dir.notice && <p className="hint">⚠ {dir.notice}</p>}
+                <div className="route-summary-card">
+                  <div className="route-summary-heading">
+                    <h3>전체 이동 요약</h3>
+                    {dir.estimated && <span className="badge">추정값</span>}
+                  </div>
+                  <dl>
+                    <div><dt>총 이동 시간</dt><dd>{formatDuration(dir.totalDurationSec)}</dd></div>
+                    <div><dt>총 이동 거리</dt><dd>{formatDistance(dir.totalDistanceM)}</dd></div>
+                  </dl>
+                </div>
+                <RouteEstimateNotice notice={dir.notice} />
+                <PlaceAccessNotes notes={dir.placeNotes} />
                 {dir.estimated && !dir.notice && (
-                  <p className="hint">
+                  <p className="route-estimate-notice">
                     {mode === 'WALK'
                       ? '도보 시간은 직선거리×1.3, 시속 4km로 계산한 값입니다.'
                       : '카카오 REST 키가 없어 직선거리로 추정했습니다.'}
                   </p>
                 )}
-                <LegList legs={dir.legs} mode={mode} />
+                <div className="route-leg-cards">
+                  <h3>구간별 이동</h3>
+                  <LegList legs={dir.legs} mode={mode} />
+                </div>
               </>
             )}
 

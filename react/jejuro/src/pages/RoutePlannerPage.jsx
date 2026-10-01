@@ -236,33 +236,40 @@ export default function RoutePlannerPage() {
   return (
     <main className="page wide">
       <div className="title-row">
-        <input
-          className="title-input"
-          value={routeName}
-          maxLength={100}
-          placeholder="경로 이름 (예: 동부 2박3일)"
-          onChange={(e) => {
-            setRouteName(e.target.value);
-            touch();
-          }}
-        />
+        <h1>나에게 맞는 경로를 짜세요</h1>
         <div className="actions">
-          <Link className="btn ghost" to={`/travels/${travelId}/pois`}>
-            + 관광지 더 찾기
-          </Link>
           <Link className="btn ghost" to={`/travels/${travelId}/bookmarks`}>
-            여행 장소
+            ← 이전
           </Link>
         </div>
       </div>
 
       <div className="planner-guide">
-        <p>
-          <b>이 여행의 경로는 하나예요.</b> 바꾸는 즉시 자동 저장되니, 관광지를 더 찾으러 다녀와도 지금 상태 그대로 이어서 짤 수 있어요.
-        </p>
-        <p>
-          <b>숙소도 함께 보세요.</b> 아래 [주변 숙소] 탭에서 그날 마지막 관광지 주변 숙소를 확인하고, 숙소 쪽에서 하루를 끝내도록 순서를 정하면 동선이 짧아져요.
-        </p>
+        <section className="planner-guide-card" aria-labelledby="planner-save-title">
+          <span className="planner-guide-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 3h12l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+              <path d="M7 3v6h10V3M7 21v-8h10v8M14 5v2" />
+            </svg>
+          </span>
+          <div>
+            <span className="planner-guide-label">자동 저장 안내</span>
+            <h2 id="planner-save-title">이 여행의 경로는 하나예요</h2>
+            <p>변경한 경로는 <strong>자동으로 저장돼요.</strong> 관광지를 더 찾아보고 돌아와도 마지막 상태에서 이어서 짤 수 있어요.</p>
+          </div>
+        </section>
+        <section className="planner-guide-card planner-guide-stay" aria-labelledby="planner-stay-title">
+          <span className="planner-guide-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 10 12 3l9 7M5 9v12h14V9M9 21v-8h6v8" />
+            </svg>
+          </span>
+          <div>
+            <span className="planner-guide-label">동선 계획 팁</span>
+            <h2 id="planner-stay-title">숙소도 함께 살펴보세요</h2>
+            <p>아래 <strong className="planner-guide-tab">주변 숙소</strong> 탭에서 그날 마지막 관광지 근처의 숙소를 확인해 보세요. 숙소와 가까운 곳에서 하루를 마무리하면 이동을 줄일 수 있어요.</p>
+          </div>
+        </section>
       </div>
 
       <DayTabs

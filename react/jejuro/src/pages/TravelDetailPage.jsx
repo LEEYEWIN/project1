@@ -7,7 +7,7 @@ import { formatDate } from '../utils/format.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import ReceiptButton from '../components/travel/ReceiptButton.jsx';
-import SpotWeather, { useRouteWeather } from '../components/travel/SpotWeather.jsx';
+import SpotWeather, { DayWeatherNote, useRouteWeather } from '../components/travel/SpotWeather.jsx';
 
 const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', NOT_TAKEN: '가지 않음' };
 
@@ -82,7 +82,7 @@ export default function TravelDetailPage() {
   const STEPS = ['여행 장소 추가', '날짜별로 모두 배치', '일정 확정'];
 
   return (
-    <main className="page">
+    <main className="page travel-detail-page">
       <div className="title-row">
         <h1>{t.travelName}</h1>
         <button type="button" className="btn ghost small danger" onClick={remove}>
@@ -109,9 +109,12 @@ export default function TravelDetailPage() {
 
       <ErrorBox message={error} />
 
-      <section className="card">
-        <h2>여행 일정</h2>
-        <ol className="progress-steps">
+      <section className="card travel-plan-card">
+        <div className="travel-plan-heading">
+          <h2>여행 일정</h2>
+          <span>{step}/3 단계 완료</span>
+        </div>
+        <ol className="progress-steps" aria-label="여행 일정 진행 단계">
           {STEPS.map((label, i) => (
             <li key={label} className={i < step ? 'done' : i === step ? 'now' : ''}>
               <span>{i < step ? '✓' : i + 1}</span>
@@ -122,18 +125,21 @@ export default function TravelDetailPage() {
         </ol>
 
         {locked ? (
-          <p className="hint">일정을 확정했어요. 경로와 여행 장소는 더 이상 바꿀 수 없어요.</p>
+          <div className="travel-plan-message complete" role="status">
+            <strong>모든 여행 일정 계획이 완료되었어요 😊</strong>
+            <span>확정한 일정과 이동 동선을 아래에서 확인해 보세요.</span>
+          </div>
         ) : t.placeCount === 0 ? (
-          <p className="hint">먼저 AI 추천 목록이나 관광지 목록에서 [+ 장소 추가]로 이 여행에 갈 곳을 담아 주세요.</p>
+          <p className="travel-plan-message">먼저 AI 추천 목록이나 관광지 목록에서 [+ 장소 추가]로 이 여행에 갈 곳을 담아 주세요.</p>
         ) : unplaced > 0 ? (
-          <p className="hint">
+          <p className="travel-plan-message">
             여행 장소 {t.placeCount}곳 중 <b>{unplaced}곳</b>이 아직 경로에 없어요. 모두 날짜별로 배치하면 일정을 확정할 수 있어요.
           </p>
         ) : (
-          <p className="hint">모든 장소를 배치했어요. 아래 일정을 확인하고 확정하세요.</p>
+          <p className="travel-plan-message ready">모든 장소를 배치했어요. 아래 일정을 확인하고 확정하세요.</p>
         )}
 
-        <div className="route-actions">
+        <div className={locked ? 'route-actions is-complete' : 'route-actions'}>
           {locked ? (
             <button
               type="button"
@@ -152,20 +158,22 @@ export default function TravelDetailPage() {
               {hasSpots ? '경로 이어서 짜기' : '경로 짜기'}
             </button>
           )}
-          <button
-            type="button"
-            className="btn big primary"
-            disabled={busy || !canAdopt}
-            title={!canAdopt && !locked ? '여행 장소를 모두 배치해야 확정할 수 있어요' : undefined}
-            onClick={adopt}
-          >
-            {locked ? '일정 확정 완료' : '이 경로로 일정 확정'}
-          </button>
+          {!locked && (
+            <button
+              type="button"
+              className="btn big primary"
+              disabled={busy || !canAdopt}
+              title={!canAdopt ? '여행 장소를 모두 배치해야 확정할 수 있어요' : undefined}
+              onClick={adopt}
+            >
+              이 경로로 일정 확정
+            </button>
+          )}
         </div>
       </section>
 
       {shownRoute && shownRoute.days.length > 0 && (
-        <section className="card">
+        <section className="card travel-route-preview">
           <h2>
             {locked ? '확정한 일정' : '지금 경로 미리보기'}
             <small>{shownRoute.routeName ?? ''}</small>
@@ -174,6 +182,7 @@ export default function TravelDetailPage() {
             <div key={d.dayNo} className="timeline-day">
               <h3>
                 {d.dayNo}일차 <small>{formatDate(d.date)}</small>
+                <DayWeatherNote date={d.date} />
               </h3>
               <ol className="timeline">
                 {d.spots.map((s) => {

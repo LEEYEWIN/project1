@@ -1,5 +1,6 @@
 package kr.fast.Jejuro.Config;
 
+
 import java.util.List;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
@@ -55,13 +56,15 @@ public class SecurityConfig {
  }
 
  @Bean SecurityFilterChain security(HttpSecurity http, SecurityContextRepository contexts,
-                                     CsrfTokenRepository tokens, UserRepository users) throws Exception {
+                                     CsrfTokenRepository tokens, UserRepository users,
+                                     SocialProviderRegistry socialProviders, SocialLoginHandler socialLogin) throws Exception {
      http.addFilterBefore(new ActiveAccountFilter(users), org.springframework.security.web.access.intercept.AuthorizationFilter.class);
      http.securityContext(context -> context.securityContextRepository(contexts))
          .csrf(csrf -> csrf.csrfTokenRepository(tokens))
          .authorizeHttpRequests(auth -> auth
              .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-             .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup", "/api/auth/email/**").permitAll()
+             .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup", "/api/auth/email/**",
+                     "/api/auth/social/providers", "/oauth2/**", "/login/oauth2/**").permitAll()
              .requestMatchers(HttpMethod.GET, "/api/pois/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
              .requestMatchers("/api/admin/**").access((authentication, context) -> {
                  var principal = authentication.get();
@@ -91,6 +94,10 @@ public class SecurityConfig {
          .logout(logout -> logout.logoutUrl("/api/auth/logout")
              .invalidateHttpSession(true).clearAuthentication(true).deleteCookies("JSESSIONID")
              .logoutSuccessHandler((req, res, auth) -> res.setStatus(204)));
+     // 소셜 로그인: application-local.properties 에 키를 넣은 제공자가 있을 때만 켠다.
+     if (socialProviders.anyEnabled()) {
+         http.oauth2Login(oauth -> oauth.successHandler(socialLogin).failureHandler(socialLogin));
+     }
      return http.build();
  }
 }

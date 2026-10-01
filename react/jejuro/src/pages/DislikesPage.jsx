@@ -75,7 +75,7 @@ export default function DislikesPage() {
 
   const list = dislikes ?? [];
   return (
-    <main className="page wide">
+    <main className="page wide dislikes-page">
       <div className="title-row">
         <h1>관심없음 관광지 {on.size}곳</h1>
         <Link className="btn ghost" to="/travels">
@@ -83,12 +83,14 @@ export default function DislikesPage() {
         </Link>
       </div>
 
-      <p className="dislike-note">
-        <b>관심없음으로 표시한 관광지는 내 모든 여행의 다음 AI 추천에서 제외됩니다.</b> [↺ 되돌리기]를 누르면 다시 추천될 수 있고,
-        되돌린 뒤에도 [관심없음]으로 다시 표시할 수 있어요.
-        <br />
-        관광지 목록·검색에서는 그대로 보이므로 직접 찾아서 담을 수는 있어요.
-      </p>
+      <section className="dislike-guide" aria-labelledby="dislike-guide-title">
+        <h2 id="dislike-guide-title">관심없음 설정은 이렇게 적용돼요</h2>
+        <div className="dislike-guide-grid">
+          <div><strong>AI 추천에서 제외</strong><p>관심없음으로 표시한 관광지는 내 모든 여행의 다음 AI 추천에 나오지 않아요.</p></div>
+          <div><strong>언제든 되돌리기</strong><p>‘되돌리기’를 누르면 다시 추천될 수 있어요. 필요하면 다시 관심없음으로 표시할 수 있어요.</p></div>
+          <div><strong>직접 선택은 가능</strong><p>관광지 목록과 검색에는 계속 보이므로, 원할 때 직접 찾아 여행에 담을 수 있어요.</p></div>
+        </div>
+      </section>
 
       <div className="tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'DISLIKED'} className={tab === 'DISLIKED' ? 'tab on' : 'tab'} onClick={() => setTab('DISLIKED')}>
@@ -103,9 +105,10 @@ export default function DislikesPage() {
 
       {tab === 'DISLIKED' &&
         (list.length === 0 ? (
-          <p className="empty">
-            관심없음으로 표시한 관광지가 없어요. AI 추천 목록이나 [이전에 추천받은 관광지]에서 [관심없음]을 누르면 추가돼요.
-          </p>
+          <div className="dislike-empty">
+            <h2>아직 관심없음으로 표시한 관광지가 없어요</h2>
+            <p>원하지 않는 장소를 AI 추천 목록이나 이전에 추천받은 관광지에서 ‘관심없음’으로 표시해 보세요.</p>
+          </div>
         ) : (
           <div className="poi-grid">
             {list.map(({ poi, createdAt }) => (

@@ -24,12 +24,22 @@ export default function WithdrawalPage() {
   return <main className="withdraw-page">
     <div className="withdraw-content">
       <header className="withdraw-heading"><p>MY ACCOUNT</p><h1>회원 탈퇴</h1>
-        <div>탈퇴 요청 후 계정 이용이 중단됩니다.</div><span className="withdraw-tangerine" aria-hidden="true">🍊</span>
+        <div>탈퇴 요청 후 계정 이용이 중단됩니다.</div>
       </header>
       <section className="withdraw-notice" aria-labelledby="withdraw-notice-title">
         <h2 id="withdraw-notice-title">탈퇴 전에 확인해 주세요</h2>
-        <p>탈퇴 요청 즉시 로그아웃되며, 이 계정으로 다시 로그인할 수 없습니다.</p>
-        <p>계정은 탈퇴 대기 상태로 전환됩니다. 여행 계획·찜·후기·게시글은 즉시 삭제되지 않습니다.</p>
+        <ol className="withdraw-notice-list">
+          <li>
+            <p><strong>탈퇴 요청 즉시 로그아웃</strong>되며, 이 계정(이메일·연동한 소셜 계정)으로 다시 로그인할 수 없습니다.</p>
+          </li>
+          <li>
+            <p>탈퇴 요청은 취소할 수 없고, <strong>탈퇴 후 30일 동안은 같은 이메일로 다시 가입할 수 없습니다.</strong></p>
+          </li>
+          <li>
+            <p>여행 계획·찜·후기·관심없음·소셜 연동 정보는 <strong>탈퇴 요청 30일 후 자동으로 삭제됩니다.</strong></p>
+            <p>게시글·댓글은 삭제되지 않고 작성자가 &quot;탈퇴한 회원&quot;으로 바뀌니, 남기고 싶지 않은 글은 탈퇴 전에 직접 삭제해 주세요.</p>
+          </li>
+        </ol>
       </section>
       <form onSubmit={submit} className="withdraw-form" aria-busy={busy}>
         <div className="withdraw-password"><label htmlFor="withdraw-password">현재 비밀번호</label>

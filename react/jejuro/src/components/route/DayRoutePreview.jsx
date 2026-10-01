@@ -5,6 +5,8 @@ import { formatDistance, formatDuration } from '../../utils/format.js';
 import KakaoMap from '../map/KakaoMap.jsx';
 import LegList from '../map/LegList.jsx';
 import LodgingPanel from './LodgingPanel.jsx';
+import PlaceAccessNotes from './PlaceAccessNotes.jsx';
+import RouteEstimateNotice from './RouteEstimateNotice.jsx';
 
 /**
  * 5페이지 아래쪽: 선택한 일차의 동선 미리보기 + 주변 숙소 + 효율적인 순서 추천.
@@ -147,12 +149,22 @@ export default function DayRoutePreview({ dayNo, spots, onReorder, routeId, save
               {error && <p className="error">{error}</p>}
               {dir ? (
                 <>
-                  <p className="total">
-                    총 {formatDuration(dir.totalDurationSec)} · {formatDistance(dir.totalDistanceM)}
-                    {dir.estimated && <span className="badge">추정값</span>}
-                  </p>
-                  {dir.notice && <p className="hint">⚠ {dir.notice}</p>}
-                  <LegList legs={dir.legs} mode={mode} />
+                  <div className="route-summary-card">
+                    <div className="route-summary-heading">
+                      <h3>전체 이동 요약</h3>
+                      {dir.estimated && <span className="badge">추정값</span>}
+                    </div>
+                    <dl>
+                      <div><dt>총 이동 시간</dt><dd>{formatDuration(dir.totalDurationSec)}</dd></div>
+                      <div><dt>총 이동 거리</dt><dd>{formatDistance(dir.totalDistanceM)}</dd></div>
+                    </dl>
+                  </div>
+                  <RouteEstimateNotice notice={dir.notice} />
+                  <PlaceAccessNotes notes={dir.placeNotes} />
+                  <div className="route-leg-cards">
+                    <h3>구간별 이동</h3>
+                    <LegList legs={dir.legs} mode={mode} />
+                  </div>
                 </>
               ) : (
                 !error && <p className="muted">이동 정보를 계산하는 중…</p>
@@ -160,6 +172,7 @@ export default function DayRoutePreview({ dayNo, spots, onReorder, routeId, save
 
               {spots.length >= 3 && (
                 <div className="optimize">
+                  <h3 className="route-optimize-title">방문 순서 추천</h3>
                   <details className="opt-rule">
                     <summary>효율적인 순서는 이렇게 계산해요</summary>
                     <ol>
@@ -178,9 +191,9 @@ export default function DayRoutePreview({ dayNo, spots, onReorder, routeId, save
                     </ol>
                   </details>
 
-                  <label className="check small">
+                  <label className="check small route-end-setting">
                     <input type="checkbox" checked={fixEnd} onChange={(e) => setFixEnd(e.target.checked)} />
-                    마지막 방문지({spots[spots.length - 1].name})도 고정
+                    <span>마지막 방문지도 고정<strong>{spots[spots.length - 1].name}</strong></span>
                   </label>
 
                   {!suggest ? (

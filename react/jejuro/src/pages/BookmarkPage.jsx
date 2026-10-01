@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchRoute } from '../api/routeApi.js';
 import { fetchTravelDetail } from '../api/travelApi.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 import useBookmarks from '../hooks/useBookmarks.js';
 import PoiCard from '../components/common/PoiCard.jsx';
-import PlaceGuide from '../components/common/PlaceGuide.jsx';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 
@@ -18,6 +18,7 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 export default function BookmarkPage() {
   const { travelId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { bookmarks, loading, error, toggle, pending, reload } = useBookmarks(travelId);
   const [travel, setTravel] = useState(null);
   const [route, setRoute] = useState(null);
@@ -61,37 +62,47 @@ export default function BookmarkPage() {
   };
 
   return (
-    <main className="page wide">
+    <main className="page wide bookmarks-page">
       <div className="title-row">
-        <h1>여행 장소 {bookmarks.length}곳</h1>
+        <h1 className="bookmark-page-title">
+          <span className="bookmark-title-context">{user?.nickname || '여행자'}님이 선택한 ‘{travel?.travelName || '여행'}’의</span>{' '}
+          <span>여행 장소 {bookmarks.length}곳</span>
+        </h1>
         <div className="actions">
           {!travel?.imported && (
             <Link className="btn ghost" to={`/travels/${travelId}/recommendations`}>
-              ← AI 추천 목록
-            </Link>
-          )}
-          {!locked && (
-            <Link className="btn ghost" to={`/travels/${travelId}/pois`}>
-              관광지 더 찾기
+              ← 이전
             </Link>
           )}
         </div>
       </div>
 
-      {locked ? (
-        <p className="hint">일정을 확정한 여행이라 장소를 바꿀 수 없어요.</p>
-      ) : (
-        <PlaceGuide travelId={travelId} count={bookmarks.length} showLink={false} />
-      )}
+      <section className="bookmark-guide" aria-labelledby="bookmark-guide-title">
+        <div className="bookmark-guide-copy">
+          <span className="bookmark-guide-label">{locked ? '확정된 여행' : '여행 일정 준비'}</span>
+          <h2 id="bookmark-guide-title">
+            {locked ? '여행 일정이 확정되었어요' : '담아 둔 장소로 나만의 여행 일정을 만들어요'}
+          </h2>
+          <p>
+            {locked
+              ? '확정된 여행은 장소를 바꿀 수 없어요. 여행 상세에서 완성된 일정을 확인해 보세요.'
+              : '아래 장소들이 이번 여행에 포함돼요. ‘경로 짜기’에서 방문 날짜와 순서를 정하고, 모든 장소를 배치하면 일정을 확정할 수 있어요.'}
+          </p>
+          {!locked && !travel?.imported && (
+            <p className="bookmark-guide-help">장소를 더 추가하려면 상단 ‘이전’ 버튼으로 AI 추천 목록에 돌아가세요.</p>
+          )}
+        </div>
+        {bookmarks.length > 0 && !locked && (
+          <div className="bookmark-placement">
+            <dl>
+              <div><dt>경로에 배치</dt><dd>{placed}<small>곳</small></dd></div>
+              <div className={unplaced > 0 ? 'needs-placement' : ''}><dt>아직 배치 전</dt><dd>{unplaced}<small>곳</small></dd></div>
+            </dl>
+            {unplaced === 0 && <p className="bookmark-placement-done">모든 장소를 배치했어요. 경로 화면에서 일정을 확정해 주세요.</p>}
+          </div>
+        )}
+      </section>
       <ErrorBox message={error} />
-
-      {bookmarks.length > 0 && !locked && (
-        <p className={unplaced === 0 ? 'placement-status done' : 'placement-status'}>
-          {unplaced === 0
-            ? `모든 장소(${bookmarks.length}곳)가 경로에 배치됐어요. 경로 화면에서 일정을 확정할 수 있어요.`
-            : `경로에 배치 ${placed}곳 · 아직 배치 전 ${unplaced}곳`}
-        </p>
-      )}
 
       {bookmarks.length === 0 ? (
         <p className="empty">아직 추가한 장소가 없어요. AI 추천 목록이나 전체 관광지에서 [+ 장소 추가]를 눌러 보세요.</p>

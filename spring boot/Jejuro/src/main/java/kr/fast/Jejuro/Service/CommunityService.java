@@ -297,17 +297,20 @@ public class CommunityService {
      }
  }
 
- /** 회원 ID → 닉네임 (여러 명 한 번에) */
+ /** 회원 ID → 닉네임 (여러 명 한 번에). 탈퇴 대기(ACTIVE가 아닌) 회원은 바로 "탈퇴한 회원"으로 표시 */
  public Map<Long, String> nicknames(Collection<Long> userIds) {
      List<Long> ids = userIds.stream().filter(Objects::nonNull).distinct().toList();
      if (ids.isEmpty()) return Map.of();
      return userRepository.findAllById(ids).stream()
-             .collect(Collectors.toMap(User::getUserId, User::getNickname));
+             .collect(Collectors.toMap(User::getUserId,
+                     u -> "ACTIVE".equals(u.getStatus()) ? u.getNickname() : WITHDRAWN_NAME));
  }
 
- /** 탈퇴한 회원은 user_id가 NULL */
+ private static final String WITHDRAWN_NAME = "탈퇴한 회원";
+
+ /** 완전 삭제된 회원은 user_id가 NULL, 탈퇴 대기 회원은 nicknames()에서 이미 "탈퇴한 회원" */
  public static String authorName(Long userId, Map<Long, String> names) {
-     return userId == null ? "탈퇴한 회원" : names.getOrDefault(userId, "알 수 없음");
+     return userId == null ? WITHDRAWN_NAME : names.getOrDefault(userId, "알 수 없음");
  }
 
  private Map<Long, Travel> travels(List<Long> travelIds) {
