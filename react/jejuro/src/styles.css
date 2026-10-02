@@ -1076,3 +1076,6 @@ button.leg-link { border: 0; background: none; padding: 0; font: inherit; font-s
   .dislikes-page .dislike-guide-grid { grid-template-columns: 1fr; }
   .dislikes-page .dislike-guide { padding: 18px; }
 }
+
+/* 막힌 버튼: 눌러도 동작 대신 알림만 띄우는 버튼 */
+.btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }

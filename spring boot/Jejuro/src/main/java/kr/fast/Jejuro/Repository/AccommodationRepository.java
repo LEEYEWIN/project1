@@ -31,6 +31,8 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, Lo
   * 기준 지점 주변 숙소를 가까운 순으로.
   * 1) 위도·경도 사각형으로 먼저 좁히고(색인 ix_accommodation_lat_lng 사용)
   * 2) ST_Distance_Sphere로 실제 거리(미터)를 계산해 반경 밖은 버린다.
+  * 3) 주소가 다른 숙소와 좌표가 똑같은 숙소는 뺀다. 원본 데이터가 위치를 못 찾은 숙소에
+  *    지역 대표 좌표를 넣어 둔 경우라(예: 한경면·애월읍 숙소 3곳이 같은 좌표), 거리·지도가 틀리게 안내된다.
   */
  @Query(value = """
          SELECT a.accommodation_id   AS id,
@@ -46,6 +48,10 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, Lo
            FROM ACCOMMODATION a
           WHERE a.latitude  BETWEEN :minLat AND :maxLat
             AND a.longitude BETWEEN :minLng AND :maxLng
+            AND NOT EXISTS (SELECT 1 FROM ACCOMMODATION d
+                             WHERE d.latitude = a.latitude
+                               AND d.longitude = a.longitude
+                               AND d.address <> a.address)
          HAVING distanceM <= :radiusM
           ORDER BY distanceM
           LIMIT :size

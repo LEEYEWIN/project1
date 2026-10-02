@@ -12,6 +12,19 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 
 const AUTOSAVE_DELAY_MS = 700;
 
+// 저장하지 못한 변경을 이 탭(sessionStorage)에 잠시 보관 → 화면을 떠난 뒤 저장이 실패해도 돌아오면 복구
+const draftKey = (routeId) => `routeDraft:${routeId}`;
+function readDraft(routeId) {
+  try { return JSON.parse(sessionStorage.getItem(draftKey(routeId)) ?? 'null'); } catch { return null; }
+}
+function writeDraft(routeId, draft) {
+  try { sessionStorage.setItem(draftKey(routeId), JSON.stringify(draft)); } catch { /* 저장소를 못 써도 편집은 계속 */ }
+}
+function clearDraft(routeId) {
+  try { sessionStorage.removeItem(draftKey(routeId)); } catch { /* 무시 */ }
+}
+const toDays = (plan) => plan.map((spots, i) => ({ dayNo: i + 1, poiIds: spots.map((p) => p.poiId) }));
+
 /**
  * 5페이지: 여행 장소를 날짜별로 배치해 경로(일정) 짜기 — /travels/:travelId/route
  * - 여행당 경로는 1개. 들어오면 서버가 경로를 찾아 주고(없으면 만듦) 마지막 상태를 불러온다.
@@ -31,7 +44,7 @@ export default function RoutePlannerPage() {
   const [routeName, setRouteName] = useState('');
   const [dayIndex, setDayIndex] = useState(0);
   const [error, setError] = useState('');
-  const [status, setStatus] = useState('saved'); // 'saved' | 'dirty' | 'saving' | 'error'
+  const [status, setStatus] = useState('saved'); // 'saved' | 'dirty' | 'saving' | 'error' | 'conflict'
   const [savedAt, setSavedAt] = useState(null);
 
   // 자동 저장용: 최신 값·변경 번호·진행 중 저장
@@ -40,6 +53,9 @@ export default function RoutePlannerPage() {
   const savedVersion = useRef(0);
   const chain = useRef(Promise.resolve());
   const timer = useRef(null);
+  const baseVersion = useRef(null); // 서버에서 마지막으로 받은 경로 버전 (다른 탭의 변경 감지용)
+  const conflict = useRef(false); // 다른 탭과 충돌 → 자동 저장 멈춤
+  const saveRestored = useRef(false); // 복구한 변경을 화면 준비 후 바로 저장
   latest.current = { plan, routeName };
 
   // ① 경로 찾기(없으면 생성) + 경로 상세 + 여행 장소
@@ -69,14 +85,45 @@ export default function RoutePlannerPage() {
         if (cleaned && !detail.locked) {
           detail = await saveRoute(id, {
             routeName: detail.routeName ?? '',
-            days: next.map((spots, i) => ({ dayNo: i + 1, poiIds: spots.map((p) => p.poiId) })),
+            days: toDays(next),
+            baseVersion: detail.version,
           });
           if (cancelled) return;
         }
+        baseVersion.current = detail.version;
+
+        // 지난번에 저장하지 못하고 떠난 변경이 있으면 복구
+        let plan0 = next;
+        let name0 = detail.routeName ?? '';
+        let restored = false;
+        const draft = detail.locked ? null : readDraft(id);
+        if (draft) {
+          if (draft.baseVersion === detail.version) {
+            const byId = new Map(bookmarks.map((b) => [b.poi.poiId, b.poi]));
+            const used = new Set();
+            plan0 = Array.from({ length: detail.tripDays }, (_, i) =>
+              (draft.days[i] ?? [])
+                .map((pid) => byId.get(pid))
+                .filter((p) => p && !used.has(p.poiId) && used.add(p.poiId))
+            );
+            name0 = draft.routeName ?? name0;
+            restored = true;
+          } else {
+            clearDraft(id);
+            window.alert('저장하지 못한 경로 변경이 있었지만, 그 사이 다른 화면에서 경로가 바뀌어 복구하지 못했어요. 최신 경로를 보여 드릴게요.');
+          }
+        }
         setRouteId(id);
         setSavedRoute(detail);
-        setPlan(next);
-        setRouteName(detail.routeName ?? '');
+        setPlan(plan0);
+        setRouteName(name0);
+        if (restored) {
+          latest.current = { plan: plan0, routeName: name0 };
+          version.current += 1;
+          saveRestored.current = true;
+          setStatus('dirty');
+          window.alert('지난번에 저장하지 못한 경로 변경을 복구했어요. 바로 저장할게요.');
+        }
         setPlaces(bookmarks.map((b) => b.poi));
         // 처음 열 때: 아직 배치 안 한 장소가 있으면 방문지가 가장 적은 날을 보여 줌
         const emptiest = next.reduce((best, s, i) => (s.length < next[best].length ? i : best), 0);
@@ -93,6 +140,7 @@ export default function RoutePlannerPage() {
   /** 지금 화면 상태를 서버에 저장 (저장은 한 번에 하나씩 순서대로) */
   const flush = useCallback(() => {
     if (!routeId) return chain.current;
+    if (conflict.current) return Promise.reject(new Error('conflict'));
     clearTimeout(timer.current);
     const target = version.current;
     if (target === savedVersion.current) return chain.current;
@@ -104,31 +152,65 @@ export default function RoutePlannerPage() {
         setStatus('saving');
         const detail = await saveRoute(routeId, {
           routeName: n.trim(),
-          days: p.map((spots, i) => ({ dayNo: i + 1, poiIds: spots.map((x) => x.poiId) })),
+          days: toDays(p),
+          baseVersion: baseVersion.current,
         });
+        baseVersion.current = detail.version;
         savedVersion.current = Math.max(savedVersion.current, target);
+        if (version.current === savedVersion.current) clearDraft(routeId);
         setSavedRoute(detail);
         setSavedAt(new Date());
         setError('');
         setStatus(version.current === savedVersion.current ? 'saved' : 'dirty');
       })
       .catch((e) => {
-        setStatus('error');
-        setError(`자동 저장에 실패했어요. ${errorMessage(e)}`);
+        if (e?.response?.status === 409) {
+          // 다른 탭에서 먼저 바뀜(또는 일정 확정) → 덮어쓰지 않고 멈춘 뒤 알린다
+          if (!conflict.current) {
+            conflict.current = true;
+            clearDraft(routeId);
+            setStatus('conflict');
+            const msg = errorMessage(e);
+            setError(msg);
+            window.alert(`${msg}\n[최신 경로 불러오기]를 눌러 주세요. 이 화면의 마지막 변경은 저장되지 않았어요.`);
+          }
+        } else if (!conflict.current) {
+          setStatus('error');
+          setError(`자동 저장에 실패했어요. ${errorMessage(e)}`);
+        }
         throw e;
       });
     return chain.current;
   }, [routeId]);
 
+  // 복구한 변경은 경로 번호가 준비되면 바로 저장
+  useEffect(() => {
+    if (routeId && saveRestored.current) {
+      saveRestored.current = false;
+      flush().catch(() => {});
+    }
+  }, [routeId, flush]);
+
   /** 화면이 바뀌었음을 표시하고 잠시 뒤 자동 저장 */
   const touch = () => {
+    if (conflict.current) {
+      window.alert('다른 화면에서 이 경로가 바뀌어 지금 화면의 변경은 저장할 수 없어요. [최신 경로 불러오기]를 눌러 주세요.');
+      return;
+    }
     version.current += 1;
     setStatus('dirty');
     clearTimeout(timer.current);
     timer.current = setTimeout(() => flush().catch(() => {}), AUTOSAVE_DELAY_MS);
   };
 
+  // 바뀐 내용은 저장이 끝날 때까지 이 탭에도 보관 (화면을 떠난 뒤 저장이 실패해도 돌아오면 복구)
+  useEffect(() => {
+    if (!routeId || conflict.current || version.current === savedVersion.current) return;
+    writeDraft(routeId, { baseVersion: baseVersion.current, routeName, days: plan.map((spots) => spots.map((p) => p.poiId)) });
+  }, [plan, routeName, routeId]);
+
   // 페이지를 나갈 때(다른 화면으로 이동) 저장 안 된 변경이 있으면 바로 저장
+  // (실패하면 보관해 둔 변경이 남아 있어 다시 들어올 때 복구한다)
   const flushRef = useRef(flush);
   flushRef.current = flush;
   useEffect(
@@ -183,6 +265,8 @@ export default function RoutePlannerPage() {
       await flush();
       await removeBookmark(travelId, poi.poiId);
       setPlaces((list) => list.filter((p) => p.poiId !== poi.poiId));
+      // 장소 빼기는 서버에서 경로도 정리할 수 있으므로 최신 버전을 다시 받아 둔다
+      baseVersion.current = (await fetchRoute(routeId)).version;
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -207,8 +291,9 @@ export default function RoutePlannerPage() {
     try {
       await flush();
       navigate(path);
-    } catch {
-      /* 오류는 flush가 화면에 표시 */
+    } catch (e) {
+      // 충돌은 flush가 이미 알림을 띄움. 그 밖의 저장 실패는 이동하지 않고 알림
+      if (!conflict.current) window.alert(`변경 내용을 저장하지 못해 이동하지 않았어요. ${errorMessage(e)}`);
     }
   };
 
@@ -229,6 +314,8 @@ export default function RoutePlannerPage() {
         ? '변경됨 · 곧 자동 저장'
         : status === 'error'
           ? '저장 실패'
+          : status === 'conflict'
+            ? '다른 화면에서 변경됨 · 저장 멈춤'
           : savedAt
             ? `자동 저장됨 ${String(savedAt.getHours()).padStart(2, '0')}:${String(savedAt.getMinutes()).padStart(2, '0')}`
             : '저장됨';
@@ -238,7 +325,11 @@ export default function RoutePlannerPage() {
       <div className="title-row">
         <h1>나에게 맞는 경로를 짜세요</h1>
         <div className="actions">
-          <Link className="btn ghost" to={`/travels/${travelId}/bookmarks`}>
+          <Link
+            className="btn ghost"
+            to={`/travels/${travelId}/bookmarks`}
+            onClick={(e) => { e.preventDefault(); saveThen(`/travels/${travelId}/bookmarks`); }}
+          >
             ← 이전
           </Link>
         </div>
@@ -331,6 +422,11 @@ export default function RoutePlannerPage() {
           {status === 'error' && (
             <button type="button" className="btn ghost" onClick={() => flush().catch(() => {})}>
               다시 저장
+            </button>
+          )}
+          {status === 'conflict' && (
+            <button type="button" className="btn primary" onClick={() => window.location.reload()}>
+              최신 경로 불러오기
             </button>
           )}
           <button

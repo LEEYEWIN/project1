@@ -17,6 +17,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import kr.fast.Jejuro.Config.ApiException;
 import kr.fast.Jejuro.Entity.CommunityPost;
@@ -212,6 +214,9 @@ public class CommunityService {
          }
      }
      String imageUrl = imageService.validateUrl(req.imageUrl());
+     if (imageUrl != null && postRepository.existsByImageUrl(imageUrl)) {
+         throw ApiException.badRequest("다른 글에 이미 첨부된 사진입니다. 사진을 다시 올려 주세요.");
+     }
      return postRepository.save(new CommunityPost(userId, travelId, req.postType(),
              req.title().trim(), req.content().trim(), imageUrl)).getPostId();
  }
@@ -229,10 +234,21 @@ public class CommunityService {
      }
      String oldImage = p.getImageUrl();
      String newImage = imageService.validateUrl(req.imageUrl());
+     if (newImage != null && !newImage.equals(oldImage) && postRepository.existsByImageUrlAndPostIdNot(newImage, postId)) {
+         throw ApiException.badRequest("다른 글에 이미 첨부된 사진입니다. 사진을 다시 올려 주세요.");
+     }
      p.edit(req.title().trim(), req.content().trim(), newImage, LocalDateTime.now());
-     // 예전 사진 파일 정리. 관리자가 관광지 사진으로 쓰는 파일이면 지우지 않는다
-     if (oldImage != null && !oldImage.equals(newImage) && !poiRepository.existsByImageUrl(oldImage)) {
-         imageService.deleteQuietly(oldImage);
+     // 예전 사진 파일은 DB 저장이 확정된 뒤에, 다른 글·관광지가 쓰지 않을 때만 지운다
+     // (저장이 롤백되면 글은 예전 사진을 계속 가리키므로 파일을 남겨 둬야 한다)
+     if (oldImage != null && !oldImage.equals(newImage)
+             && !poiRepository.existsByImageUrl(oldImage)
+             && !postRepository.existsByImageUrlAndPostIdNot(oldImage, postId)) {
+         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+             @Override
+             public void afterCommit() {
+                 imageService.deleteQuietly(oldImage);
+             }
+         });
      }
  }
 

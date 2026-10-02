@@ -104,7 +104,10 @@ export default function TravelCreatePage() {
       const { travelId } = await createTravel(payload);
       navigate(`/travels/${travelId}/recommending`); // 2페이지로
     } catch (e) {
-      setError(errorMessage(e));
+      // 기간이 겹치는 여행 등 막힌 경우는 알림으로도 알려 준다
+      const msg = errorMessage(e);
+      setError(msg);
+      window.alert(msg);
       setSubmitting(false);
     }
   };

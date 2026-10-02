@@ -63,7 +63,10 @@ export default function RouteShareActions({ post, likeButton }) {
       const { travelId } = await importRoute(post.postId, { travelName: travelName.trim(), startDate });
       navigate(`/travels/${travelId}/route`);
     } catch (err) {
-      setError(errorMessage(err));
+      // 기간이 겹치는 여행 등 막힌 경우는 알림으로도 알려 준다
+      const msg = errorMessage(err);
+      setError(msg);
+      window.alert(msg);
       setBusy(false);
     }
   };

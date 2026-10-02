@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.fast.Jejuro.Config.ApiException;
@@ -99,6 +100,7 @@ public class TravelService {
         if (!"ACTIVE".equals(user.getStatus())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "탈퇴 처리 중인 계정입니다.");
         }
+        rejectOverlap(travelRepository, userId, req.startDate(), req.endDate());
         int travelNo = travelRepository.nextTravelNo(userId);
         int ageGroup = AgeGroup.of(user.getBirthDate(), req.startDate());
 
@@ -142,9 +144,11 @@ public class TravelService {
      * DB의 복합 FK가 "같은 여행의 경로"인지 검사하지만, 알맞은 메시지를 주려고 먼저 확인한다.
      * 규칙: 한 번 확정하면 되돌릴 수 없다. 여행 장소를 모두 경로에 배치해야 확정할 수 있다.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)   // 여행 행 잠금 뒤 최신 데이터를 읽도록 (REPEATABLE READ면 잠금 전 스냅샷을 읽음)
     public void adoptRoute(Long travelId, Long userId, Long routeId) {
-        Travel travel = travelAccessService.getOwned(travelId, userId);
+        // 여행 행을 잠근 뒤 검사한다: 다른 탭의 경로 저장·장소 빼기와 동시에 확정되지 않게
+        Travel travel = travelRepository.findOwnedForUpdate(travelId, userId)
+                .orElseThrow(() -> ApiException.notFound("여행을 찾을 수 없습니다."));
         if (travel.getAdoptedRouteId() != null) {
             throw new ApiException(HttpStatus.CONFLICT, "이미 일정을 확정해 바꿀 수 없습니다.");
         }
@@ -172,6 +176,16 @@ public class TravelService {
     public void delete(Long travelId, Long userId) {
         travelAccessService.getOwned(travelId, userId);
         jdbcTemplate.update("CALL sp_delete_travel(?)", travelId);
+    }
+
+    /** 같은 회원의 여행끼리 기간이 겹치면 거부 (회원 행을 잠근 뒤 호출해 동시 생성도 막는다) */
+    static void rejectOverlap(TravelRepository travels, Long userId, java.time.LocalDate start, java.time.LocalDate end) {
+        travels.findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(userId, end, start)
+                .ifPresent(t -> {
+                    throw new ApiException(HttpStatus.CONFLICT, "'" + t.getTravelName() + "' 여행(" + t.getStartDate()
+                            + " ~ " + t.getEndDate() + ")과 기간이 겹쳐요. 같은 기간에는 여행을 하나만 만들 수 있어요."
+                            + " 날짜를 바꾸거나 기존 여행을 이용해 주세요.");
+                });
     }
 
     private void validateRegions(TravelCreateRequest req) {

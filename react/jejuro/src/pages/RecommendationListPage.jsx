@@ -62,8 +62,15 @@ export default function RecommendationListPage() {
       <div className="title-row">
         <h1>AI 추천 관광지 {pois.length}곳</h1>
         <div className="actions">
-          <button type="button" className="btn ghost" onClick={() => navigate(`/travels/${travelId}/recommending`)}>
-            다시 추천 받기
+          {/* 추천은 여행당 한 번: 받은 뒤에는 비활성화하고, 누르면 이유를 알림으로 보여 준다 */}
+          <button
+            type="button"
+            className="btn ghost"
+            aria-disabled="true"
+            title="이미 AI 추천을 받은 여행이에요"
+            onClick={() => window.alert('이미 AI 추천을 받은 여행이라 다시 추천받을 수 없어요.\n다른 곳을 더 찾으려면 [전체 관광지 보기]를 이용해 주세요.')}
+          >
+            AI 추천 받기 완료
           </button>
         </div>
       </div>

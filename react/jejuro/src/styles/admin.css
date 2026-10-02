@@ -115,7 +115,7 @@
 .adm-labels { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; font-size: 13px; }
 .adm-labels li { display: flex; gap: 8px; }
 .adm-labels i { width: 12px; height: 12px; margin-top: 3px; border-radius: 3px; flex-shrink: 0; }
-.adm-ds-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+.adm-ds-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
 
 @media (max-width: 1200px) {
   .adm-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }

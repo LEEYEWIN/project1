@@ -68,4 +68,17 @@ class RecommendServiceTest {
 
         verify(poiService).findSummaries(List.of(3L));
     }
+
+    @Test
+    void noMappedPlaceIsRecordedAsFailure() {
+        ready();
+        when(ai.recommend(any())).thenReturn(List.of("없는장소A", "없는장소B"));
+        when(sourceMaps.findBySourcePoiIdIn(any())).thenReturn(List.of());
+
+        kr.fast.Jejuro.Config.ApiException e = org.junit.jupiter.api.Assertions.assertThrows(
+                kr.fast.Jejuro.Config.ApiException.class, () -> service.recommend(1L, 1L));
+        assertEquals(org.springframework.http.HttpStatus.BAD_GATEWAY, e.getStatus());
+        verify(logs).fail(eq(1L), eq("test"), anyLong(), any());
+        verify(logs, never()).success(anyLong(), any(), anyLong(), any(), any(), any());
+    }
 }

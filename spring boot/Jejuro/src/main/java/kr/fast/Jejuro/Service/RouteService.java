@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import kr.fast.Jejuro.Config.ApiException;
@@ -162,9 +163,12 @@ public class RouteService {
                                 .toList()))
                 .toList();
 
+        List<DayReq> current = dayResponses.stream()
+                .map(d -> new DayReq(d.dayNo(), d.spots().stream().map(s -> s.poi() == null ? null : s.poi().poiId()).toList()))
+                .toList();
         return new RouteDetailResponse(routeId, travel.getTravelId(), route.getRouteName(),
                 travel.isAdopted(routeId), travel.getAdoptedRouteId() != null, travel.getStartDate(), travel.getEndDate(),
-                travel.tripDays(), dayResponses);
+                travel.tripDays(), dayResponses, version(route.getRouteName(), current));
     }
 
     /**
@@ -172,11 +176,19 @@ public class RouteService {
      * 기존 일차를 모두 지우고(방문지는 DB CASCADE로 함께 삭제) 요청대로 다시 넣는다.
      * → 순서를 바꿔도 UNIQUE(route_day_id, visit_order) 충돌이 생기지 않는다.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)   // 여행 행 잠금 뒤 최신 데이터를 읽도록 (REPEATABLE READ면 잠금 전 스냅샷을 읽음)
     public RouteDetailResponse save(Long routeId, Long userId, RouteSaveRequest req) {
-        TravelRoute route = getOwnedRoute(routeId, userId);
-        Travel travel = travelAccessService.getOwned(route.getTravelId(), userId);
+        // 여행 행을 먼저 잠근다: 다른 탭의 저장·장소 빼기·일정 확정과 겹치지 않게 차례로 처리
+        Travel travel = travelRepository.findOwnedByRouteForUpdate(routeId, userId)
+                .orElseThrow(() -> ApiException.notFound("경로를 찾을 수 없습니다."));
+        TravelRoute route = routeRepository.findById(routeId)
+                .orElseThrow(() -> ApiException.notFound("경로를 찾을 수 없습니다."));
         ensureNotLocked(travel);
+        // 화면이 불러온 뒤에 다른 탭(또는 장소 빼기)이 경로를 바꿨으면 덮어쓰지 않고 알린다
+        if (req.baseVersion() != null && !req.baseVersion().equals(version(route.getRouteName(), currentDays(routeId)))) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "다른 화면(탭)에서 이 경로가 먼저 바뀌었어요. 최신 경로를 불러온 뒤 다시 수정해 주세요.");
+        }
         validate(travel, req.days());
 
         if (req.routeName() != null) {
@@ -311,6 +323,25 @@ public class RouteService {
                     throw ApiException.badRequest("같은 관광지를 두 번 넣을 수 없습니다: " + poiId);
                 }
             }
+        }
+    }
+
+    /**
+     * 경로 내용의 버전 = (이름, 방문지가 있는 일차와 방문 순서)의 해시.
+     * DB에 칸을 추가하지 않고, 저장된 내용이 바뀌면 값도 바뀐다.
+     */
+    static String version(String routeName, List<DayReq> days) {
+        StringBuilder sb = new StringBuilder(routeName == null ? "" : routeName).append('|');
+        days.stream()
+                .filter(d -> !d.poiIds().isEmpty())
+                .sorted(Comparator.comparing(DayReq::dayNo))
+                .forEach(d -> sb.append(d.dayNo()).append(':').append(d.poiIds()).append(';'));
+        try {
+            byte[] digest = java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest, 0, 12);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
         }
     }
 

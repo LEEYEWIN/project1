@@ -122,8 +122,10 @@ public class HttpAiClient implements AiClient {
 
  /** { "recommendations": [ { "place_name": ... }, ... ] } → place_name 목록 (응답 순서 유지) */
  private List<String> placeNames(Map<?, ?> res) {
+     // 형식이 다른 응답을 "추천 0개(성공)"로 처리하지 않도록 오류로 돌려 실패 기록을 남긴다
      if (res == null || !(res.get("recommendations") instanceof List<?> list)) {
-         return List.of();
+         log.warn("AI 추천 응답 형식 오류: recommendations 목록이 없음 res={}", res);
+         throw new ApiException(HttpStatus.BAD_GATEWAY, "AI 추천 서버의 응답 형식이 올바르지 않습니다.");
      }
      List<String> names = new ArrayList<>();
      for (Object item : list) {

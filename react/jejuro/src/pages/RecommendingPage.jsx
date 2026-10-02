@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { requestRecommendations } from '../api/recommendApi.js';
 import { errorMessage } from '../api/client.js';
-import { saveRecommendation } from '../utils/recommendStorage.js';
+import { loadRecommendationIds, saveRecommendation } from '../utils/recommendStorage.js';
 
 const MESSAGES = [
   '여행 취향을 분석하고 있어요',
@@ -37,6 +37,12 @@ export default function RecommendingPage() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    // 이미 추천을 받은 여행이면 AI를 다시 부르지 않고 받은 목록으로 보낸다 (주소로 직접 들어온 경우)
+    if (loadRecommendationIds(travelId)) {
+      window.alert('이미 AI 추천을 받은 여행이에요. 받은 추천 목록을 보여 드릴게요.');
+      navigate(`/travels/${travelId}/recommendations`, { replace: true });
+      return;
+    }
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [travelId]);

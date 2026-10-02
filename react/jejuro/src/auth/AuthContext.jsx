@@ -1,11 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import client, { errorMessage } from '../api/client.js';
 
 const AuthContext = createContext(null);
 function clearAccountCache() {
   try {
-    Object.keys(sessionStorage).filter((key) => key.startsWith('recommend:')).forEach((key) => sessionStorage.removeItem(key));
+    Object.keys(sessionStorage).filter((key) => key.startsWith('recommend:') || key.startsWith('routeDraft:')).forEach((key) => sessionStorage.removeItem(key));
   } catch { /* 저장소를 사용할 수 없어도 로그인은 동작한다. */ }
 }
 
@@ -13,6 +13,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expiredNotice, setExpiredNotice] = useState('');
+  const userRef = useRef(null);
+  userRef.current = user;
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -24,7 +27,12 @@ export function AuthProvider({ children }) {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => {
-    const expired = () => { setUser(null); clearAccountCache(); };
+    const expired = (event) => {
+      // 로그인된 화면에서 세션이 끊긴 경우만 로그인 화면에 안내를 남긴다
+      if (userRef.current) setExpiredNotice(event.detail?.message || '로그인이 만료되었습니다. 다시 로그인해 주세요.');
+      setUser(null);
+      clearAccountCache();
+    };
     window.addEventListener('auth:expired', expired);
     return () => window.removeEventListener('auth:expired', expired);
   }, []);
@@ -33,6 +41,7 @@ export function AuthProvider({ children }) {
     clearAccountCache();
     setUser(data);
     setError('');
+    setExpiredNotice('');
     return data;
   }
   async function withdraw(password, confirmed) {
@@ -50,7 +59,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     clearAccountCache();
   }
-  return <AuthContext.Provider value={{ user, loading, error, refresh, authenticate, logout, withdraw, clearSession, updateNickname }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, error, expiredNotice, refresh, authenticate, logout, withdraw, clearSession, updateNickname }}>{children}</AuthContext.Provider>;
 }
 export const useAuth = () => useContext(AuthContext);
 

@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.http.HttpStatus;
 import kr.fast.Jejuro.Config.ApiException;
 
 import kr.fast.Jejuro.Entity.PoiSourceMap;
@@ -143,6 +144,19 @@ public class RecommendService {
              .stream()
              .limit(SHOW_COUNT) // AI 순위대로 10개만
              .toList();
+
+     // AI는 장소를 돌려줬는데 POI_SOURCE_MAP으로 하나도 연결되지 않음 → 정상적인 "추천 0개"가 아니라 매핑 장애
+     // (연결은 됐지만 숨김·관심없음으로 모두 빠진 경우는 정상 결과로 본다)
+     if (!sourceIds.isEmpty() && idMap.isEmpty()) {
+         String reason = "AI 추천 장소를 DB 관광지와 연결하지 못함 (" + sourceIds.size() + "곳)";
+         try {
+             recommendLogService.fail(travelId, modelVersion, elapsed, reason);
+         } catch (RuntimeException logError) {
+             log.warn("추천 실패 기록 저장 실패: {}", logError.getMessage());
+         }
+         log.warn("{} ids={}", reason, sourceIds);
+         throw new ApiException(HttpStatus.BAD_GATEWAY, "추천 결과를 관광지 정보와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+     }
 
      // 관리자 KPI·재학습용 기록 (실패해도 추천 결과에는 영향 없음)
      try {

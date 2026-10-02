@@ -78,7 +78,8 @@ export default function FeedbackPage() {
   const plannedIds = (travel?.adoptedRoute?.days ?? []).flatMap((d) => d.spots.map((sp) => sp.poi.poiId));
   const spotPayload = () => {
     if (status === 'NOT_TAKEN') return [];
-    if (status === 'COMPLETED' && !rateEach) return [];
+    // 관광지별 평가 패널을 접어도(rateEach=false) 이미 고른 평가는 그대로 보낸다.
+    // 빈 배열을 보내면 서버가 모든 곳을 "갔어요·반응 없음"으로 덮어써 저장된 평가가 지워진다.
     return plannedIds.map((poiId) => {
       const v = spots[poiId] ?? { visited: true, reaction: null };
       const visited = status === 'COMPLETED' ? true : v.visited !== false;

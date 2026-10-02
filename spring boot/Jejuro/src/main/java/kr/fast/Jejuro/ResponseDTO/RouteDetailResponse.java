@@ -20,7 +20,8 @@ public record RouteDetailResponse(
      LocalDate startDate,
      LocalDate endDate,
      int tripDays,
-     List<DayResponse> days) {
+     List<DayResponse> days,
+     String version) {        // 경로 내용(이름·일차·방문 순서)의 버전. 저장할 때 baseVersion으로 돌려보낸다
 
  public record DayResponse(
          Integer dayNo,

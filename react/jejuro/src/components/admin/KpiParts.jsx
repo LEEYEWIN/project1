@@ -172,7 +172,7 @@ export function SegmentTable({ segments, tab, onTab }) {
     <section className="adm-card" aria-labelledby="seg-title">
       <div className="adm-card-head">
         <h2 id="seg-title">
-          세그먼트별 성능 <span className="adm-muted">어디서 약한가</span>
+          세그먼트별 성능
         </h2>
         <div role="tablist" aria-label="세그먼트 기준" className="adm-tabs">
           {SEGMENT_TABS.map((t) => (
@@ -216,7 +216,6 @@ export function SegmentTable({ segments, tab, onTab }) {
           </tbody>
         </table>
       )}
-      <p className="adm-note">채택률 칸은 진할수록 높음. 여행 5건 미만은 "데이터 부족", 전체 평균의 70% 미만이면 "재학습 보강 필요"</p>
     </section>
   );
 }
@@ -377,30 +376,6 @@ export function DatasetPanel({ d, ready, threshold, onExport, exporting }) {
               </tr>
             </tbody>
           </table>
-          <p className="adm-note">
-            대상: 일정 확정 + 후기(모두 다녀옴·일부만 다녀옴)까지 끝난 여행. 진행 중인 여행은 라벨이 아직 바뀔 수 있어 넣지 않습니다.
-          </p>
-        </div>
-        <div>
-          <h3>데이터 품질</h3>
-          <dl className="adm-dl">
-            <div>
-              <dt>후기 응답률 <span className="adm-muted">(끝난 확정 여행 중)</span></dt>
-              <dd className="num">{pct(d.quality.feedbackResponseRate, 0)}</dd>
-            </div>
-            <div>
-              <dt>관광지별 후기 입력률</dt>
-              <dd className="num">{pct(d.quality.spotInputRate, 0)}</dd>
-            </div>
-            <div>
-              <dt>설문 미완료 여행</dt>
-              <dd className="num">{pct(d.quality.surveyMissingRate)}</dd>
-            </div>
-            <div>
-              <dt>이상치 <span className="adm-muted">(15일 초과 여행)</span></dt>
-              <dd className="num">{num(d.quality.outlierTravels)}건</dd>
-            </div>
-          </dl>
         </div>
       </div>
     </section>

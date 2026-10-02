@@ -71,7 +71,8 @@ public class AuthController {
          HttpServletResponse response
  ) {
 
-     if (!emailVerificationService.isVerified(body.email())) {
+     // 인증은 이 브라우저 세션에서 끝낸 것만 인정한다 (다른 사람이 같은 이메일로 가입하는 것 방지)
+     if (!emailVerificationService.isVerified(request.getSession(false), body.email())) {
          throw new ApiException(
                  HttpStatus.BAD_REQUEST,
                  "이메일 인증을 완료해 주세요."
@@ -80,7 +81,7 @@ public class AuthController {
 
      service.signup(body);
 
-     emailVerificationService.consumeVerification(body.email());
+     emailVerificationService.consumeVerification(request.getSession(false));
 
      return signIn(
              body.email(),

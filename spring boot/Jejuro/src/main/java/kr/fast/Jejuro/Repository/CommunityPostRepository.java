@@ -55,6 +55,12 @@ Optional<CommunityPost> findByIdForUpdate(@Param("postId") Long postId);
        nativeQuery = true)
 int increaseViewCount(@Param("postId") Long postId);
 
-@Query(value = "SELECT view_count FROM COMMUNITY_POST WHERE post_id = :postId", nativeQuery = true)
-Integer findViewCount(@Param("postId") Long postId);
+ /** 사진 주소를 쓰는 글이 있는지 (삭제 표시된 글 포함 — 파일이 남아 있어야 하므로) */
+ boolean existsByImageUrl(String imageUrl);
+
+ /** 이 글 말고 같은 사진 주소를 쓰는 글이 있는지 */
+ boolean existsByImageUrlAndPostIdNot(String imageUrl, Long postId);
+
+ @Query(value = "SELECT view_count FROM COMMUNITY_POST WHERE post_id = :postId", nativeQuery = true)
+ Integer findViewCount(@Param("postId") Long postId);
 }

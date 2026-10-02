@@ -33,13 +33,16 @@ class AuthControllerTest {
  @Autowired PasswordEncoder encoder;
  @MockitoBean UserRepository users;
  @MockitoBean kr.fast.Jejuro.Service.EmailVerificationService emailVerification;
+ // 소셜 로그인 설정(키 없음 → 소셜 기능 꺼짐)은 이 테스트 대상이 아니므로 가짜로 둔다
+ @MockitoBean kr.fast.Jejuro.Config.SocialProviderRegistry socialProviders;
+ @MockitoBean kr.fast.Jejuro.Config.SocialLoginHandler socialLogin;
  private final AtomicReference<User> stored = new AtomicReference<>();
  private static final String SIGNUP = """
      {"email":"hello@example.com","password":"correct-horse-123","nickname":"제주여행자","birthDate":"2000-05-14","genderCode":2}
      """;
  @BeforeEach void setup() {
      stored.set(null);
-     when(emailVerification.isVerified(anyString())).thenReturn(true);
+     when(emailVerification.isVerified(any(), anyString())).thenReturn(true);
      when(users.existsByEmailIgnoreCase(anyString())).thenAnswer(call -> stored.get() != null);
      when(users.findByEmailIgnoreCase(anyString())).thenAnswer(call -> Optional.ofNullable(stored.get()));
      when(users.findByIdForUpdate(anyLong())).thenAnswer(call -> Optional.ofNullable(stored.get()));

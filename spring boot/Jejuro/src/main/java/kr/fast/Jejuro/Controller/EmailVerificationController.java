@@ -2,6 +2,8 @@ package kr.fast.Jejuro.Controller;
 
 import java.util.Map;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +24,8 @@ public class EmailVerificationController {
 
     @PostMapping("/send")
     public Map<String, String> send(
-            @RequestBody Map<String, String> body
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request
     ) {
 
         String email = body.get("email");
@@ -34,7 +37,7 @@ public class EmailVerificationController {
             );
         }
 
-        service.sendCode(email);
+        service.sendCode(email, request.getRemoteAddr());
 
         return Map.of(
                 "message",
@@ -44,7 +47,8 @@ public class EmailVerificationController {
 
     @PostMapping("/verify")
     public Map<String, Object> verify(
-            @RequestBody Map<String, String> body
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request
     ) {
 
         String email = body.get("email");
@@ -59,15 +63,9 @@ public class EmailVerificationController {
             );
         }
 
-        boolean verified =
-                service.verifyCode(email, code);
-
-        if (!verified) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST,
-                    "인증번호가 올바르지 않거나 만료되었습니다."
-            );
-        }
+        // 틀림·만료·횟수 초과는 서비스가 알맞은 메시지로 400을 던진다.
+        // 맞으면 이 브라우저 세션에만 인증 완료를 표시한다.
+        service.verifyCode(email, code, request.getSession());
 
         return Map.of(
                 "verified",

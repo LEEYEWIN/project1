@@ -76,7 +76,7 @@ export default function AuthPage({ signup = false }) {
   const loginSea =
     'https://images.unsplash.com/photo-1579169825453-8d4b4653cc2c?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
 
-  const { user, loading, authenticate } = useAuth();
+  const { user, loading, authenticate, expiredNotice } = useAuth();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,7 +103,8 @@ export default function AuthPage({ signup = false }) {
   const [socialProviders, setSocialProviders] = useState([]);
 
   const remaining = expiresAt ? expiresAt - now : 0;
-  const codeExpired = codeSent && remaining <= 0;
+  // 인증을 마친 뒤에는 시간 제한이 없다(인증번호만 5분 유효). 가입은 같은 브라우저 세션이 유지되는 동안 가능
+  const codeExpired = codeSent && !verified && remaining <= 0;
 
   // 인증번호를 보낸 뒤 1초마다 남은 시간을 다시 그린다.
   useEffect(() => {
@@ -112,7 +113,7 @@ export default function AuthPage({ signup = false }) {
     return () => clearInterval(timer);
   }, [expiresAt]);
 
-  // 5분이 지나면 서버에서도 인증이 풀리므로 화면도 처음 상태로 돌린다.
+  // 인증 전에 5분이 지나면 인증번호가 무효가 되므로 화면도 처음 상태로 돌린다.
   useEffect(() => {
     if (!codeExpired) return;
     setVerified(false);
@@ -199,7 +200,10 @@ export default function AuthPage({ signup = false }) {
         `${email}로 인증번호를 보냈어요. 메일함(스팸함 포함)을 확인해 주세요.`
       );
     } catch (err) {
-      setError(errorMessage(err));
+      // 재전송 대기·발송 횟수 초과·가입된 이메일 등 막힌 경우는 알림으로도 알려 준다
+      const msg = errorMessage(err);
+      setError(msg);
+      window.alert(msg);
     } finally {
       setSending(false);
     }
@@ -235,8 +239,12 @@ export default function AuthPage({ signup = false }) {
         setError('인증번호가 올바르지 않습니다.');
       }
     } catch (err) {
+      // 틀림(남은 횟수)·만료·횟수 초과는 알림으로도 알려 준다
+      const msg = errorMessage(err);
       setVerified(false);
-      setError(errorMessage(err));
+      setError(msg);
+      window.alert(msg);
+      if (/다시 받아/.test(msg)) setCode('');
     }
   }
 
@@ -347,6 +355,7 @@ export default function AuthPage({ signup = false }) {
               </p>
             )}
 
+          {!signup && expiredNotice && !location.state?.passwordChanged && <p className="auth-withdrawn" role="status">{expiredNotice}</p>}
           {!signup && location.state?.passwordChanged && <p className="auth-withdrawn" role="status">비밀번호를 변경했습니다. 새 비밀번호로 로그인해 주세요.</p>}
           {!signup && socialErrorText && (
             <div className="auth-error" role="alert">
@@ -446,11 +455,7 @@ export default function AuthPage({ signup = false }) {
 
                   {verified ? (
                     <small className="auth-timer">
-                      이메일 인증이 완료되었습니다.{' '}
-                      <strong>
-                        {formatRemaining(remaining)}
-                      </strong>{' '}
-                      안에 가입을 마쳐 주세요.
+                      이메일 인증이 완료되었습니다. 이어서 가입 정보를 입력해 주세요.
                     </small>
                   ) : codeExpired ? (
                     <small className="auth-timer auth-timer-expired">
@@ -468,7 +473,9 @@ export default function AuthPage({ signup = false }) {
                   ) : (
                     <small>
                       인증번호는 5분간
-                      유효합니다.
+                      유효합니다. (재전송은
+                      1분 뒤부터, 5번 틀리면
+                      다시 받아야 해요)
                     </small>
                   )}
                 </div>

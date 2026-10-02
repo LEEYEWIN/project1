@@ -21,8 +21,11 @@ export async function fetchRoute(routeId) {
   return data;
 }
 
-/** 일정 전체 저장(자동 저장). days: [{ dayNo, poiIds: [...] }]  poiIds 순서 = 방문 순서 */
-export async function saveRoute(routeId, { routeName, days }) {
-  const { data } = await client.put(`/routes/${routeId}`, { routeName, days });
+/**
+ * 일정 전체 저장(자동 저장). days: [{ dayNo, poiIds: [...] }]  poiIds 순서 = 방문 순서
+ * baseVersion: 화면이 마지막으로 받은 경로의 version. 그 사이 다른 탭이 바꿨으면 409
+ */
+export async function saveRoute(routeId, { routeName, days, baseVersion }) {
+  const { data } = await client.put(`/routes/${routeId}`, { routeName, days, baseVersion });
   return data;
 }

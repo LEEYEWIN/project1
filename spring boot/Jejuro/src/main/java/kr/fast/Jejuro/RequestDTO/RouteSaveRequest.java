@@ -19,7 +19,8 @@ import jakarta.validation.constraints.Size;
 */
 public record RouteSaveRequest(
      @Size(max = 100) String routeName,
-     @NotNull @Valid List<DayReq> days) {
+     @NotNull @Valid List<DayReq> days,
+     String baseVersion) {      // 화면이 마지막으로 받은 경로 버전(RouteDetailResponse.version). 다르면 409
 
  public record DayReq(
          @NotNull @Min(1) Integer dayNo,
