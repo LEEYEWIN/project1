@@ -265,7 +265,7 @@ public class CommunityService {
  @Transactional
  public LikeResponse like(Long postId, Long userId) {
      if (getReadable(postId, userId).isHidden()) {
-         throw ApiException.badRequest("신고된 게시글에는 좋아요를 누를 수 없습니다.");
+         throw new ApiException(HttpStatus.CONFLICT, "신고된 게시글에는 좋아요를 누를 수 없습니다.");
      }
      if (!likeRepository.existsByPostIdAndUserId(postId, userId)) {
          likeRepository.save(new CommunityPostLike(postId, userId));

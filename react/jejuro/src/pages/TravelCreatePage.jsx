@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTravel, fetchTravelForm } from '../api/travelApi.js';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
+import { savePickStyle } from '../utils/recommendStorage.js';
 import StepIndicator from '../components/travel/StepIndicator.jsx';
 import BasicInfoStep from '../components/travel/BasicInfoStep.jsx';
 import CompanionStep from '../components/travel/CompanionStep.jsx';
@@ -17,6 +18,7 @@ const INITIAL_FORM = {
   regionIds: [],
   companions: [], // [{ relationCode, genderCode, ageGroupCode }]
   answers: {}, // { 101: [1], 201: [1, 3], ... }  질문 ID → 고른 값 배열
+  pickStyle: '', // 'POPULAR' | 'UNIQUE'  설문 첫 질문(여행지 선택 성향). 서버로 보내지 않음
 };
 
 /** 1페이지: 여행 만들기 + 설문 (3단계 폼) */
@@ -51,6 +53,7 @@ export default function TravelCreatePage() {
       if (form.companions.length > 18) return '동반자는 최대 18명까지 입력할 수 있습니다.';
     }
     if (index === 2) {
+      if (!form.pickStyle) return '여행지를 고를 때 어떤 쪽에 더 가까운지 골라 주세요.';
       for (const group of meta.groups) {
         for (const q of group.questions) {
           const count = (form.answers[q.preferenceId] ?? []).length;
@@ -85,7 +88,7 @@ export default function TravelCreatePage() {
     setError(msg);
     if (msg) return;
 
-    // 화면용 form → 서버 요청 형식(TravelCreateRequest)으로 변환
+    // 화면용 form → 서버 요청 형식(TravelCreateRequest)으로 변환 (pickStyle 은 보내지 않음)
     const payload = {
       travelName: form.travelName.trim(),
       startDate: form.startDate,
@@ -102,12 +105,11 @@ export default function TravelCreatePage() {
     setSubmitting(true);
     try {
       const { travelId } = await createTravel(payload);
+      savePickStyle(travelId, form.pickStyle); // 추천 목록 안내 문구용 (이 브라우저 탭에만 보관)
       navigate(`/travels/${travelId}/recommending`); // 2페이지로
     } catch (e) {
-      // 기간이 겹치는 여행 등 막힌 경우는 알림으로도 알려 준다
-      const msg = errorMessage(e);
-      setError(msg);
-      window.alert(msg);
+      // 기간이 겹치는 여행(409) 등 막힌 경우는 알림창, 입력 오류는 화면 메시지
+      showError(e, setError);
       setSubmitting(false);
     }
   };

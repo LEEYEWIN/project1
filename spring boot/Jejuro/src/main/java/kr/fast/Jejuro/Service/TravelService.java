@@ -162,10 +162,10 @@ public class TravelService {
         }
         RouteService.Placement placement = routeService.placement(travelId);
         if (placement.placeCount() == 0) {
-            throw ApiException.badRequest("여행 장소를 먼저 추가하고 경로에 배치해 주세요.");
+            throw new ApiException(HttpStatus.CONFLICT, "여행 장소를 먼저 추가하고 경로에 배치해 주세요.");
         }
         if (!placement.complete()) {
-            throw ApiException.badRequest("여행 장소 " + placement.placeCount() + "곳 중 "
+            throw new ApiException(HttpStatus.CONFLICT, "여행 장소 " + placement.placeCount() + "곳 중 "
                     + placement.unplacedPoiIds().size() + "곳이 아직 경로에 없습니다. 모두 배치한 뒤 확정할 수 있어요.");
         }
         travel.adopt(routeId, LocalDateTime.now());   // 변경 감지(dirty checking)로 커밋 시 UPDATE

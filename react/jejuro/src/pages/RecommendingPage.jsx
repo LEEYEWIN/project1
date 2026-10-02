@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { requestRecommendations } from '../api/recommendApi.js';
 import { errorMessage } from '../api/client.js';
-import { loadRecommendationIds, saveRecommendation } from '../utils/recommendStorage.js';
 
 const MESSAGES = [
   '여행 취향을 분석하고 있어요',
@@ -14,7 +13,7 @@ const MESSAGES = [
 /**
  * 2페이지: AI 추천 중
  * 들어오자마자 추천 API를 호출하고, 기다리는 동안 문구가 바뀌는 로딩 화면을 보여준다.
- * 성공하면 결과를 sessionStorage에 저장하고 3페이지로 이동한다.
+ * 성공하면 3페이지로 이동한다. 결과는 서버 추천 기록(RECOMMEND_ITEM)에 남아 다시 열 수 있다.
  */
 export default function RecommendingPage() {
   const { travelId } = useParams();
@@ -26,8 +25,8 @@ export default function RecommendingPage() {
   const run = async () => {
     setError('');
     try {
+      // 결과는 서버 추천 기록(RECOMMEND_ITEM)에 남으므로 브라우저에 따로 보관하지 않는다
       const { pois } = await requestRecommendations(travelId);
-      saveRecommendation(travelId, pois);
       navigate(`/travels/${travelId}/recommendations`, { replace: true, state: { pois } });
     } catch (e) {
       setError(errorMessage(e));
@@ -37,13 +36,7 @@ export default function RecommendingPage() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    // 이미 추천을 받은 여행이면 AI를 다시 부르지 않고 받은 목록으로 보낸다 (주소로 직접 들어온 경우)
-    if (loadRecommendationIds(travelId)) {
-      window.alert('이미 AI 추천을 받은 여행이에요. 받은 추천 목록을 보여 드릴게요.');
-      navigate(`/travels/${travelId}/recommendations`, { replace: true });
-      return;
-    }
-    run();
+    run(); // 이미 받은 추천이 있으면 서버가 그 결과를 바로 돌려준다 (AI 재호출 없음)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [travelId]);
 

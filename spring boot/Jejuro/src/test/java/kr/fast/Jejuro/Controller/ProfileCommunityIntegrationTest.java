@@ -50,7 +50,7 @@ class ProfileCommunityIntegrationTest {
          .content("""
              {"postType":"REVIEW","title":"DB 연동 검증 후기","content":"제주 여행 후기 테스트입니다."}
              """)).andExpect(status().isCreated());
-     Long postId=jdbc.queryForObject("SELECT MAX(post_id) FROM COMMUNITY_POST WHERE user_id=?",Long.class,user.getUserId());
+     Long postId=jdbc.queryForObject("SELECT MAX(post_id) FROM community_post WHERE user_id=?",Long.class,user.getUserId());
      comments.saveAndFlush(new CommunityComment(postId,null,user.getUserId(),"검증용 댓글"));
      entityManager.clear(); // 실제 후속 HTTP 요청처럼 DB 기본값을 다시 읽는다.
      mvc.perform(get("/api/community/posts/"+postId).session(session)).andExpect(status().isOk())
@@ -63,7 +63,7 @@ class ProfileCommunityIntegrationTest {
          .andExpect(jsonPath("loginMethod").value("EMAIL"))
          .andExpect(jsonPath("socialProviders").isEmpty())
          .andExpect(jsonPath("passwordHash").doesNotExist());
-     jdbc.update("INSERT INTO SOCIAL_ACCOUNT(user_id,provider,provider_user_id) VALUES (?,'GOOGLE',?)",user.getUserId(),UUID.randomUUID().toString());
+     jdbc.update("INSERT INTO social_account(user_id,provider,provider_user_id) VALUES (?,'GOOGLE',?)",user.getUserId(),UUID.randomUUID().toString());
      mvc.perform(get("/api/me/profile").session(session)).andExpect(status().isOk())
          .andExpect(jsonPath("loginMethod").value("EMAIL"))
          .andExpect(jsonPath("socialProviders[0]").value("GOOGLE"));

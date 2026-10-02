@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { addBookmark, fetchBookmarks, removeBookmark } from '../api/bookmarkApi.js';
 import { fetchTravelDetail } from '../api/travelApi.js';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
 import { warnClosedDays } from '../utils/closedDay.js';
 
 /**
@@ -72,7 +72,7 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
       setError('');
     } catch (e) {
       setBookmarks(before); // 실패 → 되돌리기
-      setError(errorMessage(e));
+      showError(e, setError); // 확정된 여행·숨긴 관광지·이미 담음 등은 알림창
     } finally {
       setPending((s) => {
         const next = new Set(s);

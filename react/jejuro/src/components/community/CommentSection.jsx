@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createComment, deleteComment, fetchComments, updateComment } from '../../api/communityApi.js';
-import { errorMessage } from '../../api/client.js';
+import { errorMessage, showError } from '../../api/client.js';
 import { formatDateTime } from '../../utils/format.js';
 import ErrorBox from '../common/ErrorBox.jsx';
 import ReportButton from './ReportButton.jsx';
@@ -40,7 +40,7 @@ export default function CommentSection({ postId, locked = false, onCountChange }
       await load();
       return true;
     } catch (e) {
-      setError(errorMessage(e));
+      showError(e, setError);
       return false;
     } finally {
       setBusy(false);

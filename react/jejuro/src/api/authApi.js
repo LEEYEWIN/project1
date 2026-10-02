@@ -61,12 +61,18 @@ export function socialErrorMessage(code, provider) {
     case 'INACTIVE':
       return '이용이 중단된 계정이에요.';
     case 'ALREADY_LINKED_OTHER':
-      return '이 소셜 계정은 이미 다른 회원에 연동되어 있어요.';
+      return `이 ${name} 계정은 이미 다른 제주로 회원에 연동되어 있어요. 다른 ${name} 계정으로 연동하거나, 그 회원으로 로그인해 연동을 해제한 뒤 다시 시도해 주세요.`;
     case 'PROVIDER_ALREADY_LINKED':
-      return '이미 연동한 계정이 있어요. 해제한 뒤 다시 연동해 주세요.';
+      return `이미 연동한 ${name} 계정이 있어요. 해제한 뒤 다시 연동해 주세요.`;
     case 'EXPIRED':
       return '연동 시간이 지났어요. 다시 시도해 주세요.';
     default:
       return '소셜 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.';
   }
+}
+
+// 닉네임 사용 가능 여부 { available, message } (로그인 상태면 내 닉네임은 제외)
+export async function checkNickname(nickname) {
+  const { data } = await client.get('/auth/nickname/check', { params: { nickname } });
+  return data;
 }

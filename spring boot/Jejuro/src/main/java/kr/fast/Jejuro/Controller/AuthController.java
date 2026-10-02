@@ -49,6 +49,25 @@ public class AuthController {
 	    this.users = users;
 	    this.emailVerificationService = emailVerificationService;
 	}
+ /** 닉네임 사용 가능 여부 (회원가입·내 정보 수정 화면에서 입력할 때마다 확인). 로그인 상태면 내 닉네임은 제외 */
+ @GetMapping("/nickname/check")
+ public Map<String, Object> checkNickname(@RequestParam("nickname") String nickname, Authentication principal) {
+     String value = nickname == null ? "" : nickname.strip();
+     if (value.length() < 2 || value.length() > 30) {
+         return Map.of("available", false, "message", "닉네임은 2~30자로 입력해 주세요.");
+     }
+     Long me = null;
+     if (principal != null && principal.isAuthenticated()
+             && !(principal instanceof org.springframework.security.authentication.AnonymousAuthenticationToken)) {
+         try { me = Long.valueOf(principal.getName()); } catch (NumberFormatException ignored) { }
+     }
+     boolean taken = me == null ? users.existsByNicknameIgnoreCase(value)
+             : users.existsByNicknameIgnoreCaseAndUserIdNot(value, me);
+     return taken
+             ? Map.of("available", false, "message", "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.")
+             : Map.of("available", true, "message", "사용할 수 있는 닉네임이에요.");
+ }
+
  @GetMapping("/csrf")
  public Map<String, String> csrf(CsrfToken token) {
      return Map.of("headerName", token.getHeaderName(), "token", token.getToken());

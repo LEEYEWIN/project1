@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { deletePost, fetchPost, increaseView, likePost, unlikePost } from '../api/communityApi.js';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import CommentSection from '../components/community/CommentSection.jsx';
@@ -66,7 +66,7 @@ export default function PostDetailPage() {
       const res = post.liked ? await unlikePost(postId) : await likePost(postId);
       setPost((cur) => ({ ...cur, liked: res.liked, likeCount: res.likeCount }));
     } catch (e) {
-      setError(errorMessage(e));
+      showError(e, setError);
     } finally {
       setLiking(false);
     }
@@ -78,7 +78,7 @@ export default function PostDetailPage() {
       await deletePost(postId);
       navigate('/community', { replace: true });
     } catch (e) {
-      setError(errorMessage(e));
+      showError(e, setError);
     }
   };
 

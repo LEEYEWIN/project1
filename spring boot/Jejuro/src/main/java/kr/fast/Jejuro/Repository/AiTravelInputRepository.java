@@ -25,7 +25,7 @@ public class AiTravelInputRepository {
                 style_relax_activity, photo_importance, style_plan_free, income_code,
                 travel_motive_1, user_mission_1,
                 travel_motive, user_mission, companion_count, is_survey_complete
-         FROM AI_TRAVEL_INPUT
+         FROM ai_travel_input
          WHERE travel_id = ? AND user_id = ?
          """;
 

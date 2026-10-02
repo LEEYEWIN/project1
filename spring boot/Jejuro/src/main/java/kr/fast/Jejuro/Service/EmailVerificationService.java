@@ -83,7 +83,7 @@ public class EmailVerificationService {
         checkIpLimit(clientIp, now);
 
         Timestamp last = jdbc.query("""
-                SELECT MAX(created_at) FROM EMAIL_VERIFICATION WHERE email = ? AND purpose = ?
+                SELECT MAX(created_at) FROM email_verification WHERE email = ? AND purpose = ?
                 """, rs -> rs.next() ? rs.getTimestamp(1) : null, email, PURPOSE);
         if (last != null) {
             // DATETIME은 초 단위로 반올림되어 저장되므로 음수가 나오지 않게 0 이상으로 맞춘다
@@ -94,7 +94,7 @@ public class EmailVerificationService {
             }
         }
         Integer recent = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM EMAIL_VERIFICATION WHERE email = ? AND purpose = ? AND created_at > ?
+                SELECT COUNT(*) FROM email_verification WHERE email = ? AND purpose = ? AND created_at > ?
                 """, Integer.class, email, PURPOSE, Timestamp.valueOf(now.minusHours(1)));
         if (recent != null && recent >= MAX_SENDS_PER_EMAIL_HOUR) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
@@ -103,10 +103,10 @@ public class EmailVerificationService {
 
         String code = String.format("%06d", random.nextInt(1_000_000));
         // 이전 번호는 무효로 하고 새 번호 저장
-        jdbc.update("UPDATE EMAIL_VERIFICATION SET used_at = ? WHERE email = ? AND purpose = ? AND used_at IS NULL",
+        jdbc.update("UPDATE email_verification SET used_at = ? WHERE email = ? AND purpose = ? AND used_at IS NULL",
                 Timestamp.valueOf(now), email, PURPOSE);
         jdbc.update("""
-                INSERT INTO EMAIL_VERIFICATION (email, purpose, code_verifier, expires_at, failed_count, created_at)
+                INSERT INTO email_verification (email, purpose, code_verifier, expires_at, failed_count, created_at)
                 VALUES (?, ?, ?, ?, 0, ?)
                 """, email, PURPOSE, hash(email, code), Timestamp.valueOf(now.plusMinutes(CODE_MINUTES)),
                 Timestamp.valueOf(now));
@@ -122,7 +122,7 @@ public class EmailVerificationService {
         } catch (MailException e) {
             log.warn("인증 메일 발송 실패 email={} : {}", email, e.getMessage());
             // 보내지 못한 번호는 지운다 (남겨 두면 1분 재전송 제한·발송 횟수에 걸려 바로 다시 시도할 수 없음)
-            jdbc.update("DELETE FROM EMAIL_VERIFICATION WHERE email = ? AND purpose = ? AND used_at IS NULL", email, PURPOSE);
+            jdbc.update("DELETE FROM email_verification WHERE email = ? AND purpose = ? AND used_at IS NULL", email, PURPOSE);
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "인증 메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
         }
     }
@@ -137,7 +137,7 @@ public class EmailVerificationService {
         LocalDateTime now = LocalDateTime.now();
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT verification_id, code_verifier, expires_at, failed_count
-                  FROM EMAIL_VERIFICATION
+                  FROM email_verification
                  WHERE email = ? AND purpose = ? AND used_at IS NULL
                  ORDER BY verification_id DESC
                  LIMIT 1
@@ -152,21 +152,22 @@ public class EmailVerificationService {
         int failed = ((Number) row.get("failed_count")).intValue();
 
         if (expiresAt.isBefore(now)) {
-            jdbc.update("UPDATE EMAIL_VERIFICATION SET used_at = ? WHERE verification_id = ?", Timestamp.valueOf(now), id);
-            throw ApiException.badRequest("인증 시간이 지났어요. 인증번호를 다시 받아 주세요.");
+            jdbc.update("UPDATE email_verification SET used_at = ? WHERE verification_id = ?", Timestamp.valueOf(now), id);
+            throw new ApiException(HttpStatus.GONE, "인증 시간이 지났어요. 인증번호를 다시 받아 주세요.");
         }
         if (!MessageDigest.isEqual(hash(email, code).getBytes(StandardCharsets.UTF_8),
                 String.valueOf(row.get("code_verifier")).getBytes(StandardCharsets.UTF_8))) {
             int fails = failed + 1;
             if (fails >= MAX_FAILS) {
-                jdbc.update("UPDATE EMAIL_VERIFICATION SET failed_count = ?, used_at = ? WHERE verification_id = ?",
+                jdbc.update("UPDATE email_verification SET failed_count = ?, used_at = ? WHERE verification_id = ?",
                         fails, Timestamp.valueOf(now), id);
-                throw ApiException.badRequest("인증번호를 " + MAX_FAILS + "번 틀려 이 번호는 더 이상 쓸 수 없어요. 인증번호를 다시 받아 주세요.");
+                throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                        "인증번호를 " + MAX_FAILS + "번 틀려 이 번호는 더 이상 쓸 수 없어요. 인증번호를 다시 받아 주세요.");
             }
-            jdbc.update("UPDATE EMAIL_VERIFICATION SET failed_count = ? WHERE verification_id = ?", fails, id);
+            jdbc.update("UPDATE email_verification SET failed_count = ? WHERE verification_id = ?", fails, id);
             throw ApiException.badRequest("인증번호가 올바르지 않습니다. (남은 입력 횟수 " + (MAX_FAILS - fails) + "번)");
         }
-        jdbc.update("UPDATE EMAIL_VERIFICATION SET used_at = ? WHERE verification_id = ?", Timestamp.valueOf(now), id);
+        jdbc.update("UPDATE email_verification SET used_at = ? WHERE verification_id = ?", Timestamp.valueOf(now), id);
         session.setAttribute(SESSION_KEY, email);
     }
 
@@ -187,7 +188,7 @@ public class EmailVerificationService {
     public void cleanup() {
         LocalDateTime now = LocalDateTime.now();
         try {
-            jdbc.update("DELETE FROM EMAIL_VERIFICATION WHERE created_at < ?", Timestamp.valueOf(now.minusDays(1)));
+            jdbc.update("DELETE FROM email_verification WHERE created_at < ?", Timestamp.valueOf(now.minusDays(1)));
         } catch (RuntimeException e) {
             log.warn("이메일 인증 기록 정리 실패: {}", e.getMessage());
         }

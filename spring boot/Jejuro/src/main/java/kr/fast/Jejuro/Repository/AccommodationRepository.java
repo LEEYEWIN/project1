@@ -45,10 +45,10 @@ public interface AccommodationRepository extends JpaRepository<Accommodation, Lo
                 a.phone              AS phone,
                 a.image_url          AS imageUrl,
                 ST_Distance_Sphere(POINT(a.longitude, a.latitude), POINT(:lng, :lat)) AS distanceM
-           FROM ACCOMMODATION a
+           FROM accommodation a
           WHERE a.latitude  BETWEEN :minLat AND :maxLat
             AND a.longitude BETWEEN :minLng AND :maxLng
-            AND NOT EXISTS (SELECT 1 FROM ACCOMMODATION d
+            AND NOT EXISTS (SELECT 1 FROM accommodation d
                              WHERE d.latitude = a.latitude
                                AND d.longitude = a.longitude
                                AND d.address <> a.address)

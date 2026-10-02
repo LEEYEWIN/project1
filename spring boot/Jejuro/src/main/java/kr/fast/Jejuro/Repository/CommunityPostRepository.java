@@ -34,11 +34,11 @@ long countByPostTypeAndDeletedAtIsNullAndBlockReasonIsNull(PostType postType);
 */
 @Query(value = """
        SELECT p.post_id
-         FROM COMMUNITY_POST p
+         FROM community_post p
         WHERE p.post_type = :type
           AND p.deleted_at IS NULL
           AND p.block_reason IS NULL
-        ORDER BY (SELECT COUNT(*) FROM COMMUNITY_POST_LIKE l WHERE l.post_id = p.post_id) DESC,
+        ORDER BY (SELECT COUNT(*) FROM community_post_like l WHERE l.post_id = p.post_id) DESC,
                  p.post_id DESC
         LIMIT :size OFFSET :offset
        """, nativeQuery = true)
@@ -51,7 +51,7 @@ Optional<CommunityPost> findByIdForUpdate(@Param("postId") Long postId);
 
 /** 조회수 +1 (동시에 여러 명이 봐도 정확하게 DB에서 바로 더한다) */
 @Modifying
-@Query(value = "UPDATE COMMUNITY_POST SET view_count = view_count + 1 WHERE post_id = :postId AND deleted_at IS NULL AND hidden_at IS NULL",
+@Query(value = "UPDATE community_post SET view_count = view_count + 1 WHERE post_id = :postId AND deleted_at IS NULL AND hidden_at IS NULL",
        nativeQuery = true)
 int increaseViewCount(@Param("postId") Long postId);
 
@@ -61,6 +61,6 @@ int increaseViewCount(@Param("postId") Long postId);
  /** 이 글 말고 같은 사진 주소를 쓰는 글이 있는지 */
  boolean existsByImageUrlAndPostIdNot(String imageUrl, Long postId);
 
- @Query(value = "SELECT view_count FROM COMMUNITY_POST WHERE post_id = :postId", nativeQuery = true)
+ @Query(value = "SELECT view_count FROM community_post WHERE post_id = :postId", nativeQuery = true)
  Integer findViewCount(@Param("postId") Long postId);
 }

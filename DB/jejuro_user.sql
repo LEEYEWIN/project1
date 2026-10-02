@@ -36,6 +36,7 @@ CREATE TABLE `user` (
   `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `uk_user_email` (`email`),
+  UNIQUE KEY `uk_user_nickname` (`nickname`),
   KEY `ix_user_status_withdrawn` (`status`,`withdrawn_at`),
   CONSTRAINT `ck_user_gender_code` CHECK ((`gender_code` in (1,2))),
   CONSTRAINT `ck_user_role` CHECK ((`role` in (_utf8mb4'USER',_utf8mb4'ADMIN'))),

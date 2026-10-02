@@ -76,7 +76,7 @@ public class FeedbackService {
          throw new ApiException(HttpStatus.CONFLICT, "일정을 먼저 확정하세요.");
      }
      if (LocalDate.now().isBefore(travel.getEndDate())) {
-         throw ApiException.badRequest("후기는 여행 종료일(" + travel.getEndDate() + ")부터 남길 수 있습니다.");
+         throw new ApiException(HttpStatus.CONFLICT, "후기는 여행 종료일(" + travel.getEndDate() + ")부터 남길 수 있습니다.");
      }
      validate(req);
      validateSpots(travel, req);

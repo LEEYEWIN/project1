@@ -123,7 +123,7 @@ public class AdminPoiService {
      if (issue != null && ISSUES.containsKey(issue.toUpperCase())) conds.add(ISSUES.get(issue.toUpperCase()));
      String where = conds.isEmpty() ? "" : " WHERE " + String.join(" AND ", conds);
 
-     Long totalObj = jdbc.queryForObject("SELECT COUNT(*) FROM POI p" + where, Long.class, args.toArray());
+     Long totalObj = jdbc.queryForObject("SELECT COUNT(*) FROM poi p" + where, Long.class, args.toArray());
      long total = totalObj == null ? 0 : totalObj;
 
      int safePage = Math.max(page, 0);
@@ -136,9 +136,9 @@ public class AdminPoiService {
      List<AdminPoiResponse.Row> rows = jdbc.query("""
              SELECT p.poi_id, p.poi_name, p.address, p.category_code, p.region_id, p.image_url, p.hidden_at, p.deleted_at,
                     p.ai_recommend, %s AS no_image, %s AS no_desc, %s AS out_jeju,
-                    (SELECT COUNT(*) FROM TRAVEL_BOOKMARK b WHERE b.poi_id = p.poi_id) AS bookmark_count,
-                    (SELECT COUNT(*) FROM RECOMMEND_ITEM i WHERE i.poi_id = p.poi_id AND i.shown = 1) AS recommend_count
-               FROM POI p
+                    (SELECT COUNT(*) FROM travel_bookmark b WHERE b.poi_id = p.poi_id) AS bookmark_count,
+                    (SELECT COUNT(*) FROM recommend_item i WHERE i.poi_id = p.poi_id AND i.shown = 1) AS recommend_count
+               FROM poi p
              """.formatted(NO_IMAGE, NO_DESC, OUT_JEJU) + where + " ORDER BY p.poi_id DESC LIMIT ? OFFSET ?",
              (rs, n) -> new AdminPoiResponse.Row(rs.getLong("poi_id"), rs.getString("poi_name"),
                      rs.getString("address"), rs.getString("category_code"),
@@ -152,11 +152,11 @@ public class AdminPoiService {
      // 데이터 점검 숫자: 숨긴 곳 제외한 전체 기준
      AdminPoiResponse.Checks checks = jdbc.query("""
              SELECT COUNT(*) AS total,
-                    (SELECT COUNT(*) FROM POI h WHERE h.hidden_at IS NOT NULL AND h.deleted_at IS NULL) AS hidden,
-                    (SELECT COUNT(*) FROM POI d WHERE d.deleted_at IS NOT NULL) AS deleted,
+                    (SELECT COUNT(*) FROM poi h WHERE h.hidden_at IS NOT NULL AND h.deleted_at IS NULL) AS hidden,
+                    (SELECT COUNT(*) FROM poi d WHERE d.deleted_at IS NOT NULL) AS deleted,
                     COALESCE(SUM(%s), 0) AS ai, COALESCE(SUM(%s), 0) AS manual,
                     COALESCE(SUM(%s), 0) AS no_image, COALESCE(SUM(%s), 0) AS no_desc, COALESCE(SUM(%s), 0) AS out_jeju
-               FROM POI p WHERE p.hidden_at IS NULL AND p.deleted_at IS NULL
+               FROM poi p WHERE p.hidden_at IS NULL AND p.deleted_at IS NULL
              """.formatted(AI, MANUAL, NO_IMAGE, NO_DESC, OUT_JEJU),
              (rs, n) -> new AdminPoiResponse.Checks(rs.getLong("total"), rs.getLong("hidden"), rs.getLong("deleted"),
                      rs.getLong("ai"), rs.getLong("manual"),
@@ -177,7 +177,7 @@ public class AdminPoiService {
  public List<AdminPoiResponse.ImageRow> images() {
      return jdbc.query("""
              SELECT poi_id, poi_name, image_url, hidden_at IS NOT NULL AS hidden
-               FROM POI
+               FROM poi
               WHERE deleted_at IS NULL AND image_url IS NOT NULL AND TRIM(image_url) <> ''
               ORDER BY poi_id
              """, (rs, n) -> new AdminPoiResponse.ImageRow(rs.getLong("poi_id"), rs.getString("poi_name"),
@@ -193,10 +193,10 @@ public class AdminPoiService {
              .map(m -> new AdminPoiResponse.Mapping(m.getSourcePoiId(), !m.getSourcePoiId().contains(":")))
              .toList();
      AdminPoiResponse.Usage usage = jdbc.query("""
-             SELECT (SELECT COUNT(*) FROM TRAVEL_BOOKMARK WHERE poi_id = ?) AS bookmarks,
-                    (SELECT COUNT(*) FROM ROUTE_SPOT WHERE poi_id = ?) AS spots,
-                    (SELECT COUNT(*) FROM RECOMMEND_ITEM WHERE poi_id = ? AND shown = 1) AS recommended,
-                    (SELECT COUNT(*) FROM TRAVEL_FEEDBACK_SPOT WHERE poi_id = ?) AS feedback
+             SELECT (SELECT COUNT(*) FROM travel_bookmark WHERE poi_id = ?) AS bookmarks,
+                    (SELECT COUNT(*) FROM route_spot WHERE poi_id = ?) AS spots,
+                    (SELECT COUNT(*) FROM recommend_item WHERE poi_id = ? AND shown = 1) AS recommended,
+                    (SELECT COUNT(*) FROM travel_feedback_spot WHERE poi_id = ?) AS feedback
              """, (rs, n) -> new AdminPoiResponse.Usage(rs.getLong("bookmarks"), rs.getLong("spots"),
                      rs.getLong("recommended"), rs.getLong("feedback")), poiId, poiId, poiId, poiId).get(0);
      return new AdminPoiResponse.Detail(p.getPoiId(), p.getPoiName(), p.getAddress(), p.getLatitude(),

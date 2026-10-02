@@ -38,3 +38,28 @@ export function errorMessage(err) {
 }
 
 export default client;
+
+/**
+ * 오류를 알림창으로 띄울지, 화면 메시지로 보여 줄지 정하는 공통 기준 (모든 화면이 같은 기준을 쓴다)
+ *
+ *  알림창(window.alert) ─ 누른 동작이 서비스 규칙·상태 때문에 거부되어, 지금 화면의 입력을 고쳐도 해결되지 않을 때
+ *    403 권한 없음 / 409 상태 충돌(확정된 일정, 기간이 겹치는 여행, 다른 탭에서 바뀐 경로, 신고된 글…)
+ *    410 차단·만료(차단된 글, 인증 시간 지남) / 429 횟수·시간 제한(재전송 대기, 인증번호 5번 틀림)
+ *  화면 메시지(입력 칸 아래·폼 오류 상자) ─ 입력을 고치면 되는 오류(400)와 서버·네트워크 오류(5xx, 다시 시도)
+ *    단, 입력 칸에서 바로 고칠 수 있는 409(사용 중인 닉네임, 이미 가입된 이메일)는 화면 메시지로 보여 준다.
+ */
+export function isBlocked(err) {
+  return [403, 409, 410, 429].includes(err?.response?.status);
+}
+
+/** 위 기준대로 오류를 보여 준다. 알림창으로 띄웠으면 화면 메시지는 비운다. */
+export function showError(err, setError) {
+  const msg = errorMessage(err);
+  if (isBlocked(err)) {
+    window.alert(msg);
+    setError?.('');
+  } else {
+    setError?.(msg);
+  }
+  return msg;
+}

@@ -39,7 +39,7 @@ public class WithdrawalPurgeService {
     public void purgeExpiredWithdrawals() {
         LocalDateTime deadline = LocalDateTime.now().minusDays(retentionDays);
         List<Long> userIds = jdbc.queryForList(
-                "SELECT user_id FROM `USER` WHERE status = 'WITHDRAWAL_PENDING' AND withdrawn_at <= ? ORDER BY user_id",
+                "SELECT user_id FROM `user` WHERE status = 'WITHDRAWAL_PENDING' AND withdrawn_at <= ? ORDER BY user_id",
                 Long.class, deadline);
         if (userIds.isEmpty()) return;
 

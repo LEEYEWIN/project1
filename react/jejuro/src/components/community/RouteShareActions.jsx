@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importRoute } from '../../api/communityApi.js';
-import { errorMessage } from '../../api/client.js';
+import { showError } from '../../api/client.js';
 import { formatDate } from '../../utils/format.js';
 
 /** 'YYYY-MM-DD' + n일 */
@@ -63,10 +63,8 @@ export default function RouteShareActions({ post, likeButton }) {
       const { travelId } = await importRoute(post.postId, { travelName: travelName.trim(), startDate });
       navigate(`/travels/${travelId}/route`);
     } catch (err) {
-      // 기간이 겹치는 여행 등 막힌 경우는 알림으로도 알려 준다
-      const msg = errorMessage(err);
-      setError(msg);
-      window.alert(msg);
+      // 기간이 겹치는 여행(409)·신고된 글 등 막힌 경우는 알림창, 입력 오류는 화면 메시지
+      showError(err, setError);
       setBusy(false);
     }
   };

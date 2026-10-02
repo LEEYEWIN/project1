@@ -47,6 +47,12 @@ public class GlobalExceptionHandler {
  /** DB 제약(UNIQUE, CHECK, FK, 트리거) 위반 */
  @ExceptionHandler(DataIntegrityViolationException.class)
  public ResponseEntity<Map<String, String>> handleDb(DataIntegrityViolationException e) {
+     String cause = String.valueOf(e.getMostSpecificCause().getMessage());
+     // 같은 닉네임 동시 가입·변경을 DB UNIQUE(uk_user_nickname)가 막은 경우
+     if (cause.contains("uk_user_nickname")) {
+         return ResponseEntity.status(HttpStatus.CONFLICT)
+                 .body(Map.of("message", "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요."));
+     }
      return ResponseEntity.status(HttpStatus.CONFLICT)
              .body(Map.of("message", "저장할 수 없는 값입니다. 중복이나 허용 범위를 확인하세요."));
  }

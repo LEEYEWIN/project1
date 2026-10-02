@@ -25,7 +25,7 @@ public class SocialAccountService {
     @Transactional(readOnly = true)
     public Optional<Long> findUserId(SocialProvider provider, String providerUserId) {
         List<Long> ids = jdbc.queryForList(
-                "SELECT user_id FROM SOCIAL_ACCOUNT WHERE provider = ? AND provider_user_id = ?",
+                "SELECT user_id FROM social_account WHERE provider = ? AND provider_user_id = ?",
                 Long.class, provider.name(), providerUserId);
         return ids.stream().findFirst();
     }
@@ -33,7 +33,7 @@ public class SocialAccountService {
     @Transactional(readOnly = true)
     public boolean hasProvider(Long userId, SocialProvider provider) {
         Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM SOCIAL_ACCOUNT WHERE user_id = ? AND provider = ?",
+                "SELECT COUNT(*) FROM social_account WHERE user_id = ? AND provider = ?",
                 Integer.class, userId, provider.name());
         return count != null && count > 0;
     }
@@ -52,7 +52,7 @@ public class SocialAccountService {
                     "이미 연동한 " + provider.label() + " 계정이 있습니다. 해제한 뒤 다시 연동해 주세요.");
         }
         try {
-            jdbc.update("INSERT INTO SOCIAL_ACCOUNT (user_id, provider, provider_user_id) VALUES (?, ?, ?)",
+            jdbc.update("INSERT INTO social_account (user_id, provider, provider_user_id) VALUES (?, ?, ?)",
                     userId, provider.name(), providerUserId);
         } catch (DuplicateKeyException e) {
             // 동시에 두 번 눌렀거나 그 사이 다른 회원이 연동한 경우
@@ -64,7 +64,7 @@ public class SocialAccountService {
     /** 연동 해제. 모든 회원은 비밀번호가 있으므로 항상 해제할 수 있다. */
     @Transactional
     public void unlink(Long userId, SocialProvider provider) {
-        int deleted = jdbc.update("DELETE FROM SOCIAL_ACCOUNT WHERE user_id = ? AND provider = ?",
+        int deleted = jdbc.update("DELETE FROM social_account WHERE user_id = ? AND provider = ?",
                 userId, provider.name());
         if (deleted == 0) {
             throw ApiException.notFound("연동된 " + provider.label() + " 계정이 없습니다.");

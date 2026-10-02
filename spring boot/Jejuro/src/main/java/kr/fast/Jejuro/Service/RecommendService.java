@@ -7,6 +7,7 @@ package kr.fast.Jejuro.Service;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,19 +86,24 @@ public class RecommendService {
   * 1) 내 여행인지 확인  2) VIEW에서 AI 입력 조회 + 설문 완료 확인
   * 3) 권역 코드·동반자 목록을 붙여 AI 호출 → 원본 ID 목록(FastAPI는 place_name)
   * 4) 원본 ID → poi_id 변환(POI_SOURCE_MAP)  5) POI 정보 붙여서 반환
-  * 화면용 추천 결과는 sessionStorage에 보관하고, 관리자 KPI·재학습용 기록만 RECOMMEND_REQUEST/ITEM에 남긴다.
+  * 추천 결과는 RECOMMEND_REQUEST/ITEM에 남고(관리자 KPI·재학습), 화면도 이 기록으로 다시 연다.
+  * 추천은 여행당 한 번: 이미 성공한 추천이 있으면 AI를 다시 부르지 않고 그 결과를 돌려준다.
   */
  @Transactional(readOnly = true)
  public RecommendResponse recommend(Long travelId, Long userId) {
      Travel travel = travelAccessService.getOwned(travelId, userId);
+     Optional<RecommendResponse> saved = savedResult(travelId);
+     if (saved.isPresent()) {
+         return saved.get();
+     }
      if (travel.isImported()) {
-         throw ApiException.badRequest("커뮤니티에서 가져온 여행은 설문이 없어 AI 추천을 받을 수 없어요. 관광지 목록에서 장소를 추가해 주세요.");
+         throw new ApiException(HttpStatus.CONFLICT, "커뮤니티에서 가져온 여행은 설문이 없어 AI 추천을 받을 수 없어요. 관광지 목록에서 장소를 추가해 주세요.");
      }
 
      AiTravelInput input = aiInputRepository.find(travelId, userId)
              .orElseThrow(() -> ApiException.notFound("여행을 찾을 수 없습니다."));
      if (!input.surveyComplete()) {
-         throw ApiException.badRequest("설문이 완료되지 않았습니다. 설문을 먼저 저장하세요.");
+         throw new ApiException(HttpStatus.CONFLICT, "설문이 완료되지 않았습니다. 설문을 먼저 저장하세요.");
      }
 
      List<Integer> regionIds = travel.getRegionMode() == RegionMode.SELECTED
@@ -166,5 +172,24 @@ public class RecommendService {
      }
 
      return new RecommendResponse(travelId, poiService.findSummaries(poiIds));
+ }
+
+ /**
+  * 이미 받은 추천 목록 (새로고침·다른 탭·다른 기기에서 다시 열 때). 추천을 받은 적 없으면 404.
+  * 그 사이 관리자가 숨기거나 삭제한 관광지는 뺀다.
+  */
+ @Transactional(readOnly = true)
+ public RecommendResponse latest(Long travelId, Long userId) {
+     travelAccessService.getOwned(travelId, userId);
+     return savedResult(travelId)
+             .orElseThrow(() -> ApiException.notFound("아직 AI 추천을 받지 않은 여행입니다."));
+ }
+
+ private Optional<RecommendResponse> savedResult(Long travelId) {
+     return recommendLogService.latestShown(travelId).map(ids -> {
+         Set<Long> hidden = ids.isEmpty() ? Set.of() : new HashSet<>(poiRepository.findHiddenIds(ids));
+         List<Long> visible = ids.stream().filter(id -> !hidden.contains(id)).toList();
+         return new RecommendResponse(travelId, poiService.findSummaries(visible));
+     });
  }
 }

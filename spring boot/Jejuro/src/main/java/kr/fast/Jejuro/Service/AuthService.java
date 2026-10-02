@@ -37,6 +37,7 @@ public class AuthService {
      if (req.password().getBytes(StandardCharsets.UTF_8).length > 72)
          throw ApiException.badRequest("비밀번호가 너무 깁니다. 영문·숫자는 72자, 한글은 24자 이내로 입력해 주세요.");
      if (users.existsByEmailIgnoreCase(email)) throw new ApiException(HttpStatus.CONFLICT, "이미 가입된 이메일입니다.");
+     if (users.existsByNicknameIgnoreCase(nickname)) throw new ApiException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.");
      users.saveAndFlush(User.register(email, passwords.encode(req.password()), nickname, req.birthDate(), req.genderCode()));
  }
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adoptRoute, deleteTravel, fetchTravelDetail } from '../api/travelApi.js';
 import { fetchRoute } from '../api/routeApi.js';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
 import { formatDate } from '../utils/format.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
@@ -48,7 +48,7 @@ export default function TravelDetailPage() {
       await adoptRoute(travelId, travel.route.routeId);
       load();
     } catch (e) {
-      setError(errorMessage(e));
+      showError(e, setError); // 배치 안 된 장소·이미 확정 등(409)은 알림창
     } finally {
       setBusy(false);
     }

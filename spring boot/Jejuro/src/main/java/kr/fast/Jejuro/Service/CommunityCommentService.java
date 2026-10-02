@@ -83,7 +83,7 @@ public List<CommentResponse> list(Long postId, Long loginUserId) {
 public Long create(Long postId, Long userId, CommentCreateRequest req) {
    CommunityPost post = communityService.getReadable(postId, userId);
    if (post.isHidden()) {
-       throw ApiException.badRequest("신고된 게시글에는 댓글을 달 수 없습니다.");
+       throw new ApiException(HttpStatus.CONFLICT, "신고된 게시글에는 댓글을 달 수 없습니다.");
    }
    Long parentId = null;
    if (req.parentCommentId() != null) {
@@ -91,10 +91,10 @@ public Long create(Long postId, Long userId, CommentCreateRequest req) {
                .filter(c -> c.getPostId().equals(postId))
                .orElseThrow(() -> ApiException.notFound("답글을 달 댓글을 찾을 수 없습니다."));
        if (parent.isDeleted()) {
-           throw ApiException.badRequest("삭제된 댓글에는 답글을 달 수 없습니다.");
+           throw new ApiException(HttpStatus.CONFLICT, "삭제된 댓글에는 답글을 달 수 없습니다.");
        }
        if (parent.isHidden()) {
-           throw ApiException.badRequest("신고된 댓글에는 답글을 달 수 없습니다.");
+           throw new ApiException(HttpStatus.CONFLICT, "신고된 댓글에는 답글을 달 수 없습니다.");
        }
        parentId = parent.isReply() ? parent.getParentCommentId() : parent.getCommentId();   // 한 단계만
    }
@@ -106,7 +106,7 @@ public Long create(Long postId, Long userId, CommentCreateRequest req) {
 public void update(Long commentId, Long userId, CommentUpdateRequest req) {
    CommunityComment c = getOwnedAlive(commentId, userId);
    if (c.isBlocked()) {
-       throw ApiException.badRequest("관리자가 차단한 댓글은 수정할 수 없습니다.");
+       throw new ApiException(HttpStatus.CONFLICT, "관리자가 차단한 댓글은 수정할 수 없습니다.");
    }
    if (c.isHidden()) {
        throw new ApiException(HttpStatus.CONFLICT, "신고된 댓글은 관리자 확인이 끝난 뒤 수정할 수 있습니다.");

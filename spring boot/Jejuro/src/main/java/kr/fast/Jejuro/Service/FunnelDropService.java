@@ -40,15 +40,15 @@ public class FunnelDropService {
  private static final String SELECT = """
          SELECT f.travel_id, t.travel_name, u.nickname, f.reached_step, f.drop_step, f.created_at, f.end_date,
                 f.place_count, f.placed_count,
-                (SELECT COUNT(*) FROM RECOMMEND_REQUEST q
+                (SELECT COUNT(*) FROM recommend_request q
                   WHERE q.travel_id = f.travel_id AND q.status = 'SUCCESS') AS recommend_count,
-                (SELECT COUNT(*) FROM RECOMMEND_REQUEST q JOIN RECOMMEND_ITEM i ON i.request_id = q.request_id
+                (SELECT COUNT(*) FROM recommend_request q JOIN recommend_item i ON i.request_id = q.request_id
                   WHERE q.travel_id = f.travel_id AND q.status = 'SUCCESS' AND i.shown = 1) AS shown_count,
-                (SELECT COUNT(*) FROM ROUTE_DAY rd JOIN ROUTE_SPOT s ON s.route_day_id = rd.route_day_id
+                (SELECT COUNT(*) FROM route_day rd JOIN route_spot s ON s.route_day_id = rd.route_day_id
                   WHERE rd.route_id = t.adopted_route_id) AS scheduled_count
-           FROM TRAVEL_FUNNEL f
-           JOIN TRAVEL t ON t.travel_id = f.travel_id
-           JOIN `USER` u ON u.user_id = f.user_id
+           FROM travel_funnel f
+           JOIN travel t ON t.travel_id = f.travel_id
+           JOIN `user` u ON u.user_id = f.user_id
          """;
 
  private final JdbcTemplate jdbc;
@@ -62,7 +62,7 @@ public class FunnelDropService {
      Range r = range(days, step);
      Map<String, Integer> counts = new LinkedHashMap<>();
      STEPS.forEach(s -> counts.put(s, 0));
-     jdbc.query("SELECT drop_step, COUNT(*) FROM TRAVEL_FUNNEL WHERE funnel_status = 'DROPPED' "
+     jdbc.query("SELECT drop_step, COUNT(*) FROM travel_funnel WHERE funnel_status = 'DROPPED' "
              + "AND created_at >= ? AND created_at < ? GROUP BY drop_step", (rs, n) -> {
                  counts.put(rs.getString(1), rs.getInt(2));
                  return null;

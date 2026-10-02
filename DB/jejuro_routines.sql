@@ -242,13 +242,13 @@ SET character_set_client = @saved_cs_client;
 DELIMITER ;;
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_delete_travel`(IN p_travel_id BIGINT UNSIGNED)
 BEGIN
-    UPDATE `TRAVEL`
+    UPDATE `travel`
        SET `adopted_route_id` = NULL, `adopted_at` = NULL
      WHERE `travel_id` = p_travel_id;
 
-    DELETE FROM `TRAVEL_FEEDBACK` WHERE `travel_id` = p_travel_id;
-    DELETE FROM `TRAVEL_ROUTE`    WHERE `travel_id` = p_travel_id;
-    DELETE FROM `TRAVEL`          WHERE `travel_id` = p_travel_id;
+    DELETE FROM `travel_feedback` WHERE `travel_id` = p_travel_id;
+    DELETE FROM `travel_route`    WHERE `travel_id` = p_travel_id;
+    DELETE FROM `travel`          WHERE `travel_id` = p_travel_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -271,7 +271,7 @@ BEGIN
     DECLARE v_email VARCHAR(255) DEFAULT NULL;
 
     SELECT `status`, `email` INTO v_status, v_email
-      FROM `USER` WHERE `user_id` = p_user_id
+      FROM `user` WHERE `user_id` = p_user_id
        FOR UPDATE;
 
     IF v_status IS NULL OR v_status <> 'WITHDRAWAL_PENDING' THEN
@@ -279,22 +279,22 @@ BEGIN
             SET MESSAGE_TEXT = 'Only WITHDRAWAL_PENDING users can be purged';
     END IF;
 
-    UPDATE `TRAVEL`
+    UPDATE `travel`
        SET `adopted_route_id` = NULL, `adopted_at` = NULL
      WHERE `user_id` = p_user_id;
 
-    DELETE f FROM `TRAVEL_FEEDBACK` f
-      JOIN `TRAVEL` t ON t.`travel_id` = f.`travel_id`
+    DELETE f FROM `travel_feedback` f
+      JOIN `travel` t ON t.`travel_id` = f.`travel_id`
      WHERE t.`user_id` = p_user_id;
 
-    DELETE r FROM `TRAVEL_ROUTE` r
-      JOIN `TRAVEL` t ON t.`travel_id` = r.`travel_id`
+    DELETE r FROM `travel_route` r
+      JOIN `travel` t ON t.`travel_id` = r.`travel_id`
      WHERE t.`user_id` = p_user_id;
 
-    DELETE FROM `EMAIL_VERIFICATION` WHERE `email` = v_email;
+    DELETE FROM `email_verification` WHERE `email` = v_email;
 
     -- TRAVEL·SOCIAL_ACCOUNT·AUTH_SESSION은 CASCADE, 커뮤니티 글·댓글은 SET NULL
-    DELETE FROM `USER` WHERE `user_id` = p_user_id;
+    DELETE FROM `user` WHERE `user_id` = p_user_id;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;

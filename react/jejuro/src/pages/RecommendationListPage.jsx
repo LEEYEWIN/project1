@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { fetchPoisByIds } from '../api/poiApi.js';
 import { fetchTravelDetail } from '../api/travelApi.js';
 import { errorMessage } from '../api/client.js';
-import { loadRecommendationIds } from '../utils/recommendStorage.js';
+import { fetchLatestRecommendations } from '../api/recommendApi.js';
+import { loadPickStyle } from '../utils/recommendStorage.js';
 import useBookmarks from '../hooks/useBookmarks.js';
 import PoiCard from '../components/common/PoiCard.jsx';
 import PlaceButton from '../components/common/PlaceButton.jsx';
@@ -15,13 +15,19 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
 
 /**
  * 3페이지: 추천 관광지 목록
- * 데이터 출처: ① 2페이지가 넘겨준 state.pois ② 없으면(새로고침) sessionStorage의 ID로 다시 조회
+ * 데이터 출처: ① 2페이지가 넘겨준 state.pois ② 없으면(새로고침·다른 기기) 서버 추천 기록으로 다시 조회
  * - 위쪽 "추천 기준": 이 여행의 정보·설문 1순위로 추천했다는 것을 보여 줌
  * - 카드의 [+ 장소 추가]: 이 여행의 일정(경로)에 넣을 장소로 담기
  * - 카드를 누르면 관광지 상세(/travels/:travelId/pois/:poiId)로 이동, 뒤로 가기로 돌아온다.
  * - 관심없음 버튼은 이 화면에 두지 않는다 (관심없음 관리 화면에서만). 관심없음인 곳은 서버가 추천에서 뺀다.
+ * - 제목 아래 한 줄: 설문 첫 질문(여행지 선택 성향)에 맞춘 안내 문구. 저장된 값이 없으면 숨김
  * - 일정을 확정한 여행: [+ 장소 추가] 버튼 비활성화 (🔒 확정됨)
  */
+const PICK_STYLE_TEXT = {
+  POPULAR: '회원님과 비슷한 여행 취향을 가진 사람들이 많이 고른 장소예요.',
+  UNIQUE: '회원님만의 여행 취향을 바탕으로 추천한 장소예요.',
+};
+
 export default function RecommendationListPage() {
   const { travelId } = useParams();
   const location = useLocation();
@@ -30,18 +36,24 @@ export default function RecommendationListPage() {
   const [travel, setTravel] = useState(null);
   const [error, setError] = useState('');
   const [region, setRegion] = useState('전체');
+  const pickStyle = loadPickStyle(travelId);
+  const pickStyleText = PICK_STYLE_TEXT[pickStyle];
   const { bookmarks, isBookmarked, toggle, pending, locked, error: bookmarkError } = useBookmarks(travelId, 'RECOMMEND'); // 여기서 담으면 'AI 추천으로 담음'으로 기록
 
   useEffect(() => {
     if (pois) return;
-    const ids = loadRecommendationIds(travelId);
-    if (!ids) {
-      navigate(`/travels/${travelId}/recommending`, { replace: true }); // 추천 기록 없음 → 다시 추천
-      return;
-    }
-    fetchPoisByIds(ids)
-      .then(setPois)
-      .catch((e) => setError(errorMessage(e)));
+    // 새로고침·다른 탭·다른 기기: 서버의 추천 기록에서 처음 받은 목록을 그대로 다시 연다
+    let active = true;
+    fetchLatestRecommendations(travelId)
+      .then((d) => active && setPois(d.pois))
+      .catch((e) => {
+        if (!active) return;
+        if (e.response?.status === 404) navigate(`/travels/${travelId}/recommending`, { replace: true }); // 아직 추천 전
+        else setError(errorMessage(e));
+      });
+    return () => {
+      active = false;
+    };
   }, [pois, travelId, navigate]);
 
   // 추천 기준(여행 정보·설문) — 실패해도 목록은 보여 준다
@@ -74,6 +86,8 @@ export default function RecommendationListPage() {
           </button>
         </div>
       </div>
+
+      {pickStyleText && <p className="pick-style-note" role="note">{pickStyleText}</p>}
 
       <RecommendBasis travel={travel} count={pois.length} />
       <PlaceGuide travelId={travelId} count={bookmarks.length} />

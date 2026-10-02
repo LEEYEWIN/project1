@@ -16,7 +16,7 @@ import jakarta.persistence.Table;
 
 /** 여행·커뮤니티에서 필요한 회원 정보만 읽는다. 회원가입 기능에서 필드를 더 채운다. */
 @Entity
-@Table(name = "`USER`")   // USER는 MySQL 예약어와 겹치므로 백틱으로 감싼다
+@Table(name = "`user`")   // USER는 MySQL 예약어와 겹치므로 백틱으로 감싼다
 public class User {
 
  @Id

@@ -69,14 +69,14 @@ public Long importToNewTravel(Long postId, Long userId, RouteImportRequest req) 
    Travel source = post.getTravelId() == null ? null : travelRepository.findById(post.getTravelId()).orElse(null);
    RouteDetailResponse route = source == null ? null : routeService.adoptedRouteForPublic(source);
    if (route == null || route.days().isEmpty()) {
-       throw ApiException.badRequest("가져올 경로가 없는 글입니다.");
+       throw new ApiException(HttpStatus.CONFLICT, "가져올 경로가 없는 글입니다.");
    }
    // 관리자가 숨긴 관광지(폐업 등)는 가져오지 않는다
    Set<Long> allIds = new HashSet<>();
    route.days().forEach(d -> d.spots().forEach(s -> allIds.add(s.poi().poiId())));
    Set<Long> hidden = allIds.isEmpty() ? Set.of() : new HashSet<>(poiRepository.findHiddenIds(allIds));
    if (!allIds.isEmpty() && hidden.containsAll(allIds)) {
-       throw ApiException.badRequest("이 경로의 관광지가 모두 지금은 안내하지 않는 곳이라 가져올 수 없어요.");
+       throw new ApiException(HttpStatus.CONFLICT, "이 경로의 관광지가 모두 지금은 안내하지 않는 곳이라 가져올 수 없어요.");
    }
 
    // 1) 새 여행 (회원 행을 잠가 여행 순번이 겹치지 않게)

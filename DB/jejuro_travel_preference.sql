@@ -65,12 +65,12 @@ DELIMITER ;;
     DECLARE v_count INT DEFAULT 0;
 
     SELECT g.`max_selections` INTO v_max
-      FROM `PREFERENCE` q
-      JOIN `PREFERENCE_GROUP` g ON g.`group_code` = q.`group_code`
+      FROM `preference` q
+      JOIN `preference_group` g ON g.`group_code` = q.`group_code`
      WHERE q.`preference_id` = NEW.`preference_id`;
 
     IF v_max IS NOT NULL THEN
-        SELECT COUNT(*) INTO v_count FROM `TRAVEL_PREFERENCE`
+        SELECT COUNT(*) INTO v_count FROM `travel_preference`
          WHERE `travel_id` = NEW.`travel_id`
            AND `preference_id` = NEW.`preference_id`;
         IF v_count >= v_max THEN
@@ -100,12 +100,12 @@ DELIMITER ;;
     IF NOT (OLD.`travel_id` = NEW.`travel_id`
             AND OLD.`preference_id` = NEW.`preference_id`) THEN
         SELECT g.`max_selections` INTO v_max
-          FROM `PREFERENCE` q
-          JOIN `PREFERENCE_GROUP` g ON g.`group_code` = q.`group_code`
+          FROM `preference` q
+          JOIN `preference_group` g ON g.`group_code` = q.`group_code`
          WHERE q.`preference_id` = NEW.`preference_id`;
 
         IF v_max IS NOT NULL THEN
-            SELECT COUNT(*) INTO v_count FROM `TRAVEL_PREFERENCE`
+            SELECT COUNT(*) INTO v_count FROM `travel_preference`
              WHERE `travel_id` = NEW.`travel_id`
                AND `preference_id` = NEW.`preference_id`;
             IF v_count >= v_max THEN

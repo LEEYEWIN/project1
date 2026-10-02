@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import kr.fast.Jejuro.Config.ApiException;
+import org.springframework.http.HttpStatus;
 import kr.fast.Jejuro.Repository.UserRepository;
 import kr.fast.Jejuro.RequestDTO.ProfilePasswordRequest;
 import kr.fast.Jejuro.ResponseDTO.ProfileResponse;
@@ -21,7 +22,7 @@ public class ProfileService {
  @Transactional(readOnly=true)
  public ProfileResponse profile(Long userId, String loginMethod) {
      var user=users.findById(userId).orElseThrow(() -> ApiException.notFound("회원을 찾을 수 없습니다."));
-     var providers=jdbc.queryForList("SELECT provider FROM SOCIAL_ACCOUNT WHERE user_id = ? ORDER BY provider", String.class, userId);
+     var providers=jdbc.queryForList("SELECT provider FROM social_account WHERE user_id = ? ORDER BY provider", String.class, userId);
      return new ProfileResponse(user.getUserId(),user.getEmail(),user.getNickname(),user.getRole(),loginMethod,providers);
  }
  @Transactional
@@ -29,6 +30,7 @@ public class ProfileService {
      String value=nickname.strip();
      if(value.length()<2 || value.length()>30) throw ApiException.badRequest("닉네임은 2~30자로 입력해 주세요.");
      var user=users.findByIdForUpdate(userId).orElseThrow(() -> ApiException.notFound("회원을 찾을 수 없습니다."));
+     if(users.existsByNicknameIgnoreCaseAndUserIdNot(value,userId)) throw new ApiException(HttpStatus.CONFLICT,"이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요.");
      user.changeNickname(value);
      users.saveAndFlush(user);
  }

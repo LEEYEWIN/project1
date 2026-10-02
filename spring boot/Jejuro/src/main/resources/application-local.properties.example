@@ -1,0 +1,17 @@
+# 이 파일을 복사해서 application-local.properties 로 이름을 바꾸고 내 PC 값으로 채운다.
+# application-local.properties 는 .gitignore 에 있어 깃허브에 올라가지 않는다. (비밀번호·키를 커밋하지 말 것)
+spring.datasource.username=root
+spring.datasource.password=여기에_DB_비밀번호
+kakao.mobility.rest-key=여기에_카카오_REST_API_키
+
+# 이메일 인증 (Gmail 앱 비밀번호)
+spring.mail.username=여기에_보내는_Gmail_주소
+spring.mail.password=여기에_Gmail_앱_비밀번호
+
+# 소셜 로그인 (사용하는 제공자만 채우면 그 버튼만 보인다)
+# spring.security.oauth2.client.registration.kakao.client-id=
+# spring.security.oauth2.client.registration.kakao.client-secret=
+# spring.security.oauth2.client.registration.naver.client-id=
+# spring.security.oauth2.client.registration.naver.client-secret=
+# spring.security.oauth2.client.registration.google.client-id=
+# spring.security.oauth2.client.registration.google.client-secret=

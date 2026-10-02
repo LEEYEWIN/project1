@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -53,7 +54,7 @@ public class RecommendLogService {
          rows.add(new Object[] { requestId, i + 1, cut(name, 200), poiId, shown ? 1 : 0 });
      }
      if (!rows.isEmpty()) {
-         jdbc.batchUpdate("INSERT INTO RECOMMEND_ITEM (request_id, rank_no, place_name, poi_id, shown) VALUES (?, ?, ?, ?, ?)", rows);
+         jdbc.batchUpdate("INSERT INTO recommend_item (request_id, rank_no, place_name, poi_id, shown) VALUES (?, ?, ?, ?, ?)", rows);
      }
  }
 
@@ -63,12 +64,27 @@ public class RecommendLogService {
      insertRequest(travelId, modelVersion, "FAIL", elapsedMs, 0, 0, cut(message, 200));
  }
 
+ /**
+  * 이 여행의 마지막 성공 추천에서 화면에 보여 준 관광지 번호(AI 순위대로).
+  * 성공 기록이 없으면 비어 있음. (삭제된 관광지는 poi_id가 NULL이 되어 빠진다)
+  */
+ @Transactional(readOnly = true)
+ public Optional<List<Long>> latestShown(Long travelId) {
+     Long requestId = jdbc.query(
+             "SELECT MAX(request_id) FROM recommend_request WHERE travel_id = ? AND status = 'SUCCESS'",
+             rs -> rs.next() ? (Long) rs.getObject(1, Long.class) : null, travelId);
+     if (requestId == null) return Optional.empty();
+     return Optional.of(jdbc.queryForList(
+             "SELECT poi_id FROM recommend_item WHERE request_id = ? AND shown = 1 AND poi_id IS NOT NULL ORDER BY rank_no",
+             Long.class, requestId));
+ }
+
  private Long insertRequest(Long travelId, String modelVersion, String status, long elapsedMs,
                             int resultCount, int unmapped, String error) {
      KeyHolder key = new GeneratedKeyHolder();
      jdbc.update(con -> {
          PreparedStatement ps = con.prepareStatement(
-                 "INSERT INTO RECOMMEND_REQUEST (travel_id, model_version, status, response_ms, result_count, unmapped_count, error_message) "
+                 "INSERT INTO recommend_request (travel_id, model_version, status, response_ms, result_count, unmapped_count, error_message) "
                          + "VALUES (?, ?, ?, ?, ?, ?, ?)",
                  Statement.RETURN_GENERATED_KEYS);
          ps.setLong(1, travelId);

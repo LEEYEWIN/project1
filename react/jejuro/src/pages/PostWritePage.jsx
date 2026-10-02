@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { createPost, fetchPost, updatePost, uploadImage } from '../api/communityApi.js';
 import { fetchMyTravels } from '../api/travelApi.js';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import '../styles/community.css';
@@ -101,7 +101,7 @@ export default function PostWritePage() {
         navigate(`/community/posts/${newId}`, { replace: true });
       }
     } catch (err) {
-      setError(errorMessage(err)); // 입력 내용은 그대로 유지
+      showError(err, setError); // 신고·차단된 글 등 막힌 경우는 알림창, 입력 오류는 화면 메시지 (입력 내용은 그대로 유지)
     } finally {
       setSaving(false);
     }

@@ -4,7 +4,7 @@ import { fetchFeedback, saveFeedback } from '../api/feedbackApi.js';
 import { fetchTravelDetail } from '../api/travelApi.js';
 import { createPost } from '../api/communityApi.js';
 import ImagePicker from '../components/common/ImagePicker.jsx';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError } from '../api/client.js';
 import StarRating from '../components/feedback/StarRating.jsx';
 import SpotChecklist from '../components/feedback/SpotChecklist.jsx';
 import Loading from '../components/common/Loading.jsx';
@@ -111,8 +111,8 @@ export default function FeedbackPage() {
         spots: spotPayload(),
       });
     } catch (e) {
-      // 후기 저장 자체가 실패 → 이 화면에 머물며 오류 표시
-      setError(errorMessage(e));
+      // 후기 저장 자체가 실패 → 이 화면에 머묾. 일정 미확정 등 막힌 경우(409)는 알림창, 입력 오류는 화면 메시지
+      showError(e, setError);
       setSaving(false);
       return;
     }

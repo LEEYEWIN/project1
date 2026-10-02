@@ -76,7 +76,7 @@ public class ReportService {
             throw new ApiException(HttpStatus.CONFLICT, "이미 관리자가 차단한 " + t.label() + "입니다.");
         }
         if (userId.equals(t.authorId())) {
-            throw ApiException.badRequest("내가 쓴 " + t.label() + "은(는) 신고할 수 없습니다.");
+            throw new ApiException(HttpStatus.FORBIDDEN, "내가 쓴 " + t.label() + "은(는) 신고할 수 없습니다.");
         }
         if (reportRepository.existsByTargetTypeAndTargetIdAndReporterId(req.targetType(), req.targetId(), userId)) {
             throw new ApiException(HttpStatus.CONFLICT, "이미 신고한 " + t.label() + "입니다. 관리자가 확인 중이에요.");

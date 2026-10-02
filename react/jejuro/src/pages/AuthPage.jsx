@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { errorMessage } from '../api/client.js';
+import { errorMessage, showError, isBlocked } from '../api/client.js';
 import {
   getSocialProviders,
   sendEmailCode,
@@ -10,6 +10,7 @@ import {
   socialName,
   verifyEmailCode,
 } from '../api/authApi.js';
+import useNicknameCheck from '../hooks/useNicknameCheck.js';
 import '../styles/auth.css';
 
 const CODE_VALID_MS = 5 * 60 * 1000; // 서버와 같은 5분
@@ -22,6 +23,55 @@ function formatRemaining(ms) {
   return `${min}:${sec}`;
 }
 
+// 생년월일: 연·월·일을 각각 골라 YYYY-MM-DD 로 만든다 (달력보다 연도를 고르기 쉽게)
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function BirthDateSelect({ value, onChange }) {
+  const today = new Date();
+  const thisYear = today.getFullYear();
+  const [parts, setParts] = useState(() => {
+    const [y = '', m = '', d = ''] = (value || '').split('-');
+    return { y, m: m ? String(Number(m)) : '', d: d ? String(Number(d)) : '' };
+  });
+
+  const years = Array.from({ length: thisYear - 1920 + 1 }, (_, i) => thisYear - i);
+  const lastDay = parts.y && parts.m ? new Date(Number(parts.y), Number(parts.m), 0).getDate() : 31;
+  const isFuture = (y, m, d) =>
+    new Date(Number(y), Number(m) - 1, Number(d)) > new Date(thisYear, today.getMonth(), today.getDate());
+
+  function update(key, v) {
+    const next = { ...parts, [key]: v };
+    // 월을 바꿔 그 달에 없는 날짜가 되면(예: 2월 30일) 일을 비운다
+    if (next.y && next.m && next.d) {
+      const max = new Date(Number(next.y), Number(next.m), 0).getDate();
+      if (Number(next.d) > max) next.d = '';
+    }
+    setParts(next);
+    onChange(next.y && next.m && next.d ? `${next.y}-${pad2(next.m)}-${pad2(next.d)}` : '');
+  }
+
+  return (
+    <div className="auth-birth-selects">
+      <select id="birthYear" aria-label="태어난 연도" value={parts.y} onChange={(e) => update('y', e.target.value)} required>
+        <option value="">연도</option>
+        {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+      </select>
+      <select aria-label="태어난 월" value={parts.m} onChange={(e) => update('m', e.target.value)} required>
+        <option value="">월</option>
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+          <option key={m} value={m} disabled={parts.y && isFuture(parts.y, m, 1)}>{m}월</option>
+        ))}
+      </select>
+      <select aria-label="태어난 일" value={parts.d} onChange={(e) => update('d', e.target.value)} required>
+        <option value="">일</option>
+        {Array.from({ length: lastDay }, (_, i) => i + 1).map((d) => (
+          <option key={d} value={d} disabled={parts.y && parts.m && isFuture(parts.y, parts.m, d)}>{d}일</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function PasswordInput({
   id,
   label,
@@ -31,6 +81,8 @@ function PasswordInput({
   hint,
   minLength,
   placeholder,
+  hintClass,
+  hintRole,
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -64,7 +116,7 @@ function PasswordInput({
       </div>
 
       {hint && (
-        <small id={`${id}-hint`}>
+        <small id={`${id}-hint`} className={hintClass} role={hintRole}>
           {hint}
         </small>
       )}
@@ -92,6 +144,11 @@ export default function AuthPage({ signup = false }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // 인증번호 받기·확인 오류는 입력 칸 바로 아래에 보여 준다 (맨 아래 오류 칸은 눈에 잘 안 띔)
+  const [emailError, setEmailError] = useState('');
+  const nicknameCheck = useNicknameCheck(signup ? values.nickname : '');
+  const confirmMatches = values.confirm !== '' && values.password === values.confirm;
+  const [codeError, setCodeError] = useState('');
 
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -157,6 +214,8 @@ export default function AuthPage({ signup = false }) {
     setCodeSent(false);
     setCode('');
     setError('');
+    setEmailError('');
+    setCodeError('');
     setNotice('');
     setExpiresAt(null);
   };
@@ -177,13 +236,14 @@ export default function AuthPage({ signup = false }) {
     const email = values.email.trim();
 
     if (!email) {
-      setError('이메일을 입력해 주세요.');
+      setEmailError('이메일을 입력해 주세요.');
       return;
     }
 
     if (sending) return;
 
-    setError('');
+    setEmailError('');
+    setCodeError('');
     setNotice('');
     setSending(true);
 
@@ -200,10 +260,9 @@ export default function AuthPage({ signup = false }) {
         `${email}로 인증번호를 보냈어요. 메일함(스팸함 포함)을 확인해 주세요.`
       );
     } catch (err) {
-      // 재전송 대기·발송 횟수 초과·가입된 이메일 등 막힌 경우는 알림으로도 알려 준다
-      const msg = errorMessage(err);
-      setError(msg);
-      window.alert(msg);
+      // 이미 가입된 이메일(409)은 이메일 칸을 고치면 되므로 칸 아래 메시지, 재전송 대기·횟수 초과(429)는 알림창
+      if (err?.response?.status === 409) setEmailError(errorMessage(err));
+      else showError(err, setEmailError);
     } finally {
       setSending(false);
     }
@@ -214,16 +273,16 @@ export default function AuthPage({ signup = false }) {
     const verificationCode = code.trim();
 
     if (!verificationCode) {
-      setError('인증번호를 입력해 주세요.');
+      setCodeError('인증번호를 입력해 주세요.');
       return;
     }
 
     if (codeExpired) {
-      setError('인증 시간이 지났어요. 인증번호를 다시 받아 주세요.');
+      setCodeError('인증 시간이 지났어요. 인증번호를 다시 받아 주세요.');
       return;
     }
 
-    setError('');
+    setCodeError('');
 
     try {
       const result = await verifyEmailCode(
@@ -236,15 +295,13 @@ export default function AuthPage({ signup = false }) {
         setNotice('');
       } else {
         setVerified(false);
-        setError('인증번호가 올바르지 않습니다.');
+        setCodeError('인증번호가 올바르지 않습니다.');
       }
     } catch (err) {
-      // 틀림(남은 횟수)·만료·횟수 초과는 알림으로도 알려 준다
-      const msg = errorMessage(err);
       setVerified(false);
-      setError(msg);
-      window.alert(msg);
-      if (/다시 받아/.test(msg)) setCode('');
+      // 틀린 번호(400)는 칸 아래 메시지, 시간 지남(410)·5번 틀림(429)은 알림창 후 번호 칸을 비운다
+      showError(err, setCodeError);
+      if (isBlocked(err)) setCode('');
     }
   }
 
@@ -254,6 +311,11 @@ export default function AuthPage({ signup = false }) {
     if (busy) return;
 
     setError('');
+
+    if (signup && nicknameCheck.status === 'taken') {
+      setError(nicknameCheck.message);
+      return;
+    }
 
     if (signup && !verified) {
       setError('이메일 인증을 완료해 주세요.');
@@ -402,6 +464,12 @@ export default function AuthPage({ signup = false }) {
                           : '인증번호 받기'}
                     </button>
                   </div>
+
+                  {emailError && (
+                    <p className="auth-field-error" role="alert">
+                      {emailError}
+                    </p>
+                  )}
                 </div>
 
                 <div className="auth-field">
@@ -443,6 +511,12 @@ export default function AuthPage({ signup = false }) {
                       {verified ? '완료' : '확인'}
                     </button>
                   </div>
+
+                  {codeError && (
+                    <p className="auth-field-error" role="alert">
+                      {codeError}
+                    </p>
+                  )}
 
                   {notice && (
                     <p
@@ -530,6 +604,15 @@ export default function AuthPage({ signup = false }) {
                   value={values.confirm}
                   onChange={change('confirm')}
                   autoComplete="new-password"
+                  hint={
+                    values.confirm
+                      ? confirmMatches
+                        ? '비밀번호가 일치합니다.'
+                        : '비밀번호가 일치하지 않습니다.'
+                      : undefined
+                  }
+                  hintClass={confirmMatches ? 'auth-match-ok' : 'auth-match-bad'}
+                  hintRole={confirmMatches ? 'status' : 'alert'}
                 />
 
                 <div className="auth-profile-row">
@@ -550,27 +633,30 @@ export default function AuthPage({ signup = false }) {
                       required
                       minLength={2}
                       maxLength={30}
+                      aria-describedby="nickname-check"
                     />
+
+                    {nicknameCheck.message && (
+                      <small
+                        id="nickname-check"
+                        className={nicknameCheck.status === 'taken' ? 'auth-nickname-taken' : 'auth-nickname-ok'}
+                        role={nicknameCheck.status === 'taken' ? 'alert' : 'status'}
+                      >
+                        {nicknameCheck.message}
+                      </small>
+                    )}
                   </div>
 
-                  <div className="auth-field">
-                    <label htmlFor="birthDate">
+                  <div className="auth-field auth-birth">
+                    <label htmlFor="birthYear">
                       생년월일
                     </label>
 
-                    <input
-                      id="birthDate"
-                      name="birthDate"
-                      type="date"
-                      autoComplete="bday"
+                    <BirthDateSelect
                       value={values.birthDate}
-                      onChange={change(
-                        'birthDate'
-                      )}
-                      required
-                      max={new Date().toLocaleDateString(
-                        'en-CA'
-                      )}
+                      onChange={(birthDate) =>
+                        setValues((old) => ({ ...old, birthDate }))
+                      }
                     />
                   </div>
                 </div>

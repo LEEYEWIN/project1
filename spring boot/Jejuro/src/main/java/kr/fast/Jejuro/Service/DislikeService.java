@@ -50,13 +50,13 @@ public class DislikeService {
         if (poi.isDeleted()) {
             throw ApiException.notFound("삭제된 관광지입니다.");
         }
-        jdbc.update("INSERT IGNORE INTO USER_POI_DISLIKE (user_id, poi_id) VALUES (?, ?)", userId, poiId);
+        jdbc.update("INSERT IGNORE INTO user_poi_dislike (user_id, poi_id) VALUES (?, ?)", userId, poiId);
     }
 
     /** 관심없음 해제 */
     @Transactional
     public void remove(Long userId, Long poiId) {
-        jdbc.update("DELETE FROM USER_POI_DISLIKE WHERE user_id = ? AND poi_id = ?", userId, poiId);
+        jdbc.update("DELETE FROM user_poi_dislike WHERE user_id = ? AND poi_id = ?", userId, poiId);
     }
 
     /** 관심없음 목록 (최근에 표시한 순) */
@@ -65,7 +65,7 @@ public class DislikeService {
         record Row(Long poiId, java.time.LocalDateTime createdAt) {
         }
         List<Row> rows = jdbc.query(
-                "SELECT poi_id, created_at FROM USER_POI_DISLIKE WHERE user_id = ? ORDER BY created_at DESC, poi_id DESC",
+                "SELECT poi_id, created_at FROM user_poi_dislike WHERE user_id = ? ORDER BY created_at DESC, poi_id DESC",
                 (rs, n) -> new Row(rs.getLong(1), rs.getTimestamp(2).toLocalDateTime()), userId);
         Map<Long, PoiSummaryResponse> pois = poiService.findSummaries(rows.stream().map(Row::poiId).toList()).stream()
                 .collect(Collectors.toMap(PoiSummaryResponse::poiId, Function.identity()));
@@ -85,10 +85,10 @@ public class DislikeService {
         }
         List<Row> rows = jdbc.query("""
                 SELECT i.poi_id, MAX(r.created_at) AS last_at, COUNT(DISTINCT r.request_id) AS times
-                  FROM RECOMMEND_ITEM i
-                  JOIN RECOMMEND_REQUEST r ON r.request_id = i.request_id
-                  JOIN TRAVEL t ON t.travel_id = r.travel_id
-                  JOIN POI p ON p.poi_id = i.poi_id
+                  FROM recommend_item i
+                  JOIN recommend_request r ON r.request_id = i.request_id
+                  JOIN travel t ON t.travel_id = r.travel_id
+                  JOIN poi p ON p.poi_id = i.poi_id
                  WHERE t.user_id = ? AND i.shown = 1 AND p.deleted_at IS NULL
                  GROUP BY i.poi_id
                  ORDER BY last_at DESC, i.poi_id DESC
@@ -107,7 +107,7 @@ public class DislikeService {
     /** 추천에서 뺄 관광지 번호 */
     @Transactional(readOnly = true)
     public Set<Long> ids(Long userId) {
-        return new HashSet<>(jdbc.query("SELECT poi_id FROM USER_POI_DISLIKE WHERE user_id = ?",
+        return new HashSet<>(jdbc.query("SELECT poi_id FROM user_poi_dislike WHERE user_id = ?",
                 (rs, n) -> rs.getLong(1), userId));
     }
 }

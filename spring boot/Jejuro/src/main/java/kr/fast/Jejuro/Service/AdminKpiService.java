@@ -123,18 +123,18 @@ record FeedbackRow(long travelId, String status, Integer score) {
 private List<ItemRow> loadItems(LocalDateTime from, LocalDateTime to) {
    String sql = """
            SELECT q.request_id, q.travel_id, q.model_version, q.created_at, i.rank_no, i.poi_id, i.place_name,
-                  EXISTS (SELECT 1 FROM TRAVEL_BOOKMARK b WHERE b.travel_id = q.travel_id AND b.poi_id = i.poi_id
+                  EXISTS (SELECT 1 FROM travel_bookmark b WHERE b.travel_id = q.travel_id AND b.poi_id = i.poi_id
                              AND b.source <> 'IMPORT' AND b.created_at >= q.created_at) AS added,
                   (t.adopted_route_id IS NOT NULL AND EXISTS (
-                       SELECT 1 FROM ROUTE_DAY rd JOIN ROUTE_SPOT rs ON rs.route_day_id = rd.route_day_id
+                       SELECT 1 FROM route_day rd JOIN route_spot rs ON rs.route_day_id = rd.route_day_id
                         WHERE rd.route_id = t.adopted_route_id AND rs.poi_id = i.poi_id)) AS scheduled,
-                  (SELECT fs.visited FROM TRAVEL_FEEDBACK f JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id
+                  (SELECT fs.visited FROM travel_feedback f JOIN travel_feedback_spot fs ON fs.feedback_id = f.feedback_id
                     WHERE f.travel_id = q.travel_id AND fs.poi_id = i.poi_id LIMIT 1) AS visited,
-                  (SELECT fs.reaction FROM TRAVEL_FEEDBACK f JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id
+                  (SELECT fs.reaction FROM travel_feedback f JOIN travel_feedback_spot fs ON fs.feedback_id = f.feedback_id
                     WHERE f.travel_id = q.travel_id AND fs.poi_id = i.poi_id LIMIT 1) AS reaction
-             FROM RECOMMEND_REQUEST q
-             JOIN RECOMMEND_ITEM i ON i.request_id = q.request_id
-             JOIN TRAVEL t ON t.travel_id = q.travel_id
+             FROM recommend_request q
+             JOIN recommend_item i ON i.request_id = q.request_id
+             JOIN travel t ON t.travel_id = q.travel_id
             WHERE q.status = 'SUCCESS' AND i.shown = 1
               AND q.created_at >= ? AND q.created_at < ?
             ORDER BY q.request_id, i.rank_no
@@ -150,7 +150,7 @@ private List<ItemRow> loadItems(LocalDateTime from, LocalDateTime to) {
 private List<RequestRow> loadRequests(LocalDateTime from, LocalDateTime to) {
    return jdbc.query("""
            SELECT travel_id, model_version, status, response_ms, result_count, unmapped_count
-             FROM RECOMMEND_REQUEST WHERE created_at >= ? AND created_at < ?
+             FROM recommend_request WHERE created_at >= ? AND created_at < ?
            """, (rs, n) -> new RequestRow(rs.getLong("travel_id"), rs.getString("model_version"),
            rs.getString("status"), intOrNull(rs, "response_ms"), rs.getInt("result_count"),
            rs.getInt("unmapped_count")), from, to);
@@ -158,7 +158,7 @@ private List<RequestRow> loadRequests(LocalDateTime from, LocalDateTime to) {
 
 private List<FeedbackRow> loadFeedbacks(LocalDateTime from, LocalDateTime to) {
    return jdbc.query("""
-           SELECT travel_id, execution_status, satisfaction_score FROM TRAVEL_FEEDBACK
+           SELECT travel_id, execution_status, satisfaction_score FROM travel_feedback
             WHERE answered_at >= ? AND answered_at < ?
            """, (rs, n) -> new FeedbackRow(rs.getLong("travel_id"), rs.getString("execution_status"),
            intOrNull(rs, "satisfaction_score")), from, to);
@@ -201,8 +201,8 @@ private Summary summary(List<ItemRow> items, List<ItemRow> prevItems, List<Reque
 
    // 방문률: 이 기간에 남긴 후기의 관광지별 결과 전체
    List<Boolean> visits = jdbc.query("""
-           SELECT fs.visited FROM TRAVEL_FEEDBACK f
-             JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id
+           SELECT fs.visited FROM travel_feedback f
+             JOIN travel_feedback_spot fs ON fs.feedback_id = f.feedback_id
             WHERE f.answered_at >= ? AND f.answered_at < ?
            """, (rs, n) -> rs.getInt(1) == 1, from, to);
 
@@ -218,7 +218,7 @@ private Summary summary(List<ItemRow> items, List<ItemRow> prevItems, List<Reque
 
 /** 재학습 데이터셋에 들어간 여행 수 (후기까지 끝난 여행) */
 private int datasetTravels() {
-   Integer n = jdbc.queryForObject("SELECT COUNT(DISTINCT travel_id) FROM AI_TRAINING_DATASET", Integer.class);
+   Integer n = jdbc.queryForObject("SELECT COUNT(DISTINCT travel_id) FROM ai_training_dataset", Integer.class);
    return n == null ? 0 : n;
 }
 
@@ -233,7 +233,7 @@ private List<FunnelStep> funnel(LocalDateTime from, LocalDateTime to) {
    int[] counts = new int[n];
    Map<String, Integer> dropped = new HashMap<>();
    Map<String, Integer> waiting = new HashMap<>();
-   jdbc.query("SELECT step_shared, reached_step, funnel_status, drop_step FROM TRAVEL_FUNNEL "
+   jdbc.query("SELECT step_shared, reached_step, funnel_status, drop_step FROM travel_funnel "
            + "WHERE created_at >= ? AND created_at < ?", (rs, row) -> {
                // 가장 멀리 간 단계(reached_step)까지 앞 단계는 모두 지난 것으로 센다 → 단계가 내려갈수록 줄어듦
                int reached = stepIndex(rs.getString("reached_step"));
@@ -302,13 +302,13 @@ private Map<String, List<Segment>> segments(List<ItemRow> items) {
    Object[] ids = travelIds.toArray();
 
    Map<String, String> ageName = new HashMap<>();
-   jdbc.query("SELECT code_value, code_name FROM CODE WHERE group_code = 'AGE'",
+   jdbc.query("SELECT code_value, code_name FROM code WHERE group_code = 'AGE'",
            (rs, n) -> ageName.put(rs.getString(1), rs.getString(2)));
 
    Map<Long, String> age = new HashMap<>();
    Map<Long, String> days = new HashMap<>();
    Map<Long, String> mode = new HashMap<>();
-   jdbc.query("SELECT travel_id, age_group_snapshot, DATEDIFF(end_date, start_date) + 1, region_mode FROM TRAVEL WHERE travel_id IN (" + in + ")",
+   jdbc.query("SELECT travel_id, age_group_snapshot, DATEDIFF(end_date, start_date) + 1, region_mode FROM travel WHERE travel_id IN (" + in + ")",
            (rs, n) -> {
                long id = rs.getLong(1);
                age.put(id, ageName.getOrDefault(String.valueOf(rs.getInt(2)), rs.getInt(2) + "그룹"));
@@ -318,23 +318,23 @@ private Map<String, List<Segment>> segments(List<ItemRow> items) {
            }, ids);
 
    Map<Long, List<int[]>> companions = new HashMap<>();
-   jdbc.query("SELECT travel_id, relation_code, age_group_code FROM COMPANION WHERE travel_id IN (" + in + ")",
+   jdbc.query("SELECT travel_id, relation_code, age_group_code FROM companion WHERE travel_id IN (" + in + ")",
            (rs, n) -> companions.computeIfAbsent(rs.getLong(1), k -> new ArrayList<>())
                    .add(new int[] { rs.getInt(2), rs.getInt(3) }), ids);
 
    Map<Long, List<String>> regions = new HashMap<>();
-   jdbc.query("SELECT tr.travel_id, r.region_name FROM TRAVEL_REGION tr JOIN REGION r ON r.region_id = tr.region_id WHERE tr.travel_id IN (" + in + ")",
+   jdbc.query("SELECT tr.travel_id, r.region_name FROM travel_region tr JOIN region r ON r.region_id = tr.region_id WHERE tr.travel_id IN (" + in + ")",
            (rs, n) -> regions.computeIfAbsent(rs.getLong(1), k -> new ArrayList<>()).add(rs.getString(2)), ids);
 
    Map<Long, String> motive = new HashMap<>();
    jdbc.query("""
-           SELECT p.travel_id, o.option_name FROM TRAVEL_PREFERENCE p
-             JOIN PREFERENCE_OPTION o ON o.preference_id = p.preference_id AND o.option_value = p.answer_value
+           SELECT p.travel_id, o.option_name FROM travel_preference p
+             JOIN preference_option o ON o.preference_id = p.preference_id AND o.option_value = p.answer_value
             WHERE p.preference_id = 201 AND p.answer_rank = 1 AND p.travel_id IN (""" + in + ")",
            (rs, n) -> motive.put(rs.getLong(1), rs.getString(2)), ids);
 
    Map<Long, Integer> score = new HashMap<>();
-   jdbc.query("SELECT travel_id, satisfaction_score FROM TRAVEL_FEEDBACK WHERE satisfaction_score IS NOT NULL AND travel_id IN (" + in + ")",
+   jdbc.query("SELECT travel_id, satisfaction_score FROM travel_feedback WHERE satisfaction_score IS NOT NULL AND travel_id IN (" + in + ")",
            (rs, n) -> score.put(rs.getLong(1), rs.getInt(2)), ids);
 
    Double overall = rate(items, ItemRow::added);
@@ -414,7 +414,7 @@ private List<PoiStat> overRecommended(List<ItemRow> items) {
 /** AI가 놓친 곳: 관광지 검색으로 직접 담은 수가 많은 순 (추천 수와 함께) */
 private List<PoiStat> missed(List<ItemRow> items, LocalDateTime from, LocalDateTime to) {
    Map<Long, Integer> searchAdds = new HashMap<>();
-   jdbc.query("SELECT travel_id, poi_id FROM TRAVEL_BOOKMARK WHERE source = 'SEARCH' AND created_at >= ? AND created_at < ?",
+   jdbc.query("SELECT travel_id, poi_id FROM travel_bookmark WHERE source = 'SEARCH' AND created_at >= ? AND created_at < ?",
            (rs, n) -> searchAdds.merge(rs.getLong(2), 1, Integer::sum), from, to);
    Map<Long, Long> recommended = items.stream().filter(r -> r.poiId() != null)
            .collect(Collectors.groupingBy(ItemRow::poiId, Collectors.counting()));
@@ -431,11 +431,11 @@ private List<PoiStat> missed(List<ItemRow> items, LocalDateTime from, LocalDateT
 
 private MissReasons missReasons(LocalDateTime from, LocalDateTime to) {
    Set<Long> partial = new HashSet<>();
-   jdbc.query("SELECT feedback_id, travel_id FROM TRAVEL_FEEDBACK WHERE execution_status = 'PARTIAL' AND answered_at >= ? AND answered_at < ?",
+   jdbc.query("SELECT feedback_id, travel_id FROM travel_feedback WHERE execution_status = 'PARTIAL' AND answered_at >= ? AND answered_at < ?",
            (rs, n) -> partial.add(rs.getLong(1)), from, to);
    Map<String, Integer> counts = new HashMap<>();
    if (!partial.isEmpty()) {
-       jdbc.query("SELECT reason_code FROM TRAVEL_FEEDBACK_REASON WHERE feedback_id IN (" + placeholders(partial.size()) + ")",
+       jdbc.query("SELECT reason_code FROM travel_feedback_reason WHERE feedback_id IN (" + placeholders(partial.size()) + ")",
                (rs, n) -> counts.merge(rs.getString(1), 1, Integer::sum), partial.toArray());
    }
    List<Reason> reasons = REASON_LABEL.keySet().stream()
@@ -447,8 +447,8 @@ private MissReasons missReasons(LocalDateTime from, LocalDateTime to) {
    // 자주 빠지는 관광지 (못 갔어요가 많은 순 3곳)
    Map<Long, Integer> missedPoi = new HashMap<>();
    jdbc.query("""
-           SELECT f.travel_id, fs.poi_id FROM TRAVEL_FEEDBACK f
-             JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id
+           SELECT f.travel_id, fs.poi_id FROM travel_feedback f
+             JOIN travel_feedback_spot fs ON fs.feedback_id = f.feedback_id
             WHERE fs.visited = 0 AND f.answered_at >= ? AND f.answered_at < ?
            """, (rs, n) -> missedPoi.merge(rs.getLong(2), 1, Integer::sum), from, to);
    List<Long> top = missedPoi.entrySet().stream().sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
@@ -462,7 +462,7 @@ private MissReasons missReasons(LocalDateTime from, LocalDateTime to) {
 
 private Dataset dataset(int datasetTravels) {
    int[] counts = new int[LABEL_NAME.length];
-   jdbc.query("SELECT label, COUNT(*) FROM AI_TRAINING_DATASET GROUP BY label", (rs, n) -> {
+   jdbc.query("SELECT label, COUNT(*) FROM ai_training_dataset GROUP BY label", (rs, n) -> {
        int label = rs.getInt(1);
        if (label >= 0 && label < counts.length) counts[label] = rs.getInt(2);
        return null;
@@ -478,25 +478,25 @@ private Dataset dataset(int datasetTravels) {
 
 private DataQuality dataQuality() {
    Integer ended = jdbc.queryForObject(
-           "SELECT COUNT(*) FROM TRAVEL WHERE adopted_route_id IS NOT NULL AND end_date < CURRENT_DATE", Integer.class);
+           "SELECT COUNT(*) FROM travel WHERE adopted_route_id IS NOT NULL AND end_date < CURRENT_DATE", Integer.class);
    Integer reviewed = jdbc.queryForObject("""
-           SELECT COUNT(*) FROM TRAVEL t JOIN TRAVEL_FEEDBACK f ON f.travel_id = t.travel_id
+           SELECT COUNT(*) FROM travel t JOIN travel_feedback f ON f.travel_id = t.travel_id
             WHERE t.adopted_route_id IS NOT NULL AND t.end_date < CURRENT_DATE
            """, Integer.class);
    Integer visitedFeedbacks = jdbc.queryForObject(
-           "SELECT COUNT(*) FROM TRAVEL_FEEDBACK WHERE execution_status <> 'NOT_TAKEN'", Integer.class);
+           "SELECT COUNT(*) FROM travel_feedback WHERE execution_status <> 'NOT_TAKEN'", Integer.class);
    Integer withSpots = jdbc.queryForObject("""
-           SELECT COUNT(DISTINCT f.feedback_id) FROM TRAVEL_FEEDBACK f
-             JOIN TRAVEL_FEEDBACK_SPOT fs ON fs.feedback_id = f.feedback_id
+           SELECT COUNT(DISTINCT f.feedback_id) FROM travel_feedback f
+             JOIN travel_feedback_spot fs ON fs.feedback_id = f.feedback_id
             WHERE f.execution_status <> 'NOT_TAKEN'
            """, Integer.class);
-   Integer surveyTravels = jdbc.queryForObject("SELECT COUNT(*) FROM TRAVEL WHERE source_post_id IS NULL", Integer.class);
+   Integer surveyTravels = jdbc.queryForObject("SELECT COUNT(*) FROM travel WHERE source_post_id IS NULL", Integer.class);
    Integer noSurvey = jdbc.queryForObject("""
-           SELECT COUNT(*) FROM TRAVEL t WHERE t.source_post_id IS NULL
-              AND NOT EXISTS (SELECT 1 FROM TRAVEL_PREFERENCE p WHERE p.travel_id = t.travel_id)
+           SELECT COUNT(*) FROM travel t WHERE t.source_post_id IS NULL
+              AND NOT EXISTS (SELECT 1 FROM travel_preference p WHERE p.travel_id = t.travel_id)
            """, Integer.class);
    Integer outliers = jdbc.queryForObject(
-           "SELECT COUNT(*) FROM TRAVEL WHERE DATEDIFF(end_date, start_date) + 1 > 15", Integer.class);
+           "SELECT COUNT(*) FROM travel WHERE DATEDIFF(end_date, start_date) + 1 > 15", Integer.class);
    return new DataQuality(ratio(nz(reviewed), nz(ended)), ratio(nz(withSpots), nz(visitedFeedbacks)),
            ratio(nz(noSurvey), nz(surveyTravels)), nz(outliers));
 }
@@ -511,7 +511,7 @@ public String trainingCsv() {
    String cols = DATASET_COLUMNS.stream().map(c -> "`" + c + "`").collect(Collectors.joining(", "));
    StringBuilder sb = new StringBuilder("﻿"); // 엑셀에서 한글이 깨지지 않게 BOM
    sb.append(String.join(",", DATASET_COLUMNS)).append('\n');
-   jdbc.query("SELECT " + cols + " FROM AI_TRAINING_DATASET ORDER BY travel_id, shown DESC, recommend_rank",
+   jdbc.query("SELECT " + cols + " FROM ai_training_dataset ORDER BY travel_id, shown DESC, recommend_rank",
            (rs, n) -> {
                for (int i = 1; i <= DATASET_COLUMNS.size(); i++) {
                    if (i > 1) sb.append(',');
@@ -529,7 +529,7 @@ public String trainingCsv() {
 private Map<Long, String> poiNames(Collection<Long> ids) {
    if (ids.isEmpty()) return Map.of();
    Map<Long, String> names = new HashMap<>();
-   jdbc.query("SELECT poi_id, poi_name FROM POI WHERE poi_id IN (" + placeholders(ids.size()) + ")",
+   jdbc.query("SELECT poi_id, poi_name FROM poi WHERE poi_id IN (" + placeholders(ids.size()) + ")",
            (rs, n) -> names.put(rs.getLong(1), rs.getString(2)), ids.toArray());
    return names;
 }

@@ -56,3 +56,17 @@
   .profile-social-list li { flex-wrap: wrap; }
   .profile-social-list button { margin-left: 0; }
 }
+
+/* 추가 변경 14 (아티팩트에서 옮김) */
+.profile-card small.profile-nickname-taken { color: #ab3829; font-weight: 600; }
+.profile-card small.profile-nickname-ok { color: #2f7d4f; }
+
+/* 추가 변경 15 (아티팩트에서 옮김) */
+.profile-card small.profile-match-bad { color: #ab3829; font-weight: 600; }
+.profile-card small.profile-match-ok { color: #2f7d4f; }
+
+/* 추가 변경 16 (아티팩트에서 옮김) */
+.profile-warning { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; border-color: #f0d48a; background: #fff8e1; color: #7a5300; }
+.profile-warning strong { font-weight: 800; }
+.profile-warning span { flex: 1 1 260px; }
+.profile-warning button { margin-left: auto; }

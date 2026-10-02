@@ -1079,3 +1079,6 @@ button.leg-link { border: 0; background: none; padding: 0; font: inherit; font-s
 
 /* 막힌 버튼: 눌러도 동작 대신 알림만 띄우는 버튼 */
 .btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+
+/* 추가 변경 17 (아티팩트에서 옮김) */
+.pick-style-note { margin: 0 0 16px; padding: 12px 16px; border-left: 4px solid #dc6b37; border-radius: 8px; background: #fff6ef; color: #4a3326; font-size: 15px; font-weight: 700; line-height: 1.6; }

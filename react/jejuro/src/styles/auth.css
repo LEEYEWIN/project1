@@ -115,3 +115,21 @@
 .auth-social-google { background: #fff; color: #333; border-color: #d7d8dd; }
 .auth-social-btn:hover { filter: brightness(.96); }
 .auth-social small { font-size: 11px; color: #8a8f96; text-align: center; }
+
+/* 추가 변경 11 (아티팩트에서 옮김) */
+.auth-birth { grid-column: 1 / -1; }
+.auth-birth-selects { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 8px; }
+.auth-birth-selects select { width: 100%; min-width: 0; height: 49px; padding: 0 12px; border: 1px solid #d9dfd4; border-radius: 8px; background: #fff; font: inherit; font-size: 14px; color: #243e34; cursor: pointer; }
+.auth-login .auth-birth-selects select { height: 56px; border-color: #d7d8dd; border-radius: 9px; color: #111; font-size: 15px; }
+.auth-birth-selects select:invalid { color: #969aa3; }
+
+/* 추가 변경 12 (아티팩트에서 옮김) */
+.auth-field-error { margin: 6px 0 0; padding: 10px 12px; background: #fff0ed; border: 1px solid #f0d5ce; border-radius: 8px; color: #a33f34; font-size: 12px; line-height: 1.5; }
+
+/* 추가 변경 14 (아티팩트에서 옮김) */
+.auth-field small.auth-nickname-taken { color: #a33f34; font-weight: 600; }
+.auth-field small.auth-nickname-ok { color: #2f6b45; }
+
+/* 추가 변경 15 (아티팩트에서 옮김) */
+.auth-field small.auth-match-bad { color: #a33f34; font-weight: 600; }
+.auth-field small.auth-match-ok { color: #2f6b45; }
