@@ -30,8 +30,8 @@ export async function downloadTrainingCsv() {
 
 /**
  * 퍼널 이탈 로그 (이탈 확정된 여행, 20건씩)
- * → { page, totalPages, total, counts: { SURVEYED: 1, ... }, items: [...] }
- * step: 못 간 단계 (SURVEYED | RECOMMENDED | PLACED_ANY | PLACED_ALL | ADOPTED | REVIEWED, 생략 = 전체)
+ * → { page, totalPages, total, counts: { RECOMMENDED: 1, ... }, items: [...] }
+ * step: 못 간 단계 (RECOMMENDED | PLACED_ANY | PLACED_ALL | ADOPTED | REVIEWED, 생략 = 전체)
  */
 export async function fetchFunnelDrops({ days = 30, step = '', page = 0 } = {}) {
   const params = { days, page };

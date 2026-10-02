@@ -77,7 +77,7 @@ private static final String[] LABEL_NAME = { "추천만 됨", "일정 확정", "
 
 /** 퍼널 단계 (TRAVEL_FUNNEL 뷰의 step_* 칼럼 순서) */
 private static final String[][] FUNNEL = {
-       { "CREATED", "여행 생성", "step_created" }, { "SURVEYED", "설문 완료", "step_surveyed" },
+       { "CREATED", "여행 생성·설문", "step_created" },   // 생성 화면에서 설문까지 한 번에 저장 → 한 단계
        { "RECOMMENDED", "추천 받음", "step_recommended" }, { "PLACED_ANY", "장소 담음", "step_placed_any" },
        { "PLACED_ALL", "모두 배치", "step_placed_all" }, { "ADOPTED", "일정 확정", "step_adopted" },
        { "REVIEWED", "후기 작성", "step_reviewed" }, { "SHARED", "커뮤니티 공유", "step_shared" } };

@@ -32,10 +32,10 @@ export default function FunnelPanel({ steps }) {
                   <div
                     className="fn-bar"
                     style={{ height: `${Math.max((s.count / first) * 100, 1)}%` }}
-                    title={`${s.key === 'CREATED' ? '여행 작성' : s.label} ${s.count}건 (시작 대비 ${pct(s.count / first)})`}
+                    title={`${s.label} ${s.count}건 (시작 대비 ${pct(s.count / first)})`}
                   />
                 </div>
-                <div className="fn-name">{s.key === 'CREATED' ? '여행 작성' : s.label}</div>
+                <div className="fn-name">{s.label}</div>
               </div>
             ))}
           </div>
@@ -50,6 +50,10 @@ export default function FunnelPanel({ steps }) {
               </div>
             ))}
           </div>
+          <p className="adm-muted fn-rule">
+            확정 이탈 기준: 추천 받음~일정 확정은 <b>출발일</b>이 지나도록 다음 단계로 못 가면, 후기 작성은 <b>종료일 + 14일</b>까지 쓰지 않으면 이탈로 봅니다.
+            기한이 남은 여행은 &quot;진행 중&quot;으로 셉니다.
+          </p>
         </div>
       )}
     </section>

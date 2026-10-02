@@ -23,7 +23,8 @@ import kr.fast.Jejuro.ResponseDTO.FunnelDropResponse.Item;
 /**
 * 퍼널 이탈 로그: VIEW TRAVEL_FUNNEL에서 이탈 확정(DROPPED)된 여행을 한 건씩, 판단 근거와 함께.
 * 대상 = 대시보드와 같은 기간(created_at) 안에 만든 여행. 최근에 종료된 여행부터.
-* 이탈 확정 기준: 일정 확정 전에 멈춘 채 종료일이 지남 / 확정했는데 종료일 + 14일까지 후기 없음
+* 이탈 확정 기준: 계획 단계(추천~일정 확정)에서 멈춘 채 출발일이 지남 / 확정했는데 종료일 + 14일까지 후기 없음
+* ('여행 생성'과 '설문'은 한 화면에서 함께 저장되므로 한 단계로 본다)
 */
 @Service
 @Transactional(readOnly = true)
@@ -33,12 +34,12 @@ public class FunnelDropService {
  private static final int CSV_LIMIT = 5000;
  private static final Set<Integer> ALLOWED_DAYS = Set.of(7, 30, 90);
  /** 못 간 단계 (TRAVEL_FUNNEL.drop_step 값) */
- private static final List<String> STEPS = List.of("SURVEYED", "RECOMMENDED", "PLACED_ANY", "PLACED_ALL", "ADOPTED", "REVIEWED");
+ private static final List<String> STEPS = List.of("RECOMMENDED", "PLACED_ANY", "PLACED_ALL", "ADOPTED", "REVIEWED");
  /** 후기 기한 = 종료일 + 이 일수 (TRAVEL_FUNNEL 뷰와 같게) */
  private static final int REVIEW_GRACE_DAYS = 14;
 
  private static final String SELECT = """
-         SELECT f.travel_id, t.travel_name, u.nickname, f.reached_step, f.drop_step, f.created_at, f.end_date,
+         SELECT f.travel_id, t.travel_name, u.nickname, f.reached_step, f.drop_step, f.created_at, f.start_date, f.end_date,
                 f.place_count, f.placed_count,
                 (SELECT COUNT(*) FROM recommend_request q
                   WHERE q.travel_id = f.travel_id AND q.status = 'SUCCESS') AS recommend_count,
@@ -124,7 +125,9 @@ public class FunnelDropService {
  private static Item toItem(java.sql.ResultSet rs) throws java.sql.SQLException {
      LocalDate end = rs.getDate("end_date").toLocalDate();
      String drop = rs.getString("drop_step");
-     LocalDate deadline = "REVIEWED".equals(drop) ? end.plusDays(REVIEW_GRACE_DAYS) : end;
+     // 기한: 후기 = 종료일 + 14일, 계획 단계 = 출발일 (TRAVEL_FUNNEL 뷰와 같게)
+     LocalDate deadline = "REVIEWED".equals(drop) ? end.plusDays(REVIEW_GRACE_DAYS)
+             : rs.getDate("start_date").toLocalDate();
      return new Item(rs.getLong("travel_id"), rs.getString("travel_name"), rs.getString("nickname"),
              rs.getString("reached_step"), drop, rs.getTimestamp("created_at").toLocalDateTime(), end, deadline,
              Math.max(ChronoUnit.DAYS.between(deadline, LocalDate.now()), 0),

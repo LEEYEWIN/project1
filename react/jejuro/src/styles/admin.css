@@ -632,3 +632,6 @@
   .adm-header { align-items: flex-start; }
   .fn-chart, .fn-gaps { min-width: 640px; overflow: visible; }
 }
+
+/* 퍼널 확정 이탈 기준 안내 */
+.fn-rule { margin: 12px 0 0; font-size: 12px; line-height: 1.6; }
