@@ -41,7 +41,7 @@ CREATE TABLE `community_comment` (
   CONSTRAINT `fk_community_comment_post` FOREIGN KEY (`post_id`) REFERENCES `community_post` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `fk_community_comment_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `ck_community_comment_block_reason` CHECK (((`block_reason` is null) or (`block_reason` in (_utf8mb4'SEXUAL',_utf8mb4'PRIVACY',_utf8mb4'ABUSE',_utf8mb4'SPAM'))))
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='커뮤니티 게시글 댓글·대댓글. 탈퇴 회원 댓글은 user_id NULL';
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='커뮤니티 게시글 댓글·대댓글. 탈퇴 회원 댓글은 user_id NULL';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,6 +50,7 @@ CREATE TABLE `community_comment` (
 
 LOCK TABLES `community_comment` WRITE;
 /*!40000 ALTER TABLE `community_comment` DISABLE KEYS */;
+INSERT INTO `community_comment` VALUES (2,3,NULL,14,'경로 가져가서 다음 달에 써 볼게요!','2026-09-21 10:00:00',NULL,NULL,NULL,NULL),(3,3,2,13,'민속촌은 오전에 넣는 걸 추천해요 :)','2026-09-21 12:00:00',NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `community_comment` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -62,4 +63,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:18
+-- Dump completed on 2026-10-06 15:51:51

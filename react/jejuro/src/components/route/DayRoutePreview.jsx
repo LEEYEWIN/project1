@@ -181,11 +181,7 @@ export default function DayRoutePreview({ dayNo, spots, onReorder, routeId, save
                       </li>
                       <li>아래에서 고르면 <b>마지막 방문지도 고정</b>해요. 숙소 근처 관광지로 하루를 끝내고 싶을 때 쓰세요.</li>
                       <li>
-                        나머지 방문지의 순서를 바꿔 가며 <b>방문지 사이 직선거리의 합이 가장 짧은 순서</b>를 찾아요.
-                      </li>
-                      <li>
-                        바꿀 수 있는 곳이 <b>8곳 이하</b>면 가능한 순서를 <b>모두 비교</b>한 최단 순서예요. 9곳 이상이면 가까운 곳부터
-                        잇고 꼬인 구간을 풀어 줄이는 <b>근사</b> 순서예요.
+                        나머지 방문지의 <b>모든 순서를 비교</b>해 <b>직선거리 합이 가장 짧은 효율적인 동선</b>을 안내해요.
                       </li>
                       <li>도로 사정·운영 시간·머무는 시간은 보지 않아요. 바꾼 뒤 위의 이동 시간을 보고 판단하세요.</li>
                     </ol>
@@ -209,10 +205,6 @@ export default function DayRoutePreview({ dayNo, spots, onReorder, routeId, save
                             {' '}· 도착 고정: <b>{suggest.fixedEndName}</b>
                           </>
                         )}
-                        <br />
-                        {suggest.method === 'EXACT'
-                          ? `가능한 순서 ${suggest.comparedCount.toLocaleString()}가지를 모두 비교한 최단 순서`
-                          : '9곳 이상이라 근사 계산한 순서 (최단이 아닐 수 있음)'}
                       </p>
                       {suggest.afterDistanceM >= suggest.beforeDistanceM ? (
                         <p>지금 순서가 이미 가장 짧아요. ({formatDistance(suggest.beforeDistanceM)}, 직선 기준)</p>

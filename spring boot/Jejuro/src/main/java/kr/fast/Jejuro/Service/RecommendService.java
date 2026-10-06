@@ -42,10 +42,11 @@ public class RecommendService {
 
  private static final Logger log = LoggerFactory.getLogger(RecommendService.class);
 
- /** 화면에 보여 줄 추천 개수 */
+ /**
+  * 화면에 보여 줄 추천 개수 = AI에 요청하는 개수.
+  * 관심없음·숨김 관광지는 AI 서버가 점수 예측 후 빼고 상위 10개를 고르므로, 관심없음이 많아도 10곳이 유지된다.
+  */
  private static final int SHOW_COUNT = 10;
- /** AI에 요청하는 개수: 우리 DB에 없는 장소가 빠질 것을 대비해 조금 더 받는다 */
- private static final int REQUEST_COUNT = 15;
 
  private final TravelAccessService travelAccessService;
  private final TravelRegionRepository travelRegionRepository;
@@ -119,8 +120,11 @@ public class RecommendService {
              .map(c -> new CompanionInput(c.getRelationCode(), c.getGenderCode(), c.getAgeGroupCode()))
              .toList();
 
+     // 추천에서 뺄 장소(관심없음 + 숨김·삭제·추천 대상 아님)의 AI용 이름 → AI 서버가 점수 예측 후 제외
+     List<String> excluded = sourceMapRepository.findExcludedSourceIds(userId);
+
      AiRequest request = AiRequest.of(input, travel.getRegionMode().name(), regionCodes, regionIds,
-             companions, REQUEST_COUNT);
+             companions, excluded, SHOW_COUNT);
 
      // 결과 = 원본 ID 목록(FastAPI는 place_name). POI_SOURCE_MAP.source_poi_id로 우리 관광지와 연결
      long started = System.currentTimeMillis();
@@ -137,8 +141,8 @@ public class RecommendService {
      }
      long elapsed = System.currentTimeMillis() - started;
 
-     // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거,
-     //                  AI 추천 대상이 아닌 관광지(직접 선택만)·관리자가 숨기거나 삭제한 관광지·회원이 관심없음으로 표시한 관광지 제외)
+     // 원본 ID → poi_id (AI가 준 순서 유지, 매핑 없는 ID는 버림, 중복 제거)
+     // 제외 대상은 AI 서버에서 이미 빠졌다. 아래 필터는 요청과 응답 사이에 바뀐 경우를 막는 안전장치.
      Map<String, Long> idMap = sourceMapRepository.findBySourcePoiIdIn(sourceIds).stream()
              .collect(Collectors.toMap(PoiSourceMap::getSourcePoiId, PoiSourceMap::getPoiId, (a, b) -> a));
      Set<Long> hidden = idMap.isEmpty() ? new HashSet<>() : new HashSet<>(poiRepository.findNotRecommendableIds(new HashSet<>(idMap.values())));

@@ -36,7 +36,8 @@ import kr.fast.Jejuro.RequestDTO.AiRequest;
 *   "TRAVEL_MOTIVE_1": 2,                      ← 여행 동기 1순위
 *   "region_mode": "SELECTED", "regions": ["EAST"],
 *   "companions": [ { "relation_code": 3, "gender_code": 2, "age_group_code": 6 } ],
-*   "top_n": 20
+*   "exclude_place_names": ["비자림", "산굼부리"],   ← 관심없음·숨김 등 (점수 예측 후 제외)
+*   "top_n": 10
 * }
 * 응답: { "recommendations": [ { "rank": 1, "place_name": "우도올레보트", "region": "EAST", "score": 4.87, ... } ] }
 *
@@ -116,6 +117,7 @@ public class HttpAiClient implements AiClient {
          companions.add(cm);
      }
      m.put("companions", companions);
+     m.put("exclude_place_names", r.excludePlaceNames());
      m.put("top_n", r.limit());
      return m;
  }

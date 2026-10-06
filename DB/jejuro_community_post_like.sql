@@ -39,6 +39,7 @@ CREATE TABLE `community_post_like` (
 
 LOCK TABLES `community_post_like` WRITE;
 /*!40000 ALTER TABLE `community_post_like` DISABLE KEYS */;
+INSERT INTO `community_post_like` VALUES (3,14,'2026-10-06 12:12:44'),(4,13,'2026-10-06 12:12:44');
 /*!40000 ALTER TABLE `community_post_like` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -51,4 +52,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:17
+-- Dump completed on 2026-10-06 15:51:54

@@ -2,6 +2,7 @@ package kr.fast.Jejuro.Service;
 
 // [5페이지 루트 짜기 (6·7페이지, 커뮤니티 경로 가져오기에서도 사용)]
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -46,7 +47,9 @@ import kr.fast.Jejuro.ResponseDTO.RouteSummaryResponse;
  *  - 화면이 바뀔 때마다 자동 저장(PUT)하므로 페이지를 나갔다 와도 마지막 상태가 남는다.
  *  - 경로에는 "여행 장소"(TRAVEL_BOOKMARK)에 추가한 관광지만 넣을 수 있다.
  *  - 최종 확정(채택)하려면 여행 장소가 모두 경로에 배치되어 있어야 한다(placement 참고).
- *  - 확정한 뒤에는 경로를 고칠 수 없다.
+ *  - 확정한 뒤에도 출발 전날까지는 경로 순서·일차·장소를 고칠 수 있다(같은 경로를 그대로 고침, 다른 탭 충돌 검사 유지).
+ *    출발일 당일부터는 잠근다 → 바뀐 일정은 후기의 "일부만 다녀옴 + 못 간 곳·이유"로 남긴다.
+ *  - "날짜·동행 바꿔 다시 만들기"로 새 여행을 만드는 중인 변경 전 여행도 잠근다(읽기 전용).
  */
 @Service
 public class RouteService {
@@ -167,7 +170,7 @@ public class RouteService {
                 .map(d -> new DayReq(d.dayNo(), d.spots().stream().map(s -> s.poi() == null ? null : s.poi().poiId()).toList()))
                 .toList();
         return new RouteDetailResponse(routeId, travel.getTravelId(), route.getRouteName(),
-                travel.isAdopted(routeId), travel.getAdoptedRouteId() != null, travel.getStartDate(), travel.getEndDate(),
+                travel.isAdopted(routeId), isEditLocked(travel), travel.getStartDate(), travel.getEndDate(),
                 travel.tripDays(), dayResponses, version(route.getRouteName(), current));
     }
 
@@ -190,6 +193,9 @@ public class RouteService {
                     "다른 화면(탭)에서 이 경로가 먼저 바뀌었어요. 최신 경로를 불러온 뒤 다시 수정해 주세요.");
         }
         validate(travel, req.days());
+        if (travel.getAdoptedRouteId() != null && req.days().stream().allMatch(d -> d.poiIds().isEmpty())) {
+            throw ApiException.badRequest("확정한 일정에는 장소가 하나 이상 있어야 해요.");
+        }
 
         if (req.routeName() != null) {
             route.rename(req.routeName().isBlank() ? null : req.routeName().trim());
@@ -260,10 +266,55 @@ public class RouteService {
         return route;
     }
 
-    /** 최종 경로를 확정(채택)한 여행은 경로를 고칠 수 없다. */
+    /**
+     * 경로·여행 장소를 고칠 수 있는지 검사한다.
+     *  - 확정한 일정은 출발일 당일부터 잠금
+     *  - "날짜·동행 바꿔 다시 만들기"로 새 여행을 만드는 중이면 변경 전 여행은 읽기 전용
+     */
     public void ensureNotLocked(Travel travel) {
-        if (travel.getAdoptedRouteId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "일정을 확정한 여행은 경로를 수정할 수 없습니다.");
+        if (travel.isStartLocked(LocalDate.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, "출발일부터는 확정한 일정을 바꿀 수 없어요."
+                    + " 달라진 일정은 여행이 끝난 뒤 후기에서 '일부만 다녀옴'과 못 간 곳·이유로 남겨 주세요.");
+        }
+        Optional<Travel> replacement = replacementOf(travel);
+        if (replacement.isPresent()) {
+            throw new ApiException(HttpStatus.CONFLICT, "'" + replacement.get().getTravelName()
+                    + "' 여행으로 바꿔 만드는 중이라 이 여행은 변경 전 일정으로 보기만 할 수 있어요."
+                    + " 새 여행을 확정하면 이 여행은 삭제돼요.");
+        }
+    }
+
+    /** 수정 잠금 여부 (화면 표시용, ensureNotLocked 와 같은 기준) */
+    public boolean isEditLocked(Travel travel) {
+        return travel.isStartLocked(LocalDate.now()) || replacementOf(travel).isPresent();
+    }
+
+    /**
+     * 기간이 겹치는 내 다른 여행 (시작일 순).
+     * 겹치는 여행은 "날짜·동행 바꿔 다시 만들기"로만 생기므로, 번호가 더 큰 쪽이 새 여행이다.
+     */
+    public List<Travel> overlapping(Travel travel) {
+        return travelRepository.findByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(
+                        travel.getUserId(), travel.getEndDate(), travel.getStartDate()).stream()
+                .filter(o -> !o.getTravelId().equals(travel.getTravelId()))
+                .toList();
+    }
+
+    /** 이 여행을 바꿔 만든 새 여행 (있으면 이 여행은 변경 전 일정 = 읽기 전용) */
+    public Optional<Travel> replacementOf(Travel travel) {
+        return overlapping(travel).stream()
+                .filter(o -> o.getTravelId() > travel.getTravelId())
+                .findFirst();
+    }
+
+    /** 확정한 일정의 마지막 장소는 뺄 수 없다 (확정 일정이 비면 후기·학습 라벨을 매길 수 없음) */
+    public void ensureKeepsSpot(Travel travel, Long poiId) {
+        if (travel.getAdoptedRouteId() == null) return;
+        boolean other = currentDays(travel.getAdoptedRouteId()).stream()
+                .flatMap(d -> d.poiIds().stream())
+                .anyMatch(id -> !id.equals(poiId));
+        if (!other) {
+            throw new ApiException(HttpStatus.CONFLICT, "확정한 일정의 마지막 장소는 뺄 수 없어요. 다른 장소를 먼저 넣은 뒤 빼 주세요.");
         }
     }
 

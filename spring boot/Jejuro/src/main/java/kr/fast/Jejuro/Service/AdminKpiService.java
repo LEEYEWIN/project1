@@ -103,7 +103,7 @@ private static List<String> datasetColumns() {
        cols.add("COMPANION_" + i + "_AGE");
    }
    cols.addAll(List.of("poi_id", "VISIT_AREA_NM", "address", "VISIT_AREA_TYPE_CD", "latitude", "longitude",
-           "region_code", "recommend_rank", "model_version", "shown", "label"));
+           "region_code", "TRAVEL_SEASON", "recommend_rank", "model_version", "shown", "label"));
    return List.copyOf(cols);
 }
 
@@ -357,7 +357,7 @@ private List<Segment> segmentBy(List<ItemRow> items, Function<Long, String> keyO
        List<Integer> s = travels.stream().map(score::get).filter(v -> v != null).toList();
        String level;
        if (travels.size() < 5 || adoption == null || overall == null) level = "LOW_DATA";
-       else if (adoption < overall * 0.7) level = "WEAK";
+       else if (adoption < overall * 0.8) level = "WEAK";   // 4/5(80%) 규칙의 비율을 차용 (비교 대상은 전체 평균)
        else if (adoption < overall * 0.9) level = "WATCH";
        else level = "OK";
        result.add(new Segment(name, travels.size(), adoption,

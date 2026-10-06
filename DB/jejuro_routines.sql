@@ -16,70 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Temporary view structure for view `travel_funnel`
---
-
-DROP TABLE IF EXISTS `travel_funnel`;
-/*!50001 DROP VIEW IF EXISTS `travel_funnel`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `travel_funnel` AS SELECT 
- 1 AS `travel_id`,
- 1 AS `user_id`,
- 1 AS `created_at`,
- 1 AS `start_date`,
- 1 AS `end_date`,
- 1 AS `step_created`,
- 1 AS `step_surveyed`,
- 1 AS `step_recommended`,
- 1 AS `step_placed_any`,
- 1 AS `step_placed_all`,
- 1 AS `step_adopted`,
- 1 AS `step_reviewed`,
- 1 AS `step_shared`,
- 1 AS `place_count`,
- 1 AS `placed_count`,
- 1 AS `reached_step`,
- 1 AS `funnel_status`,
- 1 AS `drop_step`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `ai_travel_input`
---
-
-DROP TABLE IF EXISTS `ai_travel_input`;
-/*!50001 DROP VIEW IF EXISTS `ai_travel_input`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `ai_travel_input` AS SELECT 
- 1 AS `travel_id`,
- 1 AS `user_id`,
- 1 AS `gender_code`,
- 1 AS `age_group_code`,
- 1 AS `region_mode`,
- 1 AS `selected_regions`,
- 1 AS `style_nature_city`,
- 1 AS `style_new_familiar`,
- 1 AS `style_hidden_famous`,
- 1 AS `style_relax_activity`,
- 1 AS `photo_importance`,
- 1 AS `style_plan_free`,
- 1 AS `income_code`,
- 1 AS `travel_motive_1`,
- 1 AS `travel_motive_2`,
- 1 AS `travel_motive_3`,
- 1 AS `user_mission_1`,
- 1 AS `user_mission_2`,
- 1 AS `user_mission_3`,
- 1 AS `travel_motive`,
- 1 AS `user_mission`,
- 1 AS `companion_count`,
- 1 AS `companions`,
- 1 AS `is_survey_complete`*/;
-SET character_set_client = @saved_cs_client;
-
---
 -- Temporary view structure for view `ai_training_dataset`
 --
 
@@ -163,6 +99,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `latitude`,
  1 AS `longitude`,
  1 AS `region_code`,
+ 1 AS `TRAVEL_SEASON`,
  1 AS `recommend_rank`,
  1 AS `model_version`,
  1 AS `shown`,
@@ -170,10 +107,74 @@ SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = @saved_cs_client;
 
 --
--- Final view structure for view `travel_funnel`
+-- Temporary view structure for view `ai_travel_input`
 --
 
+DROP TABLE IF EXISTS `ai_travel_input`;
+/*!50001 DROP VIEW IF EXISTS `ai_travel_input`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `ai_travel_input` AS SELECT 
+ 1 AS `travel_id`,
+ 1 AS `user_id`,
+ 1 AS `gender_code`,
+ 1 AS `age_group_code`,
+ 1 AS `region_mode`,
+ 1 AS `selected_regions`,
+ 1 AS `style_nature_city`,
+ 1 AS `style_new_familiar`,
+ 1 AS `style_hidden_famous`,
+ 1 AS `style_relax_activity`,
+ 1 AS `photo_importance`,
+ 1 AS `style_plan_free`,
+ 1 AS `income_code`,
+ 1 AS `travel_motive_1`,
+ 1 AS `travel_motive_2`,
+ 1 AS `travel_motive_3`,
+ 1 AS `user_mission_1`,
+ 1 AS `user_mission_2`,
+ 1 AS `user_mission_3`,
+ 1 AS `travel_motive`,
+ 1 AS `user_mission`,
+ 1 AS `companion_count`,
+ 1 AS `companions`,
+ 1 AS `is_survey_complete`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `travel_funnel`
+--
+
+DROP TABLE IF EXISTS `travel_funnel`;
 /*!50001 DROP VIEW IF EXISTS `travel_funnel`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `travel_funnel` AS SELECT 
+ 1 AS `travel_id`,
+ 1 AS `user_id`,
+ 1 AS `created_at`,
+ 1 AS `start_date`,
+ 1 AS `end_date`,
+ 1 AS `step_created`,
+ 1 AS `step_surveyed`,
+ 1 AS `step_recommended`,
+ 1 AS `step_placed_any`,
+ 1 AS `step_placed_all`,
+ 1 AS `step_adopted`,
+ 1 AS `step_reviewed`,
+ 1 AS `step_shared`,
+ 1 AS `place_count`,
+ 1 AS `placed_count`,
+ 1 AS `reached_step`,
+ 1 AS `funnel_status`,
+ 1 AS `drop_step`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Final view structure for view `ai_training_dataset`
+--
+
+/*!50001 DROP VIEW IF EXISTS `ai_training_dataset`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
@@ -182,7 +183,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY INVOKER */
-/*!50001 VIEW `travel_funnel` AS with `base` as (select `t`.`travel_id` AS `travel_id`,`t`.`user_id` AS `user_id`,`t`.`created_at` AS `created_at`,`t`.`start_date` AS `start_date`,`t`.`end_date` AS `end_date`,exists(select 1 from `travel_preference` `tp` where (`tp`.`travel_id` = `t`.`travel_id`)) AS `s_surveyed`,exists(select 1 from `recommend_request` `q` where ((`q`.`travel_id` = `t`.`travel_id`) and (`q`.`status` = 'SUCCESS'))) AS `s_recommended`,(select count(0) from `travel_bookmark` `b` where (`b`.`travel_id` = `t`.`travel_id`)) AS `place_count`,(select count(0) from `travel_bookmark` `b` where ((`b`.`travel_id` = `t`.`travel_id`) and exists(select 1 from ((`travel_route` `rt` join `route_day` `rd` on((`rd`.`route_id` = `rt`.`route_id`))) join `route_spot` `s` on((`s`.`route_day_id` = `rd`.`route_day_id`))) where ((`rt`.`travel_id` = `t`.`travel_id`) and (`s`.`poi_id` = `b`.`poi_id`))))) AS `placed_count`,(`t`.`adopted_route_id` is not null) AS `s_adopted`,exists(select 1 from `travel_feedback` `f` where (`f`.`travel_id` = `t`.`travel_id`)) AS `s_reviewed`,exists(select 1 from `community_post` `cp` where ((`cp`.`travel_id` = `t`.`travel_id`) and (`cp`.`deleted_at` is null))) AS `s_shared` from `travel` `t` where (`t`.`source_post_id` is null)), `steps` as (select `b`.`travel_id` AS `travel_id`,`b`.`user_id` AS `user_id`,`b`.`created_at` AS `created_at`,`b`.`start_date` AS `start_date`,`b`.`end_date` AS `end_date`,`b`.`s_surveyed` AS `s_surveyed`,`b`.`s_recommended` AS `s_recommended`,`b`.`place_count` AS `place_count`,`b`.`placed_count` AS `placed_count`,`b`.`s_adopted` AS `s_adopted`,`b`.`s_reviewed` AS `s_reviewed`,`b`.`s_shared` AS `s_shared`,(`b`.`place_count` > 0) AS `s_placed_any`,((`b`.`place_count` > 0) and (`b`.`placed_count` = `b`.`place_count`)) AS `s_placed_all`,(case when `b`.`s_reviewed` then 7 when `b`.`s_adopted` then 6 when ((`b`.`place_count` > 0) and (`b`.`placed_count` = `b`.`place_count`)) then 5 when (`b`.`place_count` > 0) then 4 when `b`.`s_recommended` then 3 when `b`.`s_surveyed` then 2 else 1 end) AS `reached_no` from `base` `b`) select `steps`.`travel_id` AS `travel_id`,`steps`.`user_id` AS `user_id`,`steps`.`created_at` AS `created_at`,`steps`.`start_date` AS `start_date`,`steps`.`end_date` AS `end_date`,1 AS `step_created`,`steps`.`s_surveyed` AS `step_surveyed`,`steps`.`s_recommended` AS `step_recommended`,`steps`.`s_placed_any` AS `step_placed_any`,`steps`.`s_placed_all` AS `step_placed_all`,`steps`.`s_adopted` AS `step_adopted`,`steps`.`s_reviewed` AS `step_reviewed`,`steps`.`s_shared` AS `step_shared`,`steps`.`place_count` AS `place_count`,`steps`.`placed_count` AS `placed_count`,elt(`steps`.`reached_no`,'CREATED','CREATED','RECOMMENDED','PLACED_ANY','PLACED_ALL','ADOPTED','REVIEWED') AS `reached_step`,(case when (`steps`.`reached_no` = 7) then 'DONE' when ((`steps`.`reached_no` < 6) and (`steps`.`start_date` < curdate())) then 'DROPPED' when ((`steps`.`reached_no` = 6) and (`steps`.`end_date` < (curdate() - interval 14 day))) then 'DROPPED' else 'IN_PROGRESS' end) AS `funnel_status`,(case when (((`steps`.`reached_no` < 6) and (`steps`.`start_date` < curdate())) or ((`steps`.`reached_no` = 6) and (`steps`.`end_date` < (curdate() - interval 14 day)))) then elt(`steps`.`reached_no`,'RECOMMENDED','RECOMMENDED','PLACED_ANY','PLACED_ALL','ADOPTED','REVIEWED') end) AS `drop_step` from `steps` */;
+/*!50001 VIEW `ai_training_dataset` AS with `done` as (select `t`.`travel_id` AS `travel_id`,`t`.`user_id` AS `user_id`,`t`.`adopted_route_id` AS `adopted_route_id`,`f`.`feedback_id` AS `feedback_id`,`f`.`execution_status` AS `execution_status`,`t`.`start_date` AS `start_date` from (`travel` `t` join `travel_feedback` `f` on((`f`.`travel_id` = `t`.`travel_id`))) where ((`t`.`adopted_route_id` is not null) and (`t`.`source_post_id` is null) and (`f`.`execution_status` in ('COMPLETED','PARTIAL')))), `cand` as (select `q`.`travel_id` AS `travel_id`,`i`.`poi_id` AS `poi_id`,`i`.`place_name` AS `place_name`,`i`.`rank_no` AS `rank_no`,`i`.`shown` AS `shown`,`q`.`model_version` AS `model_version`,row_number() OVER (PARTITION BY `q`.`travel_id`,`i`.`poi_id` ORDER BY `i`.`shown` desc,`q`.`request_id` desc )  AS `rn` from (`recommend_request` `q` join `recommend_item` `i` on((`i`.`request_id` = `q`.`request_id`))) where ((`q`.`status` = 'SUCCESS') and (`i`.`poi_id` is not null))), `visit_day` as (select `rd`.`route_id` AS `route_id`,`s`.`poi_id` AS `poi_id`,min(`rd`.`day_no`) AS `day_no` from (`route_day` `rd` join `route_spot` `s` on((`s`.`route_day_id` = `rd`.`route_day_id`))) group by `rd`.`route_id`,`s`.`poi_id`), `comp` as (select `c`.`travel_id` AS `travel_id`,`c`.`relation_code` AS `relation_code`,`c`.`gender_code` AS `gender_code`,`c`.`age_group_code` AS `age_group_code`,row_number() OVER (PARTITION BY `c`.`travel_id` ORDER BY `c`.`companion_seq` )  AS `slot` from `companion` `c`), `comp_slots` as (select `comp`.`travel_id` AS `travel_id`,max((case when (`comp`.`slot` = 1) then `comp`.`relation_code` end)) AS `COMPANION_1_REL`,max((case when (`comp`.`slot` = 1) then `comp`.`gender_code` end)) AS `COMPANION_1_GENDER`,max((case when (`comp`.`slot` = 1) then `comp`.`age_group_code` end)) AS `COMPANION_1_AGE`,max((case when (`comp`.`slot` = 2) then `comp`.`relation_code` end)) AS `COMPANION_2_REL`,max((case when (`comp`.`slot` = 2) then `comp`.`gender_code` end)) AS `COMPANION_2_GENDER`,max((case when (`comp`.`slot` = 2) then `comp`.`age_group_code` end)) AS `COMPANION_2_AGE`,max((case when (`comp`.`slot` = 3) then `comp`.`relation_code` end)) AS `COMPANION_3_REL`,max((case when (`comp`.`slot` = 3) then `comp`.`gender_code` end)) AS `COMPANION_3_GENDER`,max((case when (`comp`.`slot` = 3) then `comp`.`age_group_code` end)) AS `COMPANION_3_AGE`,max((case when (`comp`.`slot` = 4) then `comp`.`relation_code` end)) AS `COMPANION_4_REL`,max((case when (`comp`.`slot` = 4) then `comp`.`gender_code` end)) AS `COMPANION_4_GENDER`,max((case when (`comp`.`slot` = 4) then `comp`.`age_group_code` end)) AS `COMPANION_4_AGE`,max((case when (`comp`.`slot` = 5) then `comp`.`relation_code` end)) AS `COMPANION_5_REL`,max((case when (`comp`.`slot` = 5) then `comp`.`gender_code` end)) AS `COMPANION_5_GENDER`,max((case when (`comp`.`slot` = 5) then `comp`.`age_group_code` end)) AS `COMPANION_5_AGE`,max((case when (`comp`.`slot` = 6) then `comp`.`relation_code` end)) AS `COMPANION_6_REL`,max((case when (`comp`.`slot` = 6) then `comp`.`gender_code` end)) AS `COMPANION_6_GENDER`,max((case when (`comp`.`slot` = 6) then `comp`.`age_group_code` end)) AS `COMPANION_6_AGE`,max((case when (`comp`.`slot` = 7) then `comp`.`relation_code` end)) AS `COMPANION_7_REL`,max((case when (`comp`.`slot` = 7) then `comp`.`gender_code` end)) AS `COMPANION_7_GENDER`,max((case when (`comp`.`slot` = 7) then `comp`.`age_group_code` end)) AS `COMPANION_7_AGE`,max((case when (`comp`.`slot` = 8) then `comp`.`relation_code` end)) AS `COMPANION_8_REL`,max((case when (`comp`.`slot` = 8) then `comp`.`gender_code` end)) AS `COMPANION_8_GENDER`,max((case when (`comp`.`slot` = 8) then `comp`.`age_group_code` end)) AS `COMPANION_8_AGE`,max((case when (`comp`.`slot` = 9) then `comp`.`relation_code` end)) AS `COMPANION_9_REL`,max((case when (`comp`.`slot` = 9) then `comp`.`gender_code` end)) AS `COMPANION_9_GENDER`,max((case when (`comp`.`slot` = 9) then `comp`.`age_group_code` end)) AS `COMPANION_9_AGE`,max((case when (`comp`.`slot` = 10) then `comp`.`relation_code` end)) AS `COMPANION_10_REL`,max((case when (`comp`.`slot` = 10) then `comp`.`gender_code` end)) AS `COMPANION_10_GENDER`,max((case when (`comp`.`slot` = 10) then `comp`.`age_group_code` end)) AS `COMPANION_10_AGE`,max((case when (`comp`.`slot` = 11) then `comp`.`relation_code` end)) AS `COMPANION_11_REL`,max((case when (`comp`.`slot` = 11) then `comp`.`gender_code` end)) AS `COMPANION_11_GENDER`,max((case when (`comp`.`slot` = 11) then `comp`.`age_group_code` end)) AS `COMPANION_11_AGE`,max((case when (`comp`.`slot` = 12) then `comp`.`relation_code` end)) AS `COMPANION_12_REL`,max((case when (`comp`.`slot` = 12) then `comp`.`gender_code` end)) AS `COMPANION_12_GENDER`,max((case when (`comp`.`slot` = 12) then `comp`.`age_group_code` end)) AS `COMPANION_12_AGE`,max((case when (`comp`.`slot` = 13) then `comp`.`relation_code` end)) AS `COMPANION_13_REL`,max((case when (`comp`.`slot` = 13) then `comp`.`gender_code` end)) AS `COMPANION_13_GENDER`,max((case when (`comp`.`slot` = 13) then `comp`.`age_group_code` end)) AS `COMPANION_13_AGE`,max((case when (`comp`.`slot` = 14) then `comp`.`relation_code` end)) AS `COMPANION_14_REL`,max((case when (`comp`.`slot` = 14) then `comp`.`gender_code` end)) AS `COMPANION_14_GENDER`,max((case when (`comp`.`slot` = 14) then `comp`.`age_group_code` end)) AS `COMPANION_14_AGE`,max((case when (`comp`.`slot` = 15) then `comp`.`relation_code` end)) AS `COMPANION_15_REL`,max((case when (`comp`.`slot` = 15) then `comp`.`gender_code` end)) AS `COMPANION_15_GENDER`,max((case when (`comp`.`slot` = 15) then `comp`.`age_group_code` end)) AS `COMPANION_15_AGE`,max((case when (`comp`.`slot` = 16) then `comp`.`relation_code` end)) AS `COMPANION_16_REL`,max((case when (`comp`.`slot` = 16) then `comp`.`gender_code` end)) AS `COMPANION_16_GENDER`,max((case when (`comp`.`slot` = 16) then `comp`.`age_group_code` end)) AS `COMPANION_16_AGE`,max((case when (`comp`.`slot` = 17) then `comp`.`relation_code` end)) AS `COMPANION_17_REL`,max((case when (`comp`.`slot` = 17) then `comp`.`gender_code` end)) AS `COMPANION_17_GENDER`,max((case when (`comp`.`slot` = 17) then `comp`.`age_group_code` end)) AS `COMPANION_17_AGE`,max((case when (`comp`.`slot` = 18) then `comp`.`relation_code` end)) AS `COMPANION_18_REL`,max((case when (`comp`.`slot` = 18) then `comp`.`gender_code` end)) AS `COMPANION_18_GENDER`,max((case when (`comp`.`slot` = 18) then `comp`.`age_group_code` end)) AS `COMPANION_18_AGE` from `comp` group by `comp`.`travel_id`) select `d`.`travel_id` AS `travel_id`,`d`.`user_id` AS `user_id`,`v`.`gender_code` AS `GENDER`,`v`.`age_group_code` AS `AGE_GRP`,`v`.`income_code` AS `INCOME`,`v`.`companion_count` AS `TRAVEL_COMPANIONS_NUM`,`v`.`style_nature_city` AS `TRAVEL_STYL_1`,`v`.`style_new_familiar` AS `TRAVEL_STYL_3`,`v`.`style_relax_activity` AS `TRAVEL_STYL_5`,`v`.`style_hidden_famous` AS `TRAVEL_STYL_6`,`v`.`style_plan_free` AS `TRAVEL_STYL_7`,`v`.`photo_importance` AS `TRAVEL_STYL_8`,`v`.`travel_motive_1` AS `TRAVEL_MOTIVE_1`,`v`.`user_mission_1` AS `TRAVEL_MISSION_PRIORITY_WEB`,`cs`.`COMPANION_1_REL` AS `COMPANION_1_REL`,`cs`.`COMPANION_1_GENDER` AS `COMPANION_1_GENDER`,`cs`.`COMPANION_1_AGE` AS `COMPANION_1_AGE`,`cs`.`COMPANION_2_REL` AS `COMPANION_2_REL`,`cs`.`COMPANION_2_GENDER` AS `COMPANION_2_GENDER`,`cs`.`COMPANION_2_AGE` AS `COMPANION_2_AGE`,`cs`.`COMPANION_3_REL` AS `COMPANION_3_REL`,`cs`.`COMPANION_3_GENDER` AS `COMPANION_3_GENDER`,`cs`.`COMPANION_3_AGE` AS `COMPANION_3_AGE`,`cs`.`COMPANION_4_REL` AS `COMPANION_4_REL`,`cs`.`COMPANION_4_GENDER` AS `COMPANION_4_GENDER`,`cs`.`COMPANION_4_AGE` AS `COMPANION_4_AGE`,`cs`.`COMPANION_5_REL` AS `COMPANION_5_REL`,`cs`.`COMPANION_5_GENDER` AS `COMPANION_5_GENDER`,`cs`.`COMPANION_5_AGE` AS `COMPANION_5_AGE`,`cs`.`COMPANION_6_REL` AS `COMPANION_6_REL`,`cs`.`COMPANION_6_GENDER` AS `COMPANION_6_GENDER`,`cs`.`COMPANION_6_AGE` AS `COMPANION_6_AGE`,`cs`.`COMPANION_7_REL` AS `COMPANION_7_REL`,`cs`.`COMPANION_7_GENDER` AS `COMPANION_7_GENDER`,`cs`.`COMPANION_7_AGE` AS `COMPANION_7_AGE`,`cs`.`COMPANION_8_REL` AS `COMPANION_8_REL`,`cs`.`COMPANION_8_GENDER` AS `COMPANION_8_GENDER`,`cs`.`COMPANION_8_AGE` AS `COMPANION_8_AGE`,`cs`.`COMPANION_9_REL` AS `COMPANION_9_REL`,`cs`.`COMPANION_9_GENDER` AS `COMPANION_9_GENDER`,`cs`.`COMPANION_9_AGE` AS `COMPANION_9_AGE`,`cs`.`COMPANION_10_REL` AS `COMPANION_10_REL`,`cs`.`COMPANION_10_GENDER` AS `COMPANION_10_GENDER`,`cs`.`COMPANION_10_AGE` AS `COMPANION_10_AGE`,`cs`.`COMPANION_11_REL` AS `COMPANION_11_REL`,`cs`.`COMPANION_11_GENDER` AS `COMPANION_11_GENDER`,`cs`.`COMPANION_11_AGE` AS `COMPANION_11_AGE`,`cs`.`COMPANION_12_REL` AS `COMPANION_12_REL`,`cs`.`COMPANION_12_GENDER` AS `COMPANION_12_GENDER`,`cs`.`COMPANION_12_AGE` AS `COMPANION_12_AGE`,`cs`.`COMPANION_13_REL` AS `COMPANION_13_REL`,`cs`.`COMPANION_13_GENDER` AS `COMPANION_13_GENDER`,`cs`.`COMPANION_13_AGE` AS `COMPANION_13_AGE`,`cs`.`COMPANION_14_REL` AS `COMPANION_14_REL`,`cs`.`COMPANION_14_GENDER` AS `COMPANION_14_GENDER`,`cs`.`COMPANION_14_AGE` AS `COMPANION_14_AGE`,`cs`.`COMPANION_15_REL` AS `COMPANION_15_REL`,`cs`.`COMPANION_15_GENDER` AS `COMPANION_15_GENDER`,`cs`.`COMPANION_15_AGE` AS `COMPANION_15_AGE`,`cs`.`COMPANION_16_REL` AS `COMPANION_16_REL`,`cs`.`COMPANION_16_GENDER` AS `COMPANION_16_GENDER`,`cs`.`COMPANION_16_AGE` AS `COMPANION_16_AGE`,`cs`.`COMPANION_17_REL` AS `COMPANION_17_REL`,`cs`.`COMPANION_17_GENDER` AS `COMPANION_17_GENDER`,`cs`.`COMPANION_17_AGE` AS `COMPANION_17_AGE`,`cs`.`COMPANION_18_REL` AS `COMPANION_18_REL`,`cs`.`COMPANION_18_GENDER` AS `COMPANION_18_GENDER`,`cs`.`COMPANION_18_AGE` AS `COMPANION_18_AGE`,`c`.`poi_id` AS `poi_id`,`c`.`place_name` AS `VISIT_AREA_NM`,`p`.`address` AS `address`,(case `p`.`category_code` when 'NATURE' then 1 when 'HISTORY' then 2 when 'CULTURE' then 3 when 'COMMERCIAL' then 4 when 'LEISURE' then 5 when 'THEME' then 6 when 'TRAIL' then 7 when 'FESTIVAL' then 8 when 'EXPERIENCE' then 13 end) AS `VISIT_AREA_TYPE_CD`,`p`.`latitude` AS `latitude`,`p`.`longitude` AS `longitude`,`r`.`region_code` AS `region_code`,(case when (month((`d`.`start_date` + interval (coalesce(`vd`.`day_no`,1) - 1) day)) in (3,4,5)) then 1 when (month((`d`.`start_date` + interval (coalesce(`vd`.`day_no`,1) - 1) day)) in (6,7,8)) then 2 when (month((`d`.`start_date` + interval (coalesce(`vd`.`day_no`,1) - 1) day)) in (9,10,11)) then 3 else 4 end) AS `TRAVEL_SEASON`,`c`.`rank_no` AS `recommend_rank`,`c`.`model_version` AS `model_version`,`c`.`shown` AS `shown`,(case when ((`fs`.`visited` = 1) and (`fs`.`reaction` = 'LIKE')) then 3 when (`fs`.`visited` = 1) then 2 when (`fs`.`visited` = 0) then 1 when exists(select 1 from (`route_day` `rd` join `route_spot` `s` on((`s`.`route_day_id` = `rd`.`route_day_id`))) where ((`rd`.`route_id` = `d`.`adopted_route_id`) and (`s`.`poi_id` = `c`.`poi_id`))) then (case when (`d`.`execution_status` = 'COMPLETED') then 2 else 1 end) else 0 end) AS `label` from (((((((`done` `d` join `cand` `c` on(((`c`.`travel_id` = `d`.`travel_id`) and (`c`.`rn` = 1)))) join `ai_travel_input` `v` on((`v`.`travel_id` = `d`.`travel_id`))) join `poi` `p` on((`p`.`poi_id` = `c`.`poi_id`))) join `region` `r` on((`r`.`region_id` = `p`.`region_id`))) left join `comp_slots` `cs` on((`cs`.`travel_id` = `d`.`travel_id`))) left join `visit_day` `vd` on(((`vd`.`route_id` = `d`.`adopted_route_id`) and (`vd`.`poi_id` = `c`.`poi_id`)))) left join `travel_feedback_spot` `fs` on(((`fs`.`feedback_id` = `d`.`feedback_id`) and (`fs`.`poi_id` = `c`.`poi_id`)))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -206,10 +207,10 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
--- Final view structure for view `ai_training_dataset`
+-- Final view structure for view `travel_funnel`
 --
 
-/*!50001 DROP VIEW IF EXISTS `ai_training_dataset`*/;
+/*!50001 DROP VIEW IF EXISTS `travel_funnel`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
@@ -218,7 +219,7 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY INVOKER */
-/*!50001 VIEW `ai_training_dataset` AS with `done` as (select `t`.`travel_id` AS `travel_id`,`t`.`user_id` AS `user_id`,`t`.`adopted_route_id` AS `adopted_route_id`,`f`.`feedback_id` AS `feedback_id`,`f`.`execution_status` AS `execution_status` from (`travel` `t` join `travel_feedback` `f` on((`f`.`travel_id` = `t`.`travel_id`))) where ((`t`.`adopted_route_id` is not null) and (`t`.`source_post_id` is null) and (`f`.`execution_status` in ('COMPLETED','PARTIAL')))), `cand` as (select `q`.`travel_id` AS `travel_id`,`i`.`poi_id` AS `poi_id`,`i`.`place_name` AS `place_name`,`i`.`rank_no` AS `rank_no`,`i`.`shown` AS `shown`,`q`.`model_version` AS `model_version`,row_number() OVER (PARTITION BY `q`.`travel_id`,`i`.`poi_id` ORDER BY `i`.`shown` desc,`q`.`request_id` desc )  AS `rn` from (`recommend_request` `q` join `recommend_item` `i` on((`i`.`request_id` = `q`.`request_id`))) where ((`q`.`status` = 'SUCCESS') and (`i`.`poi_id` is not null))), `comp` as (select `c`.`travel_id` AS `travel_id`,`c`.`relation_code` AS `relation_code`,`c`.`gender_code` AS `gender_code`,`c`.`age_group_code` AS `age_group_code`,row_number() OVER (PARTITION BY `c`.`travel_id` ORDER BY `c`.`companion_seq` )  AS `slot` from `companion` `c`), `comp_slots` as (select `comp`.`travel_id` AS `travel_id`,max((case when (`comp`.`slot` = 1) then `comp`.`relation_code` end)) AS `COMPANION_1_REL`,max((case when (`comp`.`slot` = 1) then `comp`.`gender_code` end)) AS `COMPANION_1_GENDER`,max((case when (`comp`.`slot` = 1) then `comp`.`age_group_code` end)) AS `COMPANION_1_AGE`,max((case when (`comp`.`slot` = 2) then `comp`.`relation_code` end)) AS `COMPANION_2_REL`,max((case when (`comp`.`slot` = 2) then `comp`.`gender_code` end)) AS `COMPANION_2_GENDER`,max((case when (`comp`.`slot` = 2) then `comp`.`age_group_code` end)) AS `COMPANION_2_AGE`,max((case when (`comp`.`slot` = 3) then `comp`.`relation_code` end)) AS `COMPANION_3_REL`,max((case when (`comp`.`slot` = 3) then `comp`.`gender_code` end)) AS `COMPANION_3_GENDER`,max((case when (`comp`.`slot` = 3) then `comp`.`age_group_code` end)) AS `COMPANION_3_AGE`,max((case when (`comp`.`slot` = 4) then `comp`.`relation_code` end)) AS `COMPANION_4_REL`,max((case when (`comp`.`slot` = 4) then `comp`.`gender_code` end)) AS `COMPANION_4_GENDER`,max((case when (`comp`.`slot` = 4) then `comp`.`age_group_code` end)) AS `COMPANION_4_AGE`,max((case when (`comp`.`slot` = 5) then `comp`.`relation_code` end)) AS `COMPANION_5_REL`,max((case when (`comp`.`slot` = 5) then `comp`.`gender_code` end)) AS `COMPANION_5_GENDER`,max((case when (`comp`.`slot` = 5) then `comp`.`age_group_code` end)) AS `COMPANION_5_AGE`,max((case when (`comp`.`slot` = 6) then `comp`.`relation_code` end)) AS `COMPANION_6_REL`,max((case when (`comp`.`slot` = 6) then `comp`.`gender_code` end)) AS `COMPANION_6_GENDER`,max((case when (`comp`.`slot` = 6) then `comp`.`age_group_code` end)) AS `COMPANION_6_AGE`,max((case when (`comp`.`slot` = 7) then `comp`.`relation_code` end)) AS `COMPANION_7_REL`,max((case when (`comp`.`slot` = 7) then `comp`.`gender_code` end)) AS `COMPANION_7_GENDER`,max((case when (`comp`.`slot` = 7) then `comp`.`age_group_code` end)) AS `COMPANION_7_AGE`,max((case when (`comp`.`slot` = 8) then `comp`.`relation_code` end)) AS `COMPANION_8_REL`,max((case when (`comp`.`slot` = 8) then `comp`.`gender_code` end)) AS `COMPANION_8_GENDER`,max((case when (`comp`.`slot` = 8) then `comp`.`age_group_code` end)) AS `COMPANION_8_AGE`,max((case when (`comp`.`slot` = 9) then `comp`.`relation_code` end)) AS `COMPANION_9_REL`,max((case when (`comp`.`slot` = 9) then `comp`.`gender_code` end)) AS `COMPANION_9_GENDER`,max((case when (`comp`.`slot` = 9) then `comp`.`age_group_code` end)) AS `COMPANION_9_AGE`,max((case when (`comp`.`slot` = 10) then `comp`.`relation_code` end)) AS `COMPANION_10_REL`,max((case when (`comp`.`slot` = 10) then `comp`.`gender_code` end)) AS `COMPANION_10_GENDER`,max((case when (`comp`.`slot` = 10) then `comp`.`age_group_code` end)) AS `COMPANION_10_AGE`,max((case when (`comp`.`slot` = 11) then `comp`.`relation_code` end)) AS `COMPANION_11_REL`,max((case when (`comp`.`slot` = 11) then `comp`.`gender_code` end)) AS `COMPANION_11_GENDER`,max((case when (`comp`.`slot` = 11) then `comp`.`age_group_code` end)) AS `COMPANION_11_AGE`,max((case when (`comp`.`slot` = 12) then `comp`.`relation_code` end)) AS `COMPANION_12_REL`,max((case when (`comp`.`slot` = 12) then `comp`.`gender_code` end)) AS `COMPANION_12_GENDER`,max((case when (`comp`.`slot` = 12) then `comp`.`age_group_code` end)) AS `COMPANION_12_AGE`,max((case when (`comp`.`slot` = 13) then `comp`.`relation_code` end)) AS `COMPANION_13_REL`,max((case when (`comp`.`slot` = 13) then `comp`.`gender_code` end)) AS `COMPANION_13_GENDER`,max((case when (`comp`.`slot` = 13) then `comp`.`age_group_code` end)) AS `COMPANION_13_AGE`,max((case when (`comp`.`slot` = 14) then `comp`.`relation_code` end)) AS `COMPANION_14_REL`,max((case when (`comp`.`slot` = 14) then `comp`.`gender_code` end)) AS `COMPANION_14_GENDER`,max((case when (`comp`.`slot` = 14) then `comp`.`age_group_code` end)) AS `COMPANION_14_AGE`,max((case when (`comp`.`slot` = 15) then `comp`.`relation_code` end)) AS `COMPANION_15_REL`,max((case when (`comp`.`slot` = 15) then `comp`.`gender_code` end)) AS `COMPANION_15_GENDER`,max((case when (`comp`.`slot` = 15) then `comp`.`age_group_code` end)) AS `COMPANION_15_AGE`,max((case when (`comp`.`slot` = 16) then `comp`.`relation_code` end)) AS `COMPANION_16_REL`,max((case when (`comp`.`slot` = 16) then `comp`.`gender_code` end)) AS `COMPANION_16_GENDER`,max((case when (`comp`.`slot` = 16) then `comp`.`age_group_code` end)) AS `COMPANION_16_AGE`,max((case when (`comp`.`slot` = 17) then `comp`.`relation_code` end)) AS `COMPANION_17_REL`,max((case when (`comp`.`slot` = 17) then `comp`.`gender_code` end)) AS `COMPANION_17_GENDER`,max((case when (`comp`.`slot` = 17) then `comp`.`age_group_code` end)) AS `COMPANION_17_AGE`,max((case when (`comp`.`slot` = 18) then `comp`.`relation_code` end)) AS `COMPANION_18_REL`,max((case when (`comp`.`slot` = 18) then `comp`.`gender_code` end)) AS `COMPANION_18_GENDER`,max((case when (`comp`.`slot` = 18) then `comp`.`age_group_code` end)) AS `COMPANION_18_AGE` from `comp` group by `comp`.`travel_id`) select `d`.`travel_id` AS `travel_id`,`d`.`user_id` AS `user_id`,`v`.`gender_code` AS `GENDER`,`v`.`age_group_code` AS `AGE_GRP`,`v`.`income_code` AS `INCOME`,`v`.`companion_count` AS `TRAVEL_COMPANIONS_NUM`,`v`.`style_nature_city` AS `TRAVEL_STYL_1`,`v`.`style_new_familiar` AS `TRAVEL_STYL_3`,`v`.`style_relax_activity` AS `TRAVEL_STYL_5`,`v`.`style_hidden_famous` AS `TRAVEL_STYL_6`,`v`.`style_plan_free` AS `TRAVEL_STYL_7`,`v`.`photo_importance` AS `TRAVEL_STYL_8`,`v`.`travel_motive_1` AS `TRAVEL_MOTIVE_1`,`v`.`user_mission_1` AS `TRAVEL_MISSION_PRIORITY_WEB`,`cs`.`COMPANION_1_REL` AS `COMPANION_1_REL`,`cs`.`COMPANION_1_GENDER` AS `COMPANION_1_GENDER`,`cs`.`COMPANION_1_AGE` AS `COMPANION_1_AGE`,`cs`.`COMPANION_2_REL` AS `COMPANION_2_REL`,`cs`.`COMPANION_2_GENDER` AS `COMPANION_2_GENDER`,`cs`.`COMPANION_2_AGE` AS `COMPANION_2_AGE`,`cs`.`COMPANION_3_REL` AS `COMPANION_3_REL`,`cs`.`COMPANION_3_GENDER` AS `COMPANION_3_GENDER`,`cs`.`COMPANION_3_AGE` AS `COMPANION_3_AGE`,`cs`.`COMPANION_4_REL` AS `COMPANION_4_REL`,`cs`.`COMPANION_4_GENDER` AS `COMPANION_4_GENDER`,`cs`.`COMPANION_4_AGE` AS `COMPANION_4_AGE`,`cs`.`COMPANION_5_REL` AS `COMPANION_5_REL`,`cs`.`COMPANION_5_GENDER` AS `COMPANION_5_GENDER`,`cs`.`COMPANION_5_AGE` AS `COMPANION_5_AGE`,`cs`.`COMPANION_6_REL` AS `COMPANION_6_REL`,`cs`.`COMPANION_6_GENDER` AS `COMPANION_6_GENDER`,`cs`.`COMPANION_6_AGE` AS `COMPANION_6_AGE`,`cs`.`COMPANION_7_REL` AS `COMPANION_7_REL`,`cs`.`COMPANION_7_GENDER` AS `COMPANION_7_GENDER`,`cs`.`COMPANION_7_AGE` AS `COMPANION_7_AGE`,`cs`.`COMPANION_8_REL` AS `COMPANION_8_REL`,`cs`.`COMPANION_8_GENDER` AS `COMPANION_8_GENDER`,`cs`.`COMPANION_8_AGE` AS `COMPANION_8_AGE`,`cs`.`COMPANION_9_REL` AS `COMPANION_9_REL`,`cs`.`COMPANION_9_GENDER` AS `COMPANION_9_GENDER`,`cs`.`COMPANION_9_AGE` AS `COMPANION_9_AGE`,`cs`.`COMPANION_10_REL` AS `COMPANION_10_REL`,`cs`.`COMPANION_10_GENDER` AS `COMPANION_10_GENDER`,`cs`.`COMPANION_10_AGE` AS `COMPANION_10_AGE`,`cs`.`COMPANION_11_REL` AS `COMPANION_11_REL`,`cs`.`COMPANION_11_GENDER` AS `COMPANION_11_GENDER`,`cs`.`COMPANION_11_AGE` AS `COMPANION_11_AGE`,`cs`.`COMPANION_12_REL` AS `COMPANION_12_REL`,`cs`.`COMPANION_12_GENDER` AS `COMPANION_12_GENDER`,`cs`.`COMPANION_12_AGE` AS `COMPANION_12_AGE`,`cs`.`COMPANION_13_REL` AS `COMPANION_13_REL`,`cs`.`COMPANION_13_GENDER` AS `COMPANION_13_GENDER`,`cs`.`COMPANION_13_AGE` AS `COMPANION_13_AGE`,`cs`.`COMPANION_14_REL` AS `COMPANION_14_REL`,`cs`.`COMPANION_14_GENDER` AS `COMPANION_14_GENDER`,`cs`.`COMPANION_14_AGE` AS `COMPANION_14_AGE`,`cs`.`COMPANION_15_REL` AS `COMPANION_15_REL`,`cs`.`COMPANION_15_GENDER` AS `COMPANION_15_GENDER`,`cs`.`COMPANION_15_AGE` AS `COMPANION_15_AGE`,`cs`.`COMPANION_16_REL` AS `COMPANION_16_REL`,`cs`.`COMPANION_16_GENDER` AS `COMPANION_16_GENDER`,`cs`.`COMPANION_16_AGE` AS `COMPANION_16_AGE`,`cs`.`COMPANION_17_REL` AS `COMPANION_17_REL`,`cs`.`COMPANION_17_GENDER` AS `COMPANION_17_GENDER`,`cs`.`COMPANION_17_AGE` AS `COMPANION_17_AGE`,`cs`.`COMPANION_18_REL` AS `COMPANION_18_REL`,`cs`.`COMPANION_18_GENDER` AS `COMPANION_18_GENDER`,`cs`.`COMPANION_18_AGE` AS `COMPANION_18_AGE`,`c`.`poi_id` AS `poi_id`,`c`.`place_name` AS `VISIT_AREA_NM`,`p`.`address` AS `address`,(case `p`.`category_code` when 'NATURE' then 1 when 'HISTORY' then 2 when 'CULTURE' then 3 when 'COMMERCIAL' then 4 when 'LEISURE' then 5 when 'THEME' then 6 when 'TRAIL' then 7 when 'FESTIVAL' then 8 when 'EXPERIENCE' then 13 end) AS `VISIT_AREA_TYPE_CD`,`p`.`latitude` AS `latitude`,`p`.`longitude` AS `longitude`,`r`.`region_code` AS `region_code`,`c`.`rank_no` AS `recommend_rank`,`c`.`model_version` AS `model_version`,`c`.`shown` AS `shown`,(case when ((`fs`.`visited` = 1) and (`fs`.`reaction` = 'LIKE')) then 3 when (`fs`.`visited` = 1) then 2 when (`fs`.`visited` = 0) then 1 when exists(select 1 from (`route_day` `rd` join `route_spot` `s` on((`s`.`route_day_id` = `rd`.`route_day_id`))) where ((`rd`.`route_id` = `d`.`adopted_route_id`) and (`s`.`poi_id` = `c`.`poi_id`))) then (case when (`d`.`execution_status` = 'COMPLETED') then 2 else 1 end) else 0 end) AS `label` from ((((((`done` `d` join `cand` `c` on(((`c`.`travel_id` = `d`.`travel_id`) and (`c`.`rn` = 1)))) join `ai_travel_input` `v` on((`v`.`travel_id` = `d`.`travel_id`))) join `poi` `p` on((`p`.`poi_id` = `c`.`poi_id`))) join `region` `r` on((`r`.`region_id` = `p`.`region_id`))) left join `comp_slots` `cs` on((`cs`.`travel_id` = `d`.`travel_id`))) left join `travel_feedback_spot` `fs` on(((`fs`.`feedback_id` = `d`.`feedback_id`) and (`fs`.`poi_id` = `c`.`poi_id`)))) */;
+/*!50001 VIEW `travel_funnel` AS with `base` as (select `t`.`travel_id` AS `travel_id`,`t`.`user_id` AS `user_id`,`t`.`created_at` AS `created_at`,`t`.`start_date` AS `start_date`,`t`.`end_date` AS `end_date`,exists(select 1 from `travel_preference` `tp` where (`tp`.`travel_id` = `t`.`travel_id`)) AS `s_surveyed`,exists(select 1 from `recommend_request` `q` where ((`q`.`travel_id` = `t`.`travel_id`) and (`q`.`status` = 'SUCCESS'))) AS `s_recommended`,(select count(0) from `travel_bookmark` `b` where (`b`.`travel_id` = `t`.`travel_id`)) AS `place_count`,(select count(0) from `travel_bookmark` `b` where ((`b`.`travel_id` = `t`.`travel_id`) and exists(select 1 from ((`travel_route` `rt` join `route_day` `rd` on((`rd`.`route_id` = `rt`.`route_id`))) join `route_spot` `s` on((`s`.`route_day_id` = `rd`.`route_day_id`))) where ((`rt`.`travel_id` = `t`.`travel_id`) and (`s`.`poi_id` = `b`.`poi_id`))))) AS `placed_count`,(`t`.`adopted_route_id` is not null) AS `s_adopted`,exists(select 1 from `travel_feedback` `f` where (`f`.`travel_id` = `t`.`travel_id`)) AS `s_reviewed`,exists(select 1 from `community_post` `cp` where ((`cp`.`travel_id` = `t`.`travel_id`) and (`cp`.`deleted_at` is null))) AS `s_shared` from `travel` `t` where (`t`.`source_post_id` is null)), `steps` as (select `b`.`travel_id` AS `travel_id`,`b`.`user_id` AS `user_id`,`b`.`created_at` AS `created_at`,`b`.`start_date` AS `start_date`,`b`.`end_date` AS `end_date`,`b`.`s_surveyed` AS `s_surveyed`,`b`.`s_recommended` AS `s_recommended`,`b`.`place_count` AS `place_count`,`b`.`placed_count` AS `placed_count`,`b`.`s_adopted` AS `s_adopted`,`b`.`s_reviewed` AS `s_reviewed`,`b`.`s_shared` AS `s_shared`,(`b`.`place_count` > 0) AS `s_placed_any`,((`b`.`place_count` > 0) and (`b`.`placed_count` = `b`.`place_count`)) AS `s_placed_all`,(case when `b`.`s_reviewed` then 7 when `b`.`s_adopted` then 6 when ((`b`.`place_count` > 0) and (`b`.`placed_count` = `b`.`place_count`)) then 5 when (`b`.`place_count` > 0) then 4 when `b`.`s_recommended` then 3 when `b`.`s_surveyed` then 2 else 1 end) AS `reached_no` from `base` `b`) select `steps`.`travel_id` AS `travel_id`,`steps`.`user_id` AS `user_id`,`steps`.`created_at` AS `created_at`,`steps`.`start_date` AS `start_date`,`steps`.`end_date` AS `end_date`,1 AS `step_created`,`steps`.`s_surveyed` AS `step_surveyed`,`steps`.`s_recommended` AS `step_recommended`,`steps`.`s_placed_any` AS `step_placed_any`,`steps`.`s_placed_all` AS `step_placed_all`,`steps`.`s_adopted` AS `step_adopted`,`steps`.`s_reviewed` AS `step_reviewed`,`steps`.`s_shared` AS `step_shared`,`steps`.`place_count` AS `place_count`,`steps`.`placed_count` AS `placed_count`,elt(`steps`.`reached_no`,'CREATED','CREATED','RECOMMENDED','PLACED_ANY','PLACED_ALL','ADOPTED','REVIEWED') AS `reached_step`,(case when (`steps`.`reached_no` = 7) then 'DONE' when ((`steps`.`reached_no` < 6) and (`steps`.`start_date` < curdate())) then 'DROPPED' when ((`steps`.`reached_no` = 6) and (`steps`.`end_date` < (curdate() - interval 14 day))) then 'DROPPED' else 'IN_PROGRESS' end) AS `funnel_status`,(case when (((`steps`.`reached_no` < 6) and (`steps`.`start_date` < curdate())) or ((`steps`.`reached_no` = 6) and (`steps`.`end_date` < (curdate() - interval 14 day)))) then elt(`steps`.`reached_no`,'RECOMMENDED','RECOMMENDED','PLACED_ANY','PLACED_ALL','ADOPTED','REVIEWED') end) AS `drop_step` from `steps` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -311,4 +312,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:19
+-- Dump completed on 2026-10-06 15:51:55

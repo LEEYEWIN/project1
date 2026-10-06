@@ -31,7 +31,7 @@ CREATE TABLE `travel_region` (
   KEY `fk_travel_region_region` (`region_id`),
   CONSTRAINT `fk_travel_region_region` FOREIGN KEY (`region_id`) REFERENCES `region` (`region_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_travel_region_travel` FOREIGN KEY (`travel_id`) REFERENCES `travel` (`travel_id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='여행에서 선택한 제주 권역';
+) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='여행에서 선택한 제주 권역';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -40,6 +40,7 @@ CREATE TABLE `travel_region` (
 
 LOCK TABLES `travel_region` WRITE;
 /*!40000 ALTER TABLE `travel_region` DISABLE KEYS */;
+INSERT INTO `travel_region` VALUES (1,9,3),(2,10,3),(3,11,1),(4,11,3),(5,14,3),(6,17,4),(7,19,4),(8,20,1),(9,23,4),(10,24,1),(11,24,3),(12,26,1),(13,26,3),(14,27,2),(15,28,4),(16,29,3),(17,30,2),(18,31,2),(19,38,2),(20,39,2),(21,40,2),(22,41,4),(23,48,1),(24,49,2),(25,49,3),(27,51,1),(26,51,4),(28,53,2);
 /*!40000 ALTER TABLE `travel_region` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -52,4 +53,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:14
+-- Dump completed on 2026-10-06 15:51:51

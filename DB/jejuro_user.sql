@@ -41,7 +41,7 @@ CREATE TABLE `user` (
   CONSTRAINT `ck_user_gender_code` CHECK ((`gender_code` in (1,2))),
   CONSTRAINT `ck_user_role` CHECK ((`role` in (_utf8mb4'USER',_utf8mb4'ADMIN'))),
   CONSTRAINT `ck_user_status` CHECK ((((`status` = _utf8mb4'ACTIVE') and (`withdrawn_at` is null)) or ((`status` = _utf8mb4'WITHDRAWAL_PENDING') and (`withdrawn_at` is not null))))
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='서비스 회원. 이메일 가입 전용';
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='서비스 회원. 이메일 가입 전용';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -50,6 +50,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES (5,'dev@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','개발자','1995-01-01',1,'ACTIVE','ADMIN',NULL,'2026-10-06 12:04:01',NULL),(7,'kpi1@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트1','1999-03-02',2,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(8,'kpi2@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트2','1996-07-11',1,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(9,'kpi3@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트3','1990-05-20',2,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(10,'kpi4@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트4','1987-11-02',1,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(11,'kpi5@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트5','1981-01-15',2,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(12,'kpi6@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','KPI테스트6','1972-09-09',1,'ACTIVE','USER',NULL,'2026-10-06 12:06:15',NULL),(13,'demo1@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','제주여행자','1997-04-12',2,'ACTIVE','USER',NULL,'2026-10-06 12:12:44',NULL),(14,'demo2@example.com','$2b$12$0E12kqQh7DCHQg/OWHPmReICy0W3Zv/khB8dlblXyWJTtJuoy8gIm','제주탐험가','1994-08-23',1,'ACTIVE','USER',NULL,'2026-10-06 12:12:44',NULL);
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -62,4 +63,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:16
+-- Dump completed on 2026-10-06 15:51:51

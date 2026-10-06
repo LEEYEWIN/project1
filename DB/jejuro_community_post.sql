@@ -44,7 +44,7 @@ CREATE TABLE `community_post` (
   CONSTRAINT `fk_community_post_user` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `ck_community_post_block_reason` CHECK (((`block_reason` is null) or (`block_reason` in (_utf8mb4'SEXUAL',_utf8mb4'PRIVACY',_utf8mb4'ABUSE',_utf8mb4'SPAM')))),
   CONSTRAINT `ck_community_post_type` CHECK ((`post_type` in (_utf8mb4'QUESTION',_utf8mb4'REVIEW')))
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='커뮤니티 질문 및 여행 후기. 탈퇴 회원 글은 user_id NULL';
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='커뮤니티 질문 및 여행 후기. 탈퇴 회원 글은 user_id NULL';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -53,6 +53,7 @@ CREATE TABLE `community_post` (
 
 LOCK TABLES `community_post` WRITE;
 /*!40000 ALTER TABLE `community_post` DISABLE KEYS */;
+INSERT INTO `community_post` VALUES (3,13,48,'REVIEW','동부 2박 3일, 성산일출봉은 아침에 가세요','첫날은 함덕해수욕장과 비자림, 둘째 날은 성산일출봉과 섭지코지를 돌았어요. 셋째 날 민속촌은 시간이 모자라 못 갔어요. 경로 첨부했으니 가져가서 쓰세요!',NULL,39,'2026-09-20 21:00:00',NULL,NULL,NULL,NULL),(4,14,53,'REVIEW','새별오름 노을 + 협재 바다 당일치기 코스','오후에 새별오름 올라가서 노을 보고 협재로 내려오면 딱 좋아요.',NULL,21,'2026-09-11 20:00:00',NULL,NULL,NULL,NULL),(5,14,NULL,'QUESTION','렌터카 없이 동부 여행 가능할까요?','버스로만 다니려고 하는데 동부 오름까지 갈 수 있을지 궁금합니다.',NULL,9,'2026-10-03 19:00:00',NULL,NULL,NULL,NULL),(6,14,NULL,'REVIEW','숙소 홍보합니다 연락 주세요','테스트용 신고 대상 글입니다. 신고 검토 중이라 다른 회원에게는 가려져 보입니다.',NULL,2,'2026-10-04 18:00:00',NULL,NULL,'2026-10-05 09:00:00',NULL);
 /*!40000 ALTER TABLE `community_post` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -65,4 +66,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:15
+-- Dump completed on 2026-10-06 15:51:52

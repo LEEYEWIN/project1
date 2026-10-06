@@ -99,6 +99,19 @@ public class Travel {
         this.adoptedAt = null;
     }
 
+    /**
+     * 확정한 일정의 출발일 잠금: 출발 전날까지는 경로·장소를 고칠 수 있고, 출발일 당일부터는 잠근다.
+     * (당일에도 고칠 수 있으면 못 간 곳을 경로에서 지워 후기의 "못 간 곳·이유"가 남지 않기 때문)
+     */
+    public boolean isStartLocked(LocalDate today) {
+        return adoptedRouteId != null && !today.isBefore(startDate);
+    }
+
+    /** 다른 기간 [start, end]와 하루라도 겹치는지 */
+    public boolean overlaps(LocalDate start, LocalDate end) {
+        return !startDate.isAfter(end) && !endDate.isBefore(start);
+    }
+
     public boolean isAdopted(Long routeId) {
         return routeId != null && routeId.equals(adoptedRouteId);
     }

@@ -1,5 +1,11 @@
-/** 1단계: 여행 이름, 날짜, 권역 */
-export default function BasicInfoStep({ form, update, regions }) {
+import DateRangePicker from './DateRangePicker.jsx';
+import { formatDate } from '../../utils/format.js';
+
+/**
+ * 1단계: 여행 이름, 날짜, 권역
+ * 날짜는 달력에서 고른다: 오늘부터, 이미 여행이 있는 날(busy)은 고를 수 없음
+ */
+export default function BasicInfoStep({ form, update, regions, busy = [] }) {
   const toggleRegion = (regionId) => {
     const selected = form.regionIds.includes(regionId)
       ? form.regionIds.filter((id) => id !== regionId)
@@ -20,20 +26,19 @@ export default function BasicInfoStep({ form, update, regions }) {
         />
       </label>
 
-      <div className="row">
-        <label className="field">
-          시작일
-          <input type="date" value={form.startDate} onChange={(e) => update({ startDate: e.target.value })} />
-        </label>
-        <label className="field">
-          종료일
-          <input
-            type="date"
-            value={form.endDate}
-            min={form.startDate || undefined}
-            onChange={(e) => update({ endDate: e.target.value })}
-          />
-        </label>
+      <div className="field">
+        여행 날짜
+        <span className="hint small">
+          {form.startDate
+            ? `${formatDate(form.startDate)} ~ ${form.endDate ? formatDate(form.endDate) : '종료일을 골라 주세요'}`
+            : '달력에서 시작일과 종료일을 차례로 눌러 주세요.'}
+        </span>
+        <DateRangePicker
+          start={form.startDate}
+          end={form.endDate}
+          busy={busy}
+          onChange={({ start, end }) => update({ startDate: start, endDate: end })}
+        />
       </div>
 
       <fieldset className="field">

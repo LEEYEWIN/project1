@@ -24,9 +24,18 @@ export async function fetchTravelDetail(travelId) {
   return data;
 }
 
-/** 7페이지: 최종 경로 채택(routeId) / 해제(null) */
-export async function adoptRoute(travelId, routeId) {
-  await client.patch(`/travels/${travelId}/adopted-route`, { routeId });
+/**
+ * 7페이지: 일정 확정(최종 경로 채택)
+ * deleteOverlapping=true: 기간이 겹치는 변경 전 여행("날짜·동행 바꿔 다시 만들기")을 삭제하고 확정
+ */
+export async function adoptRoute(travelId, routeId, deleteOverlapping = false) {
+  await client.patch(`/travels/${travelId}/adopted-route`, { routeId, deleteOverlapping });
+}
+
+/** 여행 상세 "날짜·동행 바꿔 다시 만들기": 여행 만들기 화면에 채울 기존 값 (TravelCreateRequest 모양) */
+export async function fetchTravelCopy(travelId) {
+  const { data } = await client.get(`/travels/${travelId}/copy`);
+  return data;
 }
 
 /** 7페이지: 여행 삭제 */

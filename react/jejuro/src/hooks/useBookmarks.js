@@ -12,7 +12,11 @@ import { warnClosedDays } from '../utils/closedDay.js';
  * toggle은 "낙관적 업데이트": 화면을 먼저 바꾸고, 서버가 실패하면 원래대로 되돌린다.
  * ensure(poi): 여행 장소에 없으면 추가한다(루트에 추가하기 전에 사용). 실패하면 예외를 그대로 던짐.
  * source: 이 화면에서 담으면 서버에 남길 출처 — 'RECOMMEND'(AI 추천 목록) / 'SEARCH'(기본)
- * locked: 일정을 확정한 여행이면 true → 장소 추가·빼기 버튼을 모두 비활성화 (서버도 409로 막음)
+ * locked: 수정이 잠긴 여행이면 true → 장소 추가·빼기 버튼을 모두 비활성화 (서버도 409로 막음)
+ *   - 확정한 일정은 출발 전날까지 장소를 바꿀 수 있고, 출발일 당일부터 잠김
+ *   - "날짜·동행 바꿔 다시 만들기"로 새 여행을 만드는 중인 변경 전 여행도 잠김
+ * lockMessage: 잠긴 이유 안내 문구
+ * confirmed: 일정을 확정한 여행 → 새로 담은 장소는 경로에 배치해야 확정 일정에 들어간다고 알림
  * 자연관광지가 아닌 곳을 담으면 "휴무일을 확인한 뒤 방문하세요" 경고창을 먼저 띄운다.
  */
 export default function useBookmarks(travelId, source = 'SEARCH') {
@@ -20,7 +24,9 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pending, setPending] = useState(new Set()); // 요청 중인 poiId (연타 방지)
-  const [locked, setLocked] = useState(false); // 일정 확정 여부
+  const [locked, setLocked] = useState(false); // 수정 잠금 여부
+  const [lockMessage, setLockMessage] = useState('');
+  const [confirmed, setConfirmed] = useState(false); // 일정 확정 여부
 
   const reload = useCallback(async () => {
     if (!travelId) {
@@ -31,7 +37,11 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
     setLoading(true);
     // 확정 여부는 실패해도 목록은 보여 준다 (서버가 확정 여행 추가를 409로 막음)
     fetchTravelDetail(travelId)
-      .then((t) => setLocked(Boolean(t?.adoptedRoute)))
+      .then((t) => {
+        setLocked(Boolean(t?.editLocked));
+        setLockMessage(lockText(t));
+        setConfirmed(Boolean(t?.adoptedRoute));
+      })
       .catch(() => {});
     try {
       setBookmarks(await fetchBookmarks(travelId));
@@ -52,7 +62,7 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
   const toggle = async (poi) => {
     if (pending.has(poi.poiId)) return;
     if (locked) {
-      setError('일정을 확정한 여행은 장소를 추가하거나 뺄 수 없어요.');
+      setError(lockMessage);
       return;
     }
     const before = bookmarks;
@@ -68,6 +78,7 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
       } else {
         const saved = await addBookmark(travelId, poi.poiId, source);
         setBookmarks((list) => list.map((b) => (b.poi.poiId === poi.poiId ? saved : b)));
+        if (confirmed) window.alert(UNPLACED_WARNING);
       }
       setError('');
     } catch (e) {
@@ -89,5 +100,18 @@ export default function useBookmarks(travelId, source = 'SEARCH') {
     setBookmarks((list) => (list.some((b) => b.poi.poiId === poi.poiId) ? list : [saved, ...list]));
   };
 
-  return { bookmarks, loading, error, isBookmarked, toggle, ensure, pending, reload, locked };
+  return { bookmarks, loading, error, isBookmarked, toggle, ensure, pending, reload, locked, lockMessage, confirmed };
+}
+
+/** 확정한 여행에 장소를 새로 담았을 때 경고 */
+export const UNPLACED_WARNING =
+  '확정한 일정에 새로 담은 장소예요. 경로 짜기에서 날짜별로 배치해야 확정 일정에 들어가요.\n출발 전까지 배치하지 않으면 확정 일정에서 빠집니다.';
+
+/** 수정이 잠긴 이유 (여행 상세 응답 기준) */
+export function lockText(t) {
+  if (!t?.editLocked) return '';
+  if ((t.overlaps ?? []).some((o) => o.newer)) {
+    return '새 여행으로 바꿔 만드는 중이라 이 여행은 변경 전 일정으로 보기만 할 수 있어요.';
+  }
+  return '출발일부터는 확정한 일정을 바꿀 수 없어요. 달라진 일정은 여행 후 후기에 남겨 주세요.';
 }

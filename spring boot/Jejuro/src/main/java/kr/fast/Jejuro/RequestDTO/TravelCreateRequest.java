@@ -17,6 +17,8 @@ import kr.fast.Jejuro.Entity.RegionMode;
  *       "regionMode":"SELECTED", "regionIds":[1,3],
  *       "companions":[{"relationCode":7,"genderCode":2,"ageGroupCode":3}],
  *       "answers":[{"preferenceId":101,"values":[1]}, {"preferenceId":201,"values":[1,3,7]}, ...] }
+ * replaceTravelId: "날짜·동행 바꿔 다시 만들기"로 만들 때 바꿀 기존 여행 번호. 그 여행과는 기간이 겹쳐도 만들 수 있다.
+ * (GET /api/travels/{id}/copy 응답도 같은 모양: 기존 여행의 값을 채워 보내 주고 replaceTravelId 는 비워 둔다)
  */
 public record TravelCreateRequest(
         @NotBlank @Size(max = 100) String travelName,
@@ -25,7 +27,8 @@ public record TravelCreateRequest(
         @NotNull RegionMode regionMode,
         List<Integer> regionIds,
         @Valid List<CompanionReq> companions,
-        @NotEmpty @Valid List<AnswerReq> answers) {
+        @NotEmpty @Valid List<AnswerReq> answers,
+        Long replaceTravelId) {
 
     public record CompanionReq(
             @NotNull Integer relationCode,

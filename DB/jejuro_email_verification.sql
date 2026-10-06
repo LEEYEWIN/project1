@@ -34,7 +34,7 @@ CREATE TABLE `email_verification` (
   PRIMARY KEY (`verification_id`),
   KEY `ix_email_verification_lookup` (`email`,`purpose`,`created_at`),
   CONSTRAINT `ck_email_verification_purpose` CHECK ((`purpose` in (_utf8mb4'SIGNUP',_utf8mb4'EMAIL_CHANGE',_utf8mb4'PASSWORD_RESET')))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='이메일 인증 요청';
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='이메일 인증 요청';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -43,6 +43,7 @@ CREATE TABLE `email_verification` (
 
 LOCK TABLES `email_verification` WRITE;
 /*!40000 ALTER TABLE `email_verification` DISABLE KEYS */;
+INSERT INTO `email_verification` VALUES (1,'test@test.com','SIGNUP','61101764bd6c5a38e4a49ab0e518d3a3ba19b36961eb1e1d49d984f0a36cf7f5','2026-10-06 12:31:07',0,NULL,'2026-10-06 12:26:07'),(2,'test@google.com','SIGNUP','f6d1f1fd1b4b34bfd060f6580f490efb2b493b46f32d0d7f20f1afde4dd63e23','2026-10-06 12:31:18',1,'2026-10-06 12:27:51','2026-10-06 12:26:18'),(3,'test@google.com','SIGNUP','e1f3bc2c9e7dadbd3871bbbaf55d8c896afc9d02ed1ecf18dbd36e849d761b4d','2026-10-06 12:32:51',0,NULL,'2026-10-06 12:27:51');
 /*!40000 ALTER TABLE `email_verification` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -55,4 +56,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-01 14:52:14
+-- Dump completed on 2026-10-06 15:51:54

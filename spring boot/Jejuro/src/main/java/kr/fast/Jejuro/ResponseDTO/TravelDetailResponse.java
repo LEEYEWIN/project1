@@ -11,6 +11,9 @@ import java.util.List;
  * - survey: 설문 답변 요약 (추천 목록 화면의 "추천 기준"에 표시). 가져온 여행은 빈 목록
  * - route: 이 여행의 경로 요약 (아직 없으면 null)
  * - placeCount / placedCount: 여행 장소 수 / 그중 경로에 배치된 수 → 같아야 일정 확정 가능
+ * - editLocked: 경로·장소를 고칠 수 없음 (확정 + 출발일 당일부터, 또는 새 여행으로 바꾸는 중인 변경 전 여행)
+ * - canReplace: "날짜·동행 바꿔 다시 만들기" 가능 (설문이 있는 여행, 후기 전, 종료일 전, 이미 바꾸는 중이 아님)
+ * - overlaps: 기간이 겹치는 내 다른 여행. newer=true 이면 이 여행을 바꿔 만든 새 여행, false 이면 변경 전 여행
  */
 public record TravelDetailResponse(
         Long travelId,
@@ -30,7 +33,14 @@ public record TravelDetailResponse(
         int placedCount,
         RouteDetailResponse adoptedRoute,
         FeedbackResponse feedback,
-        boolean canWriteFeedback) {
+        boolean canWriteFeedback,
+        boolean editLocked,
+        boolean canReplace,
+        List<OverlapItem> overlaps) {
+
+    public record OverlapItem(Long travelId, String travelName, LocalDate startDate, LocalDate endDate,
+                              boolean confirmed, boolean newer) {
+    }
 
     public record CompanionItem(int seq, String relation, String gender, String ageGroup) {
     }

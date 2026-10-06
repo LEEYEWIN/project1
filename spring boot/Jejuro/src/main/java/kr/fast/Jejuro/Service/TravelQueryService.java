@@ -202,6 +202,15 @@ public TravelDetailResponse detail(Long travelId, Long userId) {
            : routeService.detail(t.getAdoptedRouteId(), userId);
    boolean canWriteFeedback = t.getAdoptedRouteId() != null && !LocalDate.now().isBefore(t.getEndDate());
    RouteService.Placement placement = routeService.placement(travelId);
+   var feedback = feedbackService.find(travelId, userId).orElse(null);
+
+   // 기간이 겹치는 내 다른 여행 ("날짜·동행 바꿔 다시 만들기"로만 생김: 번호가 큰 쪽이 새 여행)
+   List<TravelDetailResponse.OverlapItem> overlaps = routeService.overlapping(t).stream()
+           .map(o -> new TravelDetailResponse.OverlapItem(o.getTravelId(), o.getTravelName(), o.getStartDate(),
+                   o.getEndDate(), o.getAdoptedRouteId() != null, o.getTravelId() > t.getTravelId()))
+           .toList();
+   boolean replacing = overlaps.stream().anyMatch(TravelDetailResponse.OverlapItem::newer);
+   boolean canReplace = !t.isImported() && feedback == null && !LocalDate.now().isAfter(t.getEndDate()) && !replacing;
 
    return new TravelDetailResponse(t.getTravelId(), t.getTravelNo(), t.getTravelName(),
            t.getStartDate(), t.getEndDate(), t.tripDays(), phase(t),
@@ -209,7 +218,8 @@ public TravelDetailResponse detail(Long travelId, Long userId) {
            companions, t.isImported(), t.getSourcePostId(), survey(travelId),
            routeService.summary(travelId, userId),
            placement.placeCount(), placement.placedCount(),
-           adopted, feedbackService.find(travelId, userId).orElse(null), canWriteFeedback);
+           adopted, feedback, canWriteFeedback,
+           routeService.isEditLocked(t), canReplace, overlaps);
 }
 
 /** 설문 답변 요약: 질문 이름 + 고른 선택지 이름(순위 순) */

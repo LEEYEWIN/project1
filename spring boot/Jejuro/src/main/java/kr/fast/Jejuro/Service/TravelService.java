@@ -2,6 +2,7 @@ package kr.fast.Jejuro.Service;
 
 // [1·7페이지 여행 (생성 / 채택·삭제)]
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import kr.fast.Jejuro.Repository.CompanionRepository;
 import kr.fast.Jejuro.Repository.TravelPreferenceRepository;
 import kr.fast.Jejuro.Repository.TravelRegionRepository;
 import kr.fast.Jejuro.Repository.TravelRepository;
+import kr.fast.Jejuro.Repository.TravelFeedbackRepository;
 import kr.fast.Jejuro.Entity.User;
 import kr.fast.Jejuro.Repository.UserRepository;
 
@@ -54,6 +56,7 @@ public class TravelService {
     private final TravelRouteRepository routeRepository;
     private final RouteService routeService;
     private final JdbcTemplate jdbcTemplate;
+    private final TravelFeedbackRepository feedbackRepository;
 
     public TravelService(UserRepository userRepository, TravelRepository travelRepository,
                          TravelRegionRepository travelRegionRepository, CompanionRepository companionRepository,
@@ -61,7 +64,7 @@ public class TravelService {
                          PreferenceRepository preferenceRepository, PreferenceOptionRepository optionRepository,
                          SurveyValidator surveyValidator, TravelAccessService travelAccessService,
                          TravelRouteRepository routeRepository, RouteService routeService,
-                         JdbcTemplate jdbcTemplate) {
+                         JdbcTemplate jdbcTemplate, TravelFeedbackRepository feedbackRepository) {
         this.userRepository = userRepository;
         this.travelRepository = travelRepository;
         this.travelRegionRepository = travelRegionRepository;
@@ -75,6 +78,7 @@ public class TravelService {
         this.routeRepository = routeRepository;
         this.routeService = routeService;
         this.jdbcTemplate = jdbcTemplate;
+        this.feedbackRepository = feedbackRepository;
     }
 
     /**
@@ -87,6 +91,7 @@ public class TravelService {
         if (req.startDate().isAfter(req.endDate())) {
             throw ApiException.badRequest("여행 시작일이 종료일보다 늦습니다.");
         }
+        rejectPastStart(req.startDate());
         validateRegions(req);
         validateCompanions(req.companionsOrEmpty());
 
@@ -100,7 +105,14 @@ public class TravelService {
         if (!"ACTIVE".equals(user.getStatus())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "탈퇴 처리 중인 계정입니다.");
         }
-        rejectOverlap(travelRepository, userId, req.startDate(), req.endDate());
+        Long replaceId = null;
+        if (req.replaceTravelId() != null) {   // "날짜·동행 바꿔 다시 만들기": 바꿀 기존 여행과는 기간이 겹쳐도 된다
+            Travel old = travelRepository.findByTravelIdAndUserId(req.replaceTravelId(), userId)
+                    .orElseThrow(() -> ApiException.notFound("바꿀 여행을 찾을 수 없습니다."));
+            ensureReplaceable(old);
+            replaceId = old.getTravelId();
+        }
+        rejectOverlap(travelRepository, userId, req.startDate(), req.endDate(), replaceId);
         int travelNo = travelRepository.nextTravelNo(userId);
         int ageGroup = AgeGroup.of(user.getBirthDate(), req.startDate());
 
@@ -142,16 +154,19 @@ public class TravelService {
     /**
      * 7페이지: 일정 확정(최종 경로 채택).
      * DB의 복합 FK가 "같은 여행의 경로"인지 검사하지만, 알맞은 메시지를 주려고 먼저 확인한다.
-     * 규칙: 한 번 확정하면 되돌릴 수 없다. 여행 장소를 모두 경로에 배치해야 확정할 수 있다.
+     * 규칙: 한 번 확정하면 되돌릴 수 없다(경로는 출발 전날까지 고칠 수 있음). 여행 장소를 모두 경로에 배치해야 확정할 수 있다.
+     * 기간이 겹치는 변경 전 여행이 있으면("날짜·동행 바꿔 다시 만들기") deleteOverlapping=true 일 때만 그 여행을 지우고 확정한다
+     * → 같은 기간에 확정된 여행은 항상 하나라서 후기·학습 데이터가 중복되지 않는다.
      */
     @Transactional(isolation = Isolation.READ_COMMITTED)   // 여행 행 잠금 뒤 최신 데이터를 읽도록 (REPEATABLE READ면 잠금 전 스냅샷을 읽음)
-    public void adoptRoute(Long travelId, Long userId, Long routeId) {
+    public void adoptRoute(Long travelId, Long userId, Long routeId, boolean deleteOverlapping) {
         // 여행 행을 잠근 뒤 검사한다: 다른 탭의 경로 저장·장소 빼기와 동시에 확정되지 않게
         Travel travel = travelRepository.findOwnedForUpdate(travelId, userId)
                 .orElseThrow(() -> ApiException.notFound("여행을 찾을 수 없습니다."));
         if (travel.getAdoptedRouteId() != null) {
-            throw new ApiException(HttpStatus.CONFLICT, "이미 일정을 확정해 바꿀 수 없습니다.");
+            throw new ApiException(HttpStatus.CONFLICT, "이미 일정을 확정했어요. 경로는 출발 전날까지 경로 짜기에서 고칠 수 있어요.");
         }
+        routeService.ensureNotLocked(travel);   // 새 여행으로 바꾸는 중인 변경 전 여행은 확정할 수 없음
         if (routeId == null) {
             throw ApiException.badRequest("확정할 경로가 없습니다.");
         }
@@ -168,7 +183,70 @@ public class TravelService {
             throw new ApiException(HttpStatus.CONFLICT, "여행 장소 " + placement.placeCount() + "곳 중 "
                     + placement.unplacedPoiIds().size() + "곳이 아직 경로에 없습니다. 모두 배치한 뒤 확정할 수 있어요.");
         }
+        // 기간이 겹치는 변경 전 여행: 확인을 받은 경우에만 지우고 확정
+        List<Travel> older = routeService.overlapping(travel);
+        if (!older.isEmpty()) {
+            Travel first = older.get(0);
+            if (!deleteOverlapping) {
+                throw new ApiException(HttpStatus.CONFLICT, "기간이 겹치는 '" + first.getTravelName() + "' 여행("
+                        + first.getStartDate() + " ~ " + first.getEndDate() + ")이 있어요. 이 일정으로 확정하면 그 여행은 삭제돼요.");
+            }
+            for (Travel o : older) {
+                travelRepository.findOwnedForUpdate(o.getTravelId(), userId)
+                        .orElseThrow(() -> ApiException.notFound("여행을 찾을 수 없습니다."));
+                if (feedbackRepository.existsByTravelId(o.getTravelId())) {
+                    throw new ApiException(HttpStatus.CONFLICT, "후기를 남긴 '" + o.getTravelName()
+                            + "' 여행과 기간이 겹쳐 확정할 수 없어요. 날짜를 바꿔 새로 만들어 주세요.");
+                }
+            }
+            older.forEach(o -> jdbcTemplate.update("CALL sp_delete_travel(?)", o.getTravelId()));
+        }
         travel.adopt(routeId, LocalDateTime.now());   // 변경 감지(dirty checking)로 커밋 시 UPDATE
+    }
+
+    /**
+     * "날짜·동행 바꿔 다시 만들기" 화면에 채울 기존 여행 값 (이름·날짜·권역·동행·설문 답).
+     * 바꿀 수 없는 여행이면 409.
+     */
+    @Transactional(readOnly = true)
+    public TravelCreateRequest copyValues(Long travelId, Long userId) {
+        Travel t = travelAccessService.getOwned(travelId, userId);
+        ensureReplaceable(t);
+        List<Integer> regionIds = travelRegionRepository.findByTravelId(travelId).stream()
+                .map(TravelRegion::getRegionId).toList();
+        List<CompanionReq> companions = companionRepository.findByTravelIdOrderByCompanionSeq(travelId).stream()
+                .map(c -> new CompanionReq(c.getRelationCode(), c.getGenderCode(), c.getAgeGroupCode())).toList();
+        Map<Long, List<Integer>> answers = travelPreferenceRepository.findByTravelIdOrderByPreferenceIdAscAnswerRankAsc(travelId).stream()
+                .collect(Collectors.groupingBy(TravelPreference::getPreferenceId, java.util.LinkedHashMap::new,
+                        Collectors.mapping(TravelPreference::getAnswerValue, Collectors.toList())));
+        return new TravelCreateRequest(t.getTravelName(), t.getStartDate(), t.getEndDate(), t.getRegionMode(),
+                regionIds, companions,
+                answers.entrySet().stream().map(e -> new AnswerReq(e.getKey(), e.getValue())).toList(),
+                null);
+    }
+
+    /** 바꿔 만들 수 있는 여행인지: 설문이 있는 여행 · 후기 전 · 종료일 전 · 이미 바꾸는 중이 아님 */
+    private void ensureReplaceable(Travel old) {
+        if (old.isImported()) {
+            throw new ApiException(HttpStatus.CONFLICT, "커뮤니티에서 가져온 여행은 설문이 없어 바꿔 만들 수 없어요. 글에서 다시 가져와 주세요.");
+        }
+        if (LocalDate.now().isAfter(old.getEndDate())) {
+            throw new ApiException(HttpStatus.CONFLICT, "이미 끝난 여행은 바꿔 만들 수 없어요.");
+        }
+        if (feedbackRepository.existsByTravelId(old.getTravelId())) {
+            throw new ApiException(HttpStatus.CONFLICT, "후기를 남긴 여행은 바꿔 만들 수 없어요.");
+        }
+        routeService.replacementOf(old).ifPresent(n -> {
+            throw new ApiException(HttpStatus.CONFLICT, "이미 '" + n.getTravelName() + "' 여행으로 바꿔 만드는 중이에요.");
+        });
+    }
+
+    /** 여행은 오늘부터 시작하는 날짜로만 만들 수 있다 (여행 만들기·커뮤니티 일정 가져오기 공통) */
+    static void rejectPastStart(LocalDate start) {
+        LocalDate today = LocalDate.now();
+        if (start.isBefore(today)) {
+            throw ApiException.badRequest("여행은 오늘(" + today + ")부터 시작하는 날짜로 만들 수 있어요.");
+        }
     }
 
     /** 7페이지: 여행 삭제. 순환 참조 때문에 DB 프로시저가 정해진 순서로 지운다. */
@@ -179,8 +257,15 @@ public class TravelService {
     }
 
     /** 같은 회원의 여행끼리 기간이 겹치면 거부 (회원 행을 잠근 뒤 호출해 동시 생성도 막는다) */
-    static void rejectOverlap(TravelRepository travels, Long userId, java.time.LocalDate start, java.time.LocalDate end) {
-        travels.findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(userId, end, start)
+    static void rejectOverlap(TravelRepository travels, Long userId, LocalDate start, LocalDate end) {
+        rejectOverlap(travels, userId, start, end, null);
+    }
+
+    /** excludeTravelId: 겹쳐도 되는 여행 ("날짜·동행 바꿔 다시 만들기"의 변경 전 여행) */
+    static void rejectOverlap(TravelRepository travels, Long userId, LocalDate start, LocalDate end, Long excludeTravelId) {
+        travels.findByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(userId, end, start).stream()
+                .filter(t -> !t.getTravelId().equals(excludeTravelId))
+                .findFirst()
                 .ifPresent(t -> {
                     throw new ApiException(HttpStatus.CONFLICT, "'" + t.getTravelName() + "' 여행(" + t.getStartDate()
                             + " ~ " + t.getEndDate() + ")과 기간이 겹쳐요. 같은 기간에는 여행을 하나만 만들 수 있어요."

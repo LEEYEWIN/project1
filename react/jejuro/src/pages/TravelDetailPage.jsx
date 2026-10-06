@@ -4,6 +4,8 @@ import { adoptRoute, deleteTravel, fetchTravelDetail } from '../api/travelApi.js
 import { fetchRoute } from '../api/routeApi.js';
 import { errorMessage, showError } from '../api/client.js';
 import { formatDate } from '../utils/format.js';
+import { addDays } from '../utils/travelDates.js';
+import { lockText } from '../hooks/useBookmarks.js';
 import Loading from '../components/common/Loading.jsx';
 import ErrorBox from '../components/common/ErrorBox.jsx';
 import ReceiptButton from '../components/travel/ReceiptButton.jsx';
@@ -14,7 +16,11 @@ const STATUS = { COMPLETED: '모두 다녀옴', PARTIAL: '일부만 다녀옴', 
 /**
  * 7페이지(상세): 여행 한 개 = 경로 한 개
  * 진행 단계: ① 여행 장소 추가 → ② 장소를 날짜별로 모두 배치(경로 짜기, 자동 저장) → ③ 일정 확정 → ④ 후기
- * - 일정 확정(= 최종 경로 채택)은 여행 장소가 모두 배치되어야 가능. 확정하면 경로·장소를 바꿀 수 없다
+ * - 일정 확정(= 최종 경로 채택)은 여행 장소가 모두 배치되어야 가능
+ * - 확정 후 수정 규칙: 경로 순서·일차·장소 추가/빼기는 출발 전날까지 가능(같은 경로를 고쳐 자동 저장),
+ *   여행 날짜·동행·권역·설문은 못 바꿈 → [날짜·동행 바꿔 다시 만들기], 출발일 당일부터는 모든 수정 잠금
+ * - [날짜·동행 바꿔 다시 만들기]: 기존 값이 채워진 여행 만들기 화면 → 새 여행은 기존 여행과 기간이 겹쳐도 만들 수 있고,
+ *   기존 여행은 '변경 전 일정'(읽기 전용)으로 남았다가 새 여행을 확정할 때 삭제된다
  * - 확정 전에는 지금 경로를 아래에서 미리 보고 확정
  * - 커뮤니티에서 가져온 여행은 설문이 없어 AI 추천 목록 링크를 숨긴다
  * - 확정한 일정·지금 경로 미리보기: 관광지 이름 옆에 그 관광지 위치·그날 날짜 기준 오전/오후 날씨 이모지 + 최저/최고 기온
@@ -41,11 +47,15 @@ export default function TravelDetailPage() {
   useEffect(load, [load]);
 
   const adopt = async () => {
-    if (!window.confirm('이 경로로 일정을 확정할까요?\n확정하면 경로와 여행 장소를 더 이상 바꿀 수 없습니다.')) return;
+    const older = travel.overlaps.filter((o) => !o.newer); // 이 여행이 대신할 변경 전 여행
+    const message = older.length > 0
+      ? `기존 ${older.map((o) => `'${o.travelName}'(${o.startDate} ~ ${o.endDate})`).join(', ')} 여행을 삭제하고 이 일정으로 확정할까요?\n삭제한 여행은 되돌릴 수 없습니다.`
+      : '이 경로로 일정을 확정할까요?\n확정한 뒤에도 출발 전날까지는 경로 순서와 여행 장소를 고칠 수 있어요.\n여행 날짜·동행·권역·설문은 바꿀 수 없어요.';
+    if (!window.confirm(message)) return;
     setBusy(true);
     setError('');
     try {
-      await adoptRoute(travelId, travel.route.routeId);
+      await adoptRoute(travelId, travel.route.routeId, older.length > 0);
       load();
     } catch (e) {
       showError(e, setError); // 배치 안 된 장소·이미 확정 등(409)은 알림창
@@ -68,9 +78,12 @@ export default function TravelDetailPage() {
   if (!travel) return <main className="page"><Loading /></main>;
 
   const t = travel;
-  const locked = Boolean(t.adoptedRoute);
+  const locked = Boolean(t.adoptedRoute); // 일정 확정
+  const editLocked = t.editLocked; // 수정 잠금 (확정 후 출발일부터 · 바꾸는 중인 변경 전 여행)
   const unplaced = t.placeCount - t.placedCount;
-  const canAdopt = !locked && t.route && t.placeCount > 0 && unplaced === 0;
+  const canAdopt = !locked && !editLocked && t.route && t.placeCount > 0 && unplaced === 0;
+  const older = t.overlaps.filter((o) => !o.newer); // 이 여행으로 바꿀 변경 전 여행
+  const newer = t.overlaps.find((o) => o.newer); // 이 여행을 바꿔 만든 새 여행
   const shownRoute = locked ? t.adoptedRoute : route;
   const hasSpots = (t.route?.spotCount ?? 0) > 0;
   const now = new Date();
@@ -85,9 +98,17 @@ export default function TravelDetailPage() {
     <main className="page travel-detail-page">
       <div className="title-row">
         <h1>{t.travelName}</h1>
-        <button type="button" className="btn ghost small danger" onClick={remove}>
-          여행 삭제
-        </button>
+        <div className="actions">
+          {t.canReplace && (
+            <button type="button" className="btn ghost small" onClick={() => navigate(`/travels/new?replace=${travelId}`)}
+              title="여행 날짜·동행·권역·설문은 확정 후 바꿀 수 없어 새 여행으로 다시 만들어요">
+              날짜·동행 바꿔 다시 만들기
+            </button>
+          )}
+          <button type="button" className="btn ghost small danger" onClick={remove}>
+            여행 삭제
+          </button>
+        </div>
       </div>
       <p className="muted">
         {formatDate(t.startDate)} ~ {formatDate(t.endDate)} ({t.tripDays}일) · {t.regionNames.join(', ')}
@@ -101,10 +122,28 @@ export default function TravelDetailPage() {
         </p>
       )}
 
+      {newer && (
+        <p className="overlap-note" role="note">
+          📌 변경 전 일정이에요. <Link to={`/travels/${newer.travelId}`}>‘{newer.travelName}’</Link>
+          ({formatDate(newer.startDate)} ~ {formatDate(newer.endDate)}) 여행으로 바꿔 만드는 중이라 이 여행은 보기만 할 수 있어요.
+          새 여행을 확정하면 이 여행은 삭제돼요.
+        </p>
+      )}
+      {older.length > 0 && (
+        <p className="overlap-note" role="note">
+          📌 {older.map((o) => (
+            <span key={o.travelId}>
+              <Link to={`/travels/${o.travelId}`}>‘{o.travelName}’</Link>({formatDate(o.startDate)} ~ {formatDate(o.endDate)}){' '}
+            </span>
+          ))}
+          여행을 바꿔 만드는 새 여행이에요. 이 여행을 확정하면 기존 여행은 삭제돼요.
+        </p>
+      )}
+
       <nav className="quick-links">
         {!t.imported && <Link to={`/travels/${travelId}/recommendations`}>AI 추천 목록</Link>}
         <Link to={`/travels/${travelId}/bookmarks`}>여행 장소 {t.placeCount}곳</Link>
-        {!locked && <Link to={`/travels/${travelId}/pois`}>관광지 더 찾기</Link>}
+        {!editLocked && <Link to={`/travels/${travelId}/pois`}>관광지 더 찾기</Link>}
       </nav>
 
       <ErrorBox message={error} />
@@ -127,8 +166,19 @@ export default function TravelDetailPage() {
         {locked ? (
           <div className="travel-plan-message complete" role="status">
             <strong>모든 여행 일정 계획이 완료되었어요 😊</strong>
-            <span>확정한 일정과 이동 동선을 아래에서 확인해 보세요.</span>
+            <span>
+              {editLocked
+                ? lockText(t)
+                : `출발 전날(${formatDate(addDays(t.startDate, -1))})까지는 경로 순서·일차를 바꾸고 장소를 더하거나 뺄 수 있어요. 고친 내용은 확정 일정에 바로 반영돼요.`}
+            </span>
+            {!editLocked && unplaced > 0 && (
+              <span className="placement-status" role="alert">
+                확정 후 담은 장소 {unplaced}곳이 아직 경로에 없어요. 출발 전까지 배치하지 않으면 확정 일정에서 빠집니다.
+              </span>
+            )}
           </div>
+        ) : editLocked ? (
+          <p className="travel-plan-message">{lockText(t)}</p>
         ) : t.placeCount === 0 ? (
           <p className="travel-plan-message">먼저 AI 추천 목록이나 관광지 목록에서 [+ 장소 추가]로 이 여행에 갈 곳을 담아 주세요.</p>
         ) : unplaced > 0 ? (
@@ -141,14 +191,21 @@ export default function TravelDetailPage() {
 
         <div className={locked ? 'route-actions is-complete' : 'route-actions'}>
           {locked ? (
-            <button
-              type="button"
-              className="btn big ghost"
-              onClick={() => navigate(`/travels/${travelId}/routes/${t.adoptedRoute.routeId}/map`)}
-            >
-              지도에서 동선·숙소 보기
-            </button>
-          ) : (
+            <>
+              <button
+                type="button"
+                className="btn big ghost"
+                onClick={() => navigate(`/travels/${travelId}/routes/${t.adoptedRoute.routeId}/map`)}
+              >
+                지도에서 동선·숙소 보기
+              </button>
+              {!editLocked && (
+                <button type="button" className="btn big primary" onClick={() => navigate(`/travels/${travelId}/route`)}>
+                  확정 일정 고치기
+                </button>
+              )}
+            </>
+          ) : editLocked ? null : (
             <button
               type="button"
               className="btn big ghost"
@@ -158,7 +215,7 @@ export default function TravelDetailPage() {
               {hasSpots ? '경로 이어서 짜기' : '경로 짜기'}
             </button>
           )}
-          {!locked && (
+          {!locked && !editLocked && (
             <button
               type="button"
               className="btn big primary"

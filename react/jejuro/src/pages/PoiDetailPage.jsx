@@ -33,7 +33,7 @@ export default function PoiDetailPage() {
   const location = useLocation();
   // AI 추천 목록에서 들어와 담으면 '추천으로 담음'으로 기록 (관리자 KPI)
   const source = location.state?.source === 'RECOMMEND' ? 'RECOMMEND' : 'SEARCH';
-  const { isBookmarked, toggle, ensure, pending, locked, error: bookmarkError } = useBookmarks(travelId, source);
+  const { isBookmarked, toggle, ensure, pending, locked, lockMessage, error: bookmarkError } = useBookmarks(travelId, source);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,7 +119,7 @@ export default function PoiDetailPage() {
               <PlaceButton on={isBookmarked(poi.poiId)} disabled={pending.has(poi.poiId)} locked={locked} onClick={() => toggle(poi)} />
               <span className="hint small">
                 {locked
-                  ? '일정을 확정한 여행이라 장소를 추가하거나 뺄 수 없어요.'
+                  ? lockMessage
                   : isBookmarked(poi.poiId)
                     ? '이 여행의 장소예요. 경로 짜기에서 날짜별로 배치해요.'
                     : '추가하면 이 여행의 일정(경로)에 넣을 장소가 돼요.'}

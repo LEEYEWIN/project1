@@ -21,7 +21,7 @@ import ErrorBox from '../components/common/ErrorBox.jsx';
  * - 카드를 누르면 관광지 상세(/travels/:travelId/pois/:poiId)로 이동, 뒤로 가기로 돌아온다.
  * - 관심없음 버튼은 이 화면에 두지 않는다 (관심없음 관리 화면에서만). 관심없음인 곳은 서버가 추천에서 뺀다.
  * - 제목 아래 한 줄: 설문 첫 질문(여행지 선택 성향)에 맞춘 안내 문구. 저장된 값이 없으면 숨김
- * - 일정을 확정한 여행: [+ 장소 추가] 버튼 비활성화 (🔒 확정됨)
+ * - 수정이 잠긴 여행(확정 후 출발일부터 · 바꾸는 중인 변경 전 여행): [+ 장소 추가] 버튼 비활성화 (🔒 잠김)
  */
 const PICK_STYLE_TEXT = {
   POPULAR: '회원님과 비슷한 여행 취향을 가진 사람들이 많이 고른 장소예요.',
@@ -38,7 +38,7 @@ export default function RecommendationListPage() {
   const [region, setRegion] = useState('전체');
   const pickStyle = loadPickStyle(travelId);
   const pickStyleText = PICK_STYLE_TEXT[pickStyle];
-  const { bookmarks, isBookmarked, toggle, pending, locked, error: bookmarkError } = useBookmarks(travelId, 'RECOMMEND'); // 여기서 담으면 'AI 추천으로 담음'으로 기록
+  const { bookmarks, isBookmarked, toggle, pending, locked, lockMessage, error: bookmarkError } = useBookmarks(travelId, 'RECOMMEND'); // 여기서 담으면 'AI 추천으로 담음'으로 기록
 
   useEffect(() => {
     if (pois) return;
@@ -94,7 +94,7 @@ export default function RecommendationListPage() {
 
       {locked && (
         <p className="locked-note" role="note">
-          🔒 일정을 확정한 여행이에요. 추천 목록은 볼 수 있지만 여행 장소를 추가하거나 뺄 수는 없어요.
+          🔒 {lockMessage} 추천 목록은 볼 수 있어요.
         </p>
       )}
 
@@ -105,7 +105,7 @@ export default function RecommendationListPage() {
           </h2>
           <p id="more-places-description">
             {locked
-              ? '관광지 더보기에서 다른 장소도 살펴보세요. 일정이 확정되어 장소 추가는 할 수 없어요.'
+              ? '관광지 더보기에서 다른 장소도 살펴보세요. 지금은 이 여행에 장소를 추가할 수 없어요.'
               : '다른 관광지도 추가하고 싶다면 관광지 더보기에서 찾아보세요. 마음에 드는 곳의 [+ 장소 추가]를 누르면 이 여행의 여행 장소에 함께 담겨요.'}
           </p>
         </div>

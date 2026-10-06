@@ -1,25 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importRoute } from '../../api/communityApi.js';
+import { fetchMyTravels } from '../../api/travelApi.js';
 import { showError } from '../../api/client.js';
 import { formatDate } from '../../utils/format.js';
-
-/** 'YYYY-MM-DD' + n일 */
-function addDays(iso, n) {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setDate(d.getDate() + n);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function todayIso() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+import { addDays, busyRanges } from '../../utils/travelDates.js';
+import DateRangePicker from '../travel/DateRangePicker.jsx';
 
 /**
  * [커뮤니티 글 상세] 첨부된 최종 경로 아래 버튼
  * - [경로 링크 공유]: 휴대폰은 공유 창(navigator.share), PC는 링크 복사
  * - [내 여행으로 가져오기]: 여행 이름·시작일만 입력 → 새 여행 생성(경로·여행 장소 복사) → 경로 짜기 화면으로
+ *   시작일은 달력에서 고른다: 오늘부터, 원래 일수만큼의 기간에 이미 내 여행이 있으면 고를 수 없음
  *   가져온 여행은 설문이 없어서 AI 추천은 받을 수 없고, 경로는 자유롭게 고친 뒤 확정한다.
  * post: { postId, title, travelName, route: { tripDays, days }, importCount }
  */
@@ -31,6 +23,12 @@ export default function RouteShareActions({ post, likeButton }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [travels, setTravels] = useState([]); // 내 여행 (이미 여행이 있는 날 표시)
+
+  useEffect(() => {
+    if (!open) return;
+    fetchMyTravels().then(setTravels).catch(() => setTravels([])); // 실패해도 서버가 겹침을 다시 검사
+  }, [open]);
 
   const tripDays = post.route.tripDays;
   const spotCount = post.route.days.reduce((n, d) => n + d.spots.length, 0);
@@ -97,10 +95,16 @@ export default function RouteShareActions({ post, likeButton }) {
             여행 이름
             <input value={travelName} maxLength={100} onChange={(e) => setTravelName(e.target.value)} />
           </label>
-          <label className="cm-field">
+          <div className="cm-field">
             시작일
-            <input type="date" value={startDate} min={todayIso()} onChange={(e) => setStartDate(e.target.value)} />
-          </label>
+            <DateRangePicker
+              start={startDate}
+              end={startDate ? addDays(startDate, tripDays - 1) : ''}
+              fixedDays={tripDays}
+              busy={busyRanges(travels)}
+              onChange={({ start }) => setStartDate(start)}
+            />
+          </div>
           {startDate && (
             <p className="cm-muted">
               여행 기간: {formatDate(startDate)} ~ {formatDate(addDays(startDate, tripDays - 1))} ({tripDays}일)

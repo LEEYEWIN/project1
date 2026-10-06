@@ -61,7 +61,10 @@ public List<BookmarkResponse> list(Long travelId, Long userId) {
            .toList();
 }
 
-/** 여행 장소 추가. 이미 추가했으면 409, 일정을 확정한 여행이면 409. source = 담은 화면(RECOMMEND/SEARCH) */
+/**
+ * 여행 장소 추가. 이미 추가했으면 409, 수정이 잠긴 여행(확정 후 출발일부터 · 바꾸는 중인 변경 전 여행)이면 409.
+ * 확정한 여행에 새로 담은 장소는 경로에 배치해야 확정 일정에 들어간다(화면에서 안내). source = 담은 화면(RECOMMEND/SEARCH)
+ */
 @Transactional(isolation = Isolation.READ_COMMITTED)   // 여행 행 잠금 뒤 최신 데이터를 읽도록 (REPEATABLE READ면 잠금 전 스냅샷을 읽음)
 public BookmarkResponse add(Long travelId, Long userId, Long poiId, String source) {
    routeService.ensureNotLocked(lockOwned(travelId, userId));
@@ -83,7 +86,9 @@ public BookmarkResponse add(Long travelId, Long userId, Long poiId, String sourc
 */
 @Transactional(isolation = Isolation.READ_COMMITTED)   // 여행 행 잠금 뒤 최신 데이터를 읽도록 (REPEATABLE READ면 잠금 전 스냅샷을 읽음)
 public void remove(Long travelId, Long userId, Long poiId) {
-   routeService.ensureNotLocked(lockOwned(travelId, userId));
+   Travel travel = lockOwned(travelId, userId);
+   routeService.ensureNotLocked(travel);
+   routeService.ensureKeepsSpot(travel, poiId);
    int deleted = bookmarkRepository.deleteByTravelIdAndPoiId(travelId, poiId);
    if (deleted == 0) {
        throw ApiException.notFound("여행 장소에 없는 관광지입니다.");

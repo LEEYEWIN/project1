@@ -9,7 +9,8 @@ import kr.fast.Jejuro.Entity.AiTravelInput;
 /**
 * AI 추천에 필요한 입력을 한곳에 모은 값. user_id 같은 개인 식별값은 넣지 않는다.
 * - HttpAiClient: FastAPI /recommend 형식(JSON 키 이름)으로 바꿔서 보낸다.
-* - MockAiClient: regionIds, limit만 사용한다.
+* - MockAiClient: regionIds, limit, excludePlaceNames만 사용한다.
+* excludePlaceNames: 추천에서 뺄 AI용 이름(관심없음·숨김·삭제·추천 대상 아님). AI 서버가 점수 예측 후 제외한다.
 * regionMode가 ALL이면 regionCodes·regionIds는 빈 배열.
 */
 public record AiRequest(
@@ -28,6 +29,7 @@ public record AiRequest(
      List<String> regionCodes,
      List<Integer> regionIds,
      List<CompanionInput> companions,
+     List<String> excludePlaceNames,
      int limit) {
 
  /** 동반자 1명 (DB 코드 그대로). 정렬·18-slot 변환은 AI 서버가 한다. */
@@ -35,11 +37,12 @@ public record AiRequest(
  }
 
  public static AiRequest of(AiTravelInput in, String regionMode, List<String> regionCodes,
-                            List<Integer> regionIds, List<CompanionInput> companions, int limit) {
+                            List<Integer> regionIds, List<CompanionInput> companions,
+                            List<String> excludePlaceNames, int limit) {
      return new AiRequest(in.genderCode(), in.ageGroupCode(), in.incomeCode(),
              in.styleNatureCity(), in.styleNewFamiliar(), in.styleHiddenFamous(),
              in.styleRelaxActivity(), in.photoImportance(), in.stylePlanFree(),
              in.travelMotive1(), in.userMission1(),
-             regionMode, regionCodes, regionIds, companions, limit);
+             regionMode, regionCodes, regionIds, companions, excludePlaceNames, limit);
  }
 }

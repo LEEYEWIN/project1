@@ -8,7 +8,7 @@ import { errorMessage } from '../../api/client.js';
  * 1) 누르면 이 여행의 경로(여행당 1개, 없으면 서버가 만듦)를 불러와 날짜(일차)를 고르게 한다
  * 2) [추가]: 여행 장소에 없으면 먼저 장소로 추가(ensureBookmarked) → 그 일차 맨 뒤에 넣고 경로 저장
  *    (경로에는 여행 장소만 넣을 수 있다는 서버 규칙 때문에 장소 추가가 먼저)
- * - 일정을 확정한 여행은 추가할 수 없음
+ * - 수정이 잠긴 여행(확정 후 출발일부터 · 바꾸는 중인 변경 전 여행)은 추가할 수 없음
  * - 경로 어딘가에 이미 있으면 안내만 하고 저장하지 않음(한 곳은 한 번만 방문)
  */
 export default function AddToRouteButton({ travelId, poi, ensureBookmarked }) {
@@ -42,7 +42,7 @@ export default function AddToRouteButton({ travelId, poi, ensureBookmarked }) {
         return;
       }
       if (fresh.locked) {
-        setError('일정을 확정한 여행이라 경로를 바꿀 수 없어요.');
+        setError('지금은 이 여행의 경로를 바꿀 수 없어요.');
         return;
       }
       await ensureBookmarked(poi);
@@ -76,7 +76,7 @@ export default function AddToRouteButton({ travelId, poi, ensureBookmarked }) {
     <div className="add-route" role="group" aria-label={`${poi.name} 루트에 추가`}>
       {!route && !error && <p className="hint small">경로를 불러오는 중…</p>}
 
-      {route?.locked && <p className="hint small">일정을 확정한 여행이라 경로를 바꿀 수 없어요.</p>}
+      {route?.locked && <p className="hint small">지금은 이 여행의 경로를 바꿀 수 없어요.</p>}
 
       {route && !route.locked && (
         <>

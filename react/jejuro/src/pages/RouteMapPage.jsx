@@ -93,7 +93,7 @@ export default function RouteMapPage() {
       <div className="title-row">
         <h1>{route.routeName ?? '여행 경로'} · 동선</h1>
         {route.locked ? (
-          <span className="badge">확정된 일정 · 수정 불가</span>
+          <span className="badge">{route.adopted ? '확정된 일정 · 수정 불가' : '변경 전 일정 · 보기만 가능'}</span>
         ) : (
           <Link className="btn ghost" to={`/travels/${travelId}/route`}>
             경로 짜기로 돌아가기
@@ -203,7 +203,13 @@ export default function RouteMapPage() {
       <ErrorBox message={error} />
 
       <div className="bottom-bar">
-        <span>{route.locked ? '확정된 일정이에요.' : '여행 장소를 모두 배치했다면 여행 상세에서 일정을 확정하세요.'}</span>
+        <span>
+          {route.locked
+            ? route.adopted ? '확정된 일정이에요. 출발일부터는 바꿀 수 없어요.' : '새 여행으로 바꿔 만드는 중인 변경 전 일정이에요.'
+            : route.adopted
+              ? '확정한 일정이에요. 출발 전날까지 경로 짜기에서 고칠 수 있어요.'
+              : '여행 장소를 모두 배치했다면 여행 상세에서 일정을 확정하세요.'}
+        </span>
         <Link className="btn primary" to={`/travels/${travelId}`}>
           여행 상세로 →
         </Link>

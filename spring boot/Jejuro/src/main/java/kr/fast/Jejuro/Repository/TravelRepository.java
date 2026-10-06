@@ -38,8 +38,11 @@ public interface TravelRepository extends JpaRepository<Travel, Long> {
             + " and t.travelId = (select r.travelId from TravelRoute r where r.routeId = :routeId)")
     Optional<Travel> findOwnedByRouteForUpdate(@Param("routeId") Long routeId, @Param("userId") Long userId);
 
-    /** 기간이 겹치는 내 여행 (시작일 ≤ 새 종료일 이고 종료일 ≥ 새 시작일). 같은 기간 중복 생성 막기 */
-    Optional<Travel> findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(
+    /**
+     * 기간이 겹치는 내 여행 (시작일 ≤ 새 종료일 이고 종료일 ≥ 새 시작일).
+     * 같은 기간 중복 생성 막기 · "날짜·동행 바꿔 다시 만들기"로 생긴 변경 전/새 여행 찾기에 쓴다.
+     */
+    List<Travel> findByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(
             Long userId, java.time.LocalDate endDate, java.time.LocalDate startDate);
 
     /** 소유권 검사용: 내 여행일 때만 찾는다. */

@@ -9,6 +9,8 @@ import java.util.List;
 /**
 * 경로 상세: "1일차 1번 한라산, 2번 바다" 형태.
 * locked=true 이면 화면은 읽기 전용(편집·순서 추천 적용 불가).
+*   - 확정한 일정은 출발 전날까지 고칠 수 있고 출발일 당일부터 잠긴다.
+*   - "날짜·동행 바꿔 다시 만들기"로 새 여행을 만드는 중인 변경 전 여행도 잠긴다.
 * tripDays는 여행 전체 일수(편집 화면의 일차 탭 개수), days는 방문지가 있는 일차만 들어 있다.
 */
 public record RouteDetailResponse(
@@ -16,7 +18,7 @@ public record RouteDetailResponse(
      Long travelId,
      String routeName,
      boolean adopted,
-     boolean locked,          // 이 여행에 최종 경로가 채택됨 → 모든 경로 수정 불가
+     boolean locked,          // 수정 잠금 (확정 + 출발일 당일부터, 또는 새 여행으로 바꾸는 중인 변경 전 여행)
      LocalDate startDate,
      LocalDate endDate,
      int tripDays,

@@ -75,7 +75,13 @@ public class TravelController {
     @PatchMapping("/travels/{travelId}/adopted-route")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void adopt(@PathVariable("travelId") Long travelId, @RequestBody AdoptRouteRequest req) {
-        travelService.adoptRoute(travelId, currentUser.id(), req.routeId());
+        travelService.adoptRoute(travelId, currentUser.id(), req.routeId(), req.deleteOverlappingOrFalse());
+    }
+
+    /** 여행 상세 "날짜·동행 바꿔 다시 만들기": 여행 만들기 화면에 채울 기존 값 */
+    @GetMapping("/travels/{travelId}/copy")
+    public TravelCreateRequest copy(@PathVariable("travelId") Long travelId) {
+        return travelService.copyValues(travelId, currentUser.id());
     }
 
     /** 7페이지: 여행 삭제 */

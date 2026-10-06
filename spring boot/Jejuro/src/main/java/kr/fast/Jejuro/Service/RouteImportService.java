@@ -86,6 +86,7 @@ public Long importToNewTravel(Long postId, Long userId, RouteImportRequest req) 
        throw new ApiException(HttpStatus.FORBIDDEN, "탈퇴 처리 중인 계정입니다.");
    }
    int tripDays = source.tripDays();
+   TravelService.rejectPastStart(req.startDate());
    TravelService.rejectOverlap(travelRepository, userId, req.startDate(), req.startDate().plusDays(tripDays - 1L));
    Travel travel = travelRepository.save(Travel.createImported(userId, travelRepository.nextTravelNo(userId),
            req.travelName().trim(), req.startDate(), req.startDate().plusDays(tripDays - 1L),

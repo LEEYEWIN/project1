@@ -30,6 +30,7 @@ const toDays = (plan) => plan.map((spots, i) => ({ dayNo: i + 1, poiIds: spots.m
  * - 여행당 경로는 1개. 들어오면 서버가 경로를 찾아 주고(없으면 만듦) 마지막 상태를 불러온다.
  * - 바꿀 때마다 0.7초 뒤 자동 저장. 페이지를 나가도(관광지 화면을 보고 와도) 마지막 경로가 그대로 남는다.
  * - 여행 장소를 "모두" 배치해야 [일정 확정하러 가기]가 열린다. (확정은 여행 상세에서)
+ * - 확정한 일정도 출발 전날까지는 여기서 고친다(자동 저장이 곧 확정 일정에 반영). 출발일부터는 잠겨 지도로 보낸다.
  * - 아래 동선 패널에서 이동 시간·주변 숙소·효율적인 순서 추천을 함께 본다.
  * plan[i] = i+1일차의 방문지 배열(배열 순서 = 방문 순서)
  */
@@ -299,13 +300,14 @@ export default function RoutePlannerPage() {
 
   if (error && !savedRoute) return <main className="page"><ErrorBox message={error} /></main>;
   if (!savedRoute) return <main className="page"><Loading text="경로를 불러오는 중…" /></main>;
-  // 일정을 확정한 여행은 수정 불가 → 지도(읽기 전용)로 보낸다
+  // 수정이 잠긴 여행(확정 후 출발일부터 · 바꾸는 중인 변경 전 여행) → 지도(읽기 전용)로 보낸다
   if (savedRoute.locked) return <Navigate to={`/travels/${travelId}/routes/${savedRoute.routeId}/map`} replace />;
 
   const placedIds = new Set(plan.flat().map((p) => p.poiId));
   const unplaced = places.filter((p) => !placedIds.has(p.poiId));
   const totalSpots = placedIds.size;
   const ready = places.length > 0 && unplaced.length === 0;
+  const confirmed = savedRoute.adopted; // 확정한 일정을 고치는 중
 
   const statusText =
     status === 'saving'
@@ -377,7 +379,11 @@ export default function RoutePlannerPage() {
             여행 장소 <small>{totalSpots}/{places.length}곳 배치</small>
           </h2>
           {unplaced.length > 0 ? (
-            <p className="placement-status">아직 배치 전 {unplaced.length}곳 — 모두 배치해야 일정을 확정할 수 있어요.</p>
+            <p className="placement-status">
+              {confirmed
+                ? `아직 배치 전 ${unplaced.length}곳 — 출발 전까지 배치하지 않으면 확정 일정에서 빠집니다.`
+                : `아직 배치 전 ${unplaced.length}곳 — 모두 배치해야 일정을 확정할 수 있어요.`}
+            </p>
           ) : (
             places.length > 0 && <p className="placement-status done">모든 장소를 배치했어요.</p>
           )}
@@ -440,11 +446,13 @@ export default function RoutePlannerPage() {
           <button
             type="button"
             className="btn primary"
-            disabled={!ready}
-            title={ready ? undefined : places.length === 0 ? '여행 장소를 먼저 추가해 주세요' : `여행 장소 ${unplaced.length}곳을 먼저 배치해 주세요`}
+            disabled={!ready && !confirmed}
+            title={ready || confirmed ? undefined : places.length === 0 ? '여행 장소를 먼저 추가해 주세요' : `여행 장소 ${unplaced.length}곳을 먼저 배치해 주세요`}
             onClick={() => saveThen(`/travels/${travelId}`)}
           >
-            {ready
+            {confirmed
+              ? '수정 완료 · 여행 상세로 →'
+              : ready
               ? '일정 확정하러 가기 →'
               : places.length === 0
                 ? '장소를 먼저 추가해 주세요'
