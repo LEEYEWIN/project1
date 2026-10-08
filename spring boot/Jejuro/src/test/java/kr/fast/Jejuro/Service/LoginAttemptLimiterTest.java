@@ -25,6 +25,16 @@ class LoginAttemptLimiterTest {
     }
 
     @Test
+    void failureReturnsRemainingAttempts() {
+        assertEquals(4, limiter.recordFailure("a@x.com", "1.1.1.1"));
+        assertEquals(3, limiter.recordFailure("a@x.com", "1.1.1.1"));
+        assertEquals(2, limiter.recordFailure("a@x.com", "1.1.1.1"));
+        assertEquals(1, limiter.recordFailure("a@x.com", "1.1.1.1"));
+        assertEquals(0, limiter.recordFailure("a@x.com", "1.1.1.1"));
+        assertEquals(0, limiter.recordFailure("a@x.com", "1.1.1.1")); // 음수로 내려가지 않음
+    }
+
+    @Test
     void blockMessageShowsRemainingTime() {
         for (int i = 0; i < 5; i++) limiter.recordFailure("a@x.com", "1.1.1.1");
         ApiException e = assertThrows(ApiException.class, () -> limiter.check("a@x.com", "9.9.9.9"));

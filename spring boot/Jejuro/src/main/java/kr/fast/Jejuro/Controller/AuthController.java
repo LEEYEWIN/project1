@@ -123,7 +123,14 @@ public class AuthController {
          loginLimiter.recordSuccess(email);
          return me;
      } catch (ApiException e) {
-         if (e.getStatus() == HttpStatus.UNAUTHORIZED) loginLimiter.recordFailure(email, ip);
+         if (e.getStatus() == HttpStatus.UNAUTHORIZED) {
+             // 비밀번호가 틀리면 남은 시도 횟수를 알려 준다 (없는 이메일도 같은 문구라 가입 여부는 드러나지 않는다)
+             int left = loginLimiter.recordFailure(email, ip);
+             String hint = left > 0
+                     ? " (남은 시도 " + left + "번)"
+                     : " 5번 모두 틀려 15분 동안 로그인할 수 없어요.";
+             throw new ApiException(HttpStatus.UNAUTHORIZED, e.getMessage() + hint);
+         }
          throw e;
      }
  }

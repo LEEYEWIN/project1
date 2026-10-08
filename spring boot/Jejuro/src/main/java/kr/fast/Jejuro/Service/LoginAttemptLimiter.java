@@ -40,10 +40,12 @@ public class LoginAttemptLimiter {
         }
     }
 
-    public void recordFailure(String email, String ip) {
+    /** 실패 기록 → 이 이메일로 더 틀려도 되는 남은 횟수 (0이면 방금 5번째 실패로 차단됨) */
+    public int recordFailure(String email, String ip) {
         Instant now = Instant.now();
-        add(byEmail, email, now);
+        int fails = add(byEmail, email, now);
         add(byIp, ip, now);
+        return Math.max(MAX_FAILS_PER_EMAIL - fails, 0);
     }
 
     /** 로그인 성공 → 그 이메일의 실패 기록 삭제 */
@@ -64,12 +66,14 @@ public class LoginAttemptLimiter {
         }
     }
 
-    private static void add(Map<String, Deque<Instant>> map, String key, Instant now) {
-        if (key == null) return;
+    /** 기록을 더하고 지금 기간 안의 실패 횟수를 돌려준다 */
+    private static int add(Map<String, Deque<Instant>> map, String key, Instant now) {
+        if (key == null) return 0;
         Deque<Instant> q = map.computeIfAbsent(key, k -> new ArrayDeque<>());
         synchronized (q) {
             prune(q, now);
             q.addLast(now);
+            return q.size();
         }
     }
 

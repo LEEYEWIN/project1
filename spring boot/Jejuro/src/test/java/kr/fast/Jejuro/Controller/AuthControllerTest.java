@@ -84,6 +84,25 @@ class AuthControllerTest {
      assertNotEquals(oldId, session.getId());
      mvc.perform(get("/api/me").session(session)).andExpect(status().isOk());
  }
+ @org.springframework.test.annotation.DirtiesContext(methodMode = org.springframework.test.annotation.DirtiesContext.MethodMode.AFTER_METHOD)
+ @Test void wrongPasswordShowsRemainingAttemptsAndBlocksAfterFive() throws Exception {
+     signup();
+     String wrong = "{\"email\":\"hello@example.com\",\"password\":\"incorrect\"}";
+     for (int left = 4; left >= 1; left--) {
+         mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(wrong))
+             .andExpect(status().isUnauthorized())
+             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message")
+                     .value(org.hamcrest.Matchers.containsString("남은 시도 " + left + "번")));
+     }
+     mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(wrong))
+         .andExpect(status().isUnauthorized())
+         .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message")
+                 .value(org.hamcrest.Matchers.containsString("15분 동안 로그인할 수 없어요")));
+     // 차단 중에는 맞는 비밀번호도 429
+     mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+             .content("{\"email\":\"hello@example.com\",\"password\":\"correct-horse-123\"}"))
+         .andExpect(status().isTooManyRequests());
+ }
  @Test void rejectsDuplicateEmailInvalidSignupAndMissingCsrf() throws Exception {
      mvc.perform(post("/api/auth/signup").contentType(MediaType.APPLICATION_JSON).content(SIGNUP))
          .andExpect(status().isForbidden());
