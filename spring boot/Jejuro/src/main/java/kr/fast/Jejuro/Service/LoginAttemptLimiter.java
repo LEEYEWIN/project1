@@ -32,9 +32,11 @@ public class LoginAttemptLimiter {
     /** 로그인 시도 전에 호출: 한도를 넘었으면 429 */
     public void check(String email, String ip) {
         Instant now = Instant.now();
-        if (count(byEmail, email, now) >= MAX_FAILS_PER_EMAIL || count(byIp, ip, now) >= MAX_FAILS_PER_IP) {
+        long wait = Math.max(waitSeconds(byEmail, email, MAX_FAILS_PER_EMAIL, now),
+                waitSeconds(byIp, ip, MAX_FAILS_PER_IP, now));
+        if (wait > 0) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
-                    "로그인을 너무 많이 실패했어요. 15분 뒤에 다시 시도해 주세요.");
+                    "로그인을 너무 많이 실패했어요. " + WaitText.of(wait) + " 뒤에 다시 시도해 주세요.");
         }
     }
 
@@ -49,13 +51,16 @@ public class LoginAttemptLimiter {
         if (email != null) byEmail.remove(email);
     }
 
-    private static int count(Map<String, Deque<Instant>> map, String key, Instant now) {
+    /** 한도를 넘었으면 다시 시도할 수 있을 때까지 남은 초, 아니면 0 (한도 아래로 내려가는 시점 = 오래된 실패가 15분을 넘기는 시점) */
+    private static long waitSeconds(Map<String, Deque<Instant>> map, String key, int max, Instant now) {
         if (key == null) return 0;
         Deque<Instant> q = map.get(key);
         if (q == null) return 0;
         synchronized (q) {
             prune(q, now);
-            return q.size();
+            if (q.size() < max) return 0;
+            Instant releaseAt = q.stream().skip(q.size() - max).findFirst().orElse(now).plus(WINDOW);
+            return Math.max(Duration.between(now, releaseAt).getSeconds(), 1);
         }
     }
 

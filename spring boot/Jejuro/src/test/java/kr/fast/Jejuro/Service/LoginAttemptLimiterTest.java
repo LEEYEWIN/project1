@@ -25,6 +25,13 @@ class LoginAttemptLimiterTest {
     }
 
     @Test
+    void blockMessageShowsRemainingTime() {
+        for (int i = 0; i < 5; i++) limiter.recordFailure("a@x.com", "1.1.1.1");
+        ApiException e = assertThrows(ApiException.class, () -> limiter.check("a@x.com", "9.9.9.9"));
+        org.junit.jupiter.api.Assertions.assertTrue(e.getMessage().contains("15분 뒤"), e.getMessage());
+    }
+
+    @Test
     void successClearsFailures() {
         for (int i = 0; i < 4; i++) limiter.recordFailure("a@x.com", "1.1.1.1");
         limiter.recordSuccess("a@x.com");

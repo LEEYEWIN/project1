@@ -107,8 +107,13 @@ public class EmailVerificationService {
                 SELECT COUNT(*) FROM email_verification WHERE email = ? AND purpose = ? AND created_at > ?
                 """, Integer.class, email, PURPOSE, Timestamp.valueOf(now.minusHours(1)));
         if (recent != null && recent >= MAX_SENDS_PER_EMAIL_HOUR) {
+            Timestamp oldest = jdbc.query("""
+                    SELECT MIN(created_at) FROM email_verification WHERE email = ? AND purpose = ? AND created_at > ?
+                    """, rs -> rs.next() ? rs.getTimestamp(1) : null, email, PURPOSE, Timestamp.valueOf(now.minusHours(1)));
+            String wait = oldest == null ? "잠시" : WaitText.of(
+                    java.time.Duration.between(now, oldest.toLocalDateTime().plusHours(1)).getSeconds());
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
-                    "인증번호를 너무 많이 요청했어요. 1시간 뒤에 다시 시도해 주세요.");
+                    "인증번호를 너무 많이 요청했어요. " + wait + " 뒤에 다시 시도해 주세요.");
         }
 
         reserveIp(clientIp, now);   // IP 한도 확인과 기록을 한 번에 (이메일 한도를 통과한 요청만 센다)

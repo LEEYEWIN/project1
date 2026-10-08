@@ -56,7 +56,9 @@ public class CommunityImageService {
      synchronized (q) {
          while (!q.isEmpty() && q.peekFirst().isBefore(now.minus(java.time.Duration.ofHours(1)))) q.removeFirst();
          if (q.size() >= MAX_UPLOADS_PER_HOUR) {
-             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "사진은 1시간에 " + MAX_UPLOADS_PER_HOUR + "장까지 올릴 수 있어요. 잠시 후 다시 시도해 주세요.");
+             long wait = java.time.Duration.between(now, q.peekFirst().plus(java.time.Duration.ofHours(1))).getSeconds();
+             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "사진은 1시간에 " + MAX_UPLOADS_PER_HOUR
+                     + "장까지 올릴 수 있어요. " + WaitText.of(wait) + " 뒤에 다시 시도해 주세요.");
          }
          q.addLast(now);
      }

@@ -7,8 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,9 +18,6 @@ import jakarta.validation.constraints.Size;
 */
 public record WeatherSpotsRequest(@NotEmpty @Size(max = 80) @Valid List<Spot> spots) {
 
- /** 제주 일대 좌표만 받는다 (엉뚱한 값이 외부 날씨 API 오류와 캐시 증가를 일으키지 않게) */
- public record Spot(@NotNull @DecimalMin("32.5") @DecimalMax("34.5") Double latitude,
-                    @NotNull @DecimalMin("125.5") @DecimalMax("127.5") Double longitude,
-                    @NotNull LocalDate date) {
+ public record Spot(@NotNull Double latitude, @NotNull Double longitude, @NotNull LocalDate date) {
  }
 }

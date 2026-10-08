@@ -3,6 +3,7 @@ package kr.fast.Jejuro.Service;
 
 //[여행 상세 - 확정한 일정 관광지별 날씨]
 
+import kr.fast.Jejuro.Config.ApiException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -67,6 +68,12 @@ public class WeatherService {
 
  public WeatherResponse spots(WeatherSpotsRequest req) {
      List<WeatherSpotsRequest.Spot> spots = req.spots();
+     // 제주 일대 좌표만 받는다 (엉뚱한 값이 외부 날씨 API 오류와 캐시 증가를 일으키지 않게. NaN도 걸러진다)
+     for (WeatherSpotsRequest.Spot s : spots) {
+         if (!(s.latitude() >= 32.5 && s.latitude() <= 34.5 && s.longitude() >= 125.5 && s.longitude() <= 127.5)) {
+             throw ApiException.badRequest("제주 지역 좌표만 사용할 수 있어요.");
+         }
+     }
      if (!enabled) {
          return new WeatherResponse(nulls(spots.size()), null, "날씨 기능이 꺼져 있습니다 (weather.enabled=false).");
      }
