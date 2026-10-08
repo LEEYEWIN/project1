@@ -57,6 +57,8 @@ public class EmailVerificationService {
     private final JdbcTemplate jdbc;
     private final UserRepository users;
     private final SecureRandom random = new SecureRandom();
+    /** 이메일별 발송 확인을 한 줄로 세우는 잠금 (이메일 해시로 나눠 쓴다) */
+    private final Object[] emailLocks = java.util.stream.Stream.generate(Object::new).limit(64).toArray();
     /** IP별 최근 1시간 발송 시각 (서버마다 따로 세는 보조 제한. 이메일별 제한은 DB로 모든 서버가 공유) */
     private final Map<String, List<LocalDateTime>> sendsByIp = new ConcurrentHashMap<>();
 
@@ -79,9 +81,17 @@ public class EmailVerificationService {
         if (users.existsByEmailIgnoreCase(email)) {
             throw new ApiException(HttpStatus.CONFLICT, "이미 가입된 이메일입니다. 로그인하거나 다른 이메일을 입력해 주세요.");
         }
+        String code = String.format("%06d", random.nextInt(1_000_000));
         LocalDateTime now = LocalDateTime.now();
-        checkIpLimit(clientIp, now);
+        // 같은 이메일의 동시 요청이 한도 확인을 함께 통과하지 못하게, 확인~저장을 이메일별로 한 줄로 세운다
+        synchronized (emailLocks[Math.floorMod(email.hashCode(), emailLocks.length)]) {
+            reserveSend(email, code, clientIp, now);
+        }
+        sendMail(email, code);
+    }
 
+    /** 한도 확인(IP·이메일) → 이전 번호 무효화 → 새 번호 저장. 이메일별 잠금 안에서만 호출 */
+    private void reserveSend(String email, String code, String clientIp, LocalDateTime now) {
         Timestamp last = jdbc.query("""
                 SELECT MAX(created_at) FROM email_verification WHERE email = ? AND purpose = ?
                 """, rs -> rs.next() ? rs.getTimestamp(1) : null, email, PURPOSE);
@@ -101,7 +111,7 @@ public class EmailVerificationService {
                     "인증번호를 너무 많이 요청했어요. 1시간 뒤에 다시 시도해 주세요.");
         }
 
-        String code = String.format("%06d", random.nextInt(1_000_000));
+        reserveIp(clientIp, now);   // IP 한도 확인과 기록을 한 번에 (이메일 한도를 통과한 요청만 센다)
         // 이전 번호는 무효로 하고 새 번호 저장
         jdbc.update("UPDATE email_verification SET used_at = ? WHERE email = ? AND purpose = ? AND used_at IS NULL",
                 Timestamp.valueOf(now), email, PURPOSE);
@@ -110,8 +120,9 @@ public class EmailVerificationService {
                 VALUES (?, ?, ?, ?, 0, ?)
                 """, email, PURPOSE, hash(email, code), Timestamp.valueOf(now.plusMinutes(CODE_MINUTES)),
                 Timestamp.valueOf(now));
-        recordIpSend(clientIp, now);
+    }
 
+    private void sendMail(String email, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("[JEJURO] 이메일 인증번호");
@@ -200,23 +211,16 @@ public class EmailVerificationService {
         });
     }
 
-    private void checkIpLimit(String ip, LocalDateTime now) {
+    /** IP 한도 확인 + 기록을 같은 잠금 안에서 처리 (동시 요청이 한도를 함께 통과하지 못함) */
+    private void reserveIp(String ip, LocalDateTime now) {
         if (ip == null) return;
-        List<LocalDateTime> times = sendsByIp.get(ip);
-        if (times == null) return;
+        List<LocalDateTime> times = sendsByIp.computeIfAbsent(ip, k -> new java.util.ArrayList<>());
         synchronized (times) {
             times.removeIf(t -> t.isBefore(now.minusHours(1)));
             if (times.size() >= MAX_SENDS_PER_IP_HOUR) {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
                         "인증번호 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.");
             }
-        }
-    }
-
-    private void recordIpSend(String ip, LocalDateTime now) {
-        if (ip == null) return;
-        List<LocalDateTime> times = sendsByIp.computeIfAbsent(ip, k -> new java.util.ArrayList<>());
-        synchronized (times) {
             times.add(now);
         }
     }

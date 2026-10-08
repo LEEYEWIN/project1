@@ -179,12 +179,19 @@ public class CommunityService {
              p.isBlocked() ? ReportPolicy.label(p.getBlockReason()) : null);
  }
 
+ /** 조회수만 읽기 (이미 센 글을 다시 열 때) */
+ @Transactional(readOnly = true)
+ public int viewCount(Long postId) {
+     CommunityPost p = getAlive(postId);
+     return p.getViewCount() == null ? 0 : p.getViewCount();
+ }
+
  /** 조회수 +1 → 올린 뒤 조회수 */
  @Transactional
  public int increaseView(Long postId) {
      CommunityPost p = getAlive(postId);
-     if (p.isHidden()) {
-         return p.getViewCount() == null ? 0 : p.getViewCount();   // 신고 검토 중인 글은 조회수를 올리지 않음
+     if (p.isHidden() || p.isBlocked()) {
+         return p.getViewCount() == null ? 0 : p.getViewCount();   // 신고 검토 중·차단된 글은 조회수를 올리지 않음
      }
      if (postRepository.increaseViewCount(postId) == 0) {
          throw ApiException.notFound("삭제되었거나 없는 글입니다.");

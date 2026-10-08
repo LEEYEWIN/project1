@@ -96,14 +96,14 @@ public class AdminPoiService {
      List<Object> args = new ArrayList<>();
      if (keyword != null && !keyword.isBlank()) {
          String kw = keyword.trim();
-         if (kw.matches("\\d+")) {                         // 숫자면 번호로도 찾기
+         if (kw.matches("\\d{1,18}")) {                    // 숫자면 번호로도 찾기 (18자리까지만 번호로 본다)
              conds.add("(p.poi_id = ? OR p.poi_name LIKE ?)");
              args.add(Long.valueOf(kw));
          } else {
              conds.add("(p.poi_name LIKE ? OR p.address LIKE ?)");
-             args.add("%" + kw + "%");
+             args.add(likePattern(kw));
          }
-         args.add("%" + kw + "%");
+         args.add(likePattern(kw));
      }
      if (regionId != null) {
          conds.add("p.region_id = ?");
@@ -302,5 +302,10 @@ public class AdminPoiService {
 
  private static String trim(String v) {
      return v == null || v.isBlank() ? null : v.trim();
+ }
+
+ /** LIKE 검색어: 사용자가 입력한 % _ \ 는 글자 그대로 찾는다 */
+ private static String likePattern(String kw) {
+     return "%" + kw.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
  }
 }

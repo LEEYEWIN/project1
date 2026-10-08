@@ -30,3 +30,6 @@ uploads/
 
 # Python virtual environment
 .venv/
+
+# 테스트 계정 스크립트(내 이메일을 넣어 쓰므로 커밋하지 않음)
+tools/test_accounts.sql

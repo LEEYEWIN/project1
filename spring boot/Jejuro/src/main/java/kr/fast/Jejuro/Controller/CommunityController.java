@@ -70,7 +70,17 @@ public class CommunityController {
 
     /** 조회수 +1 → { "viewCount": 129 } (화면이 상세에 들어갈 때 한 번만 호출) */
     @PostMapping("/posts/{postId}/view")
-    public Map<String, Integer> view(@PathVariable("postId") Long postId) {
+    public Map<String, Integer> view(@PathVariable("postId") Long postId, jakarta.servlet.http.HttpSession session) {
+        // 같은 세션이 같은 글을 반복 호출해도 조회수는 한 번만 올린다 (새로고침·반복 호출로 조회수 부풀리기 방지)
+        @SuppressWarnings("unchecked")
+        java.util.Set<Long> seen = (java.util.Set<Long>) session.getAttribute("viewedPosts");
+        if (seen == null) {
+            seen = new java.util.HashSet<>();
+            session.setAttribute("viewedPosts", seen);
+        }
+        if (!seen.add(postId)) {
+            return Map.of("viewCount", communityService.viewCount(postId));
+        }
         return Map.of("viewCount", communityService.increaseView(postId));
     }
 
@@ -122,7 +132,8 @@ public class CommunityController {
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, String> upload(@RequestPart("image") MultipartFile image) {
-        currentUser.id();   // 로그인 회원만
+        Long userId = currentUser.id();   // 로그인 회원만
+        imageService.checkQuota(userId);
         return Map.of("imageUrl", imageService.store(image));
     }
 

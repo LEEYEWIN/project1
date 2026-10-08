@@ -27,7 +27,7 @@ import kr.fast.Jejuro.Repository.UserRepository;
 import kr.fast.Jejuro.Service.AuthService;
 
 @WebMvcTest(controllers = {AuthController.class, MeController.class})
-@Import({SecurityConfig.class, AuthService.class, CurrentUser.class})
+@Import({SecurityConfig.class, AuthService.class, CurrentUser.class, kr.fast.Jejuro.Service.LoginAttemptLimiter.class})
 class AuthControllerTest {
  @Autowired MockMvc mvc;
  @Autowired PasswordEncoder encoder;

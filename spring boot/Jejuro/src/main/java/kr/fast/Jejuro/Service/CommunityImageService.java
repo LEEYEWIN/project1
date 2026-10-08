@@ -39,10 +39,27 @@ public class CommunityImageService {
  private static final Map<String, String> CONTENT_TYPE = Map.of(
          "jpg", "image/jpeg", "png", "image/png", "gif", "image/gif", "webp", "image/webp");
 
+ private static final int MAX_UPLOADS_PER_HOUR = 20;
+
  private final Path dir;
+ /** 회원별 최근 1시간 업로드 시각 (서버 메모리. 디스크를 무한정 채우는 반복 업로드 방지) */
+ private final Map<Long, java.util.Deque<java.time.Instant>> uploads = new java.util.concurrent.ConcurrentHashMap<>();
 
  public CommunityImageService(@Value("${app.upload-dir:uploads/community}") String uploadDir) {
      this.dir = Paths.get(uploadDir).toAbsolutePath().normalize();
+ }
+
+ /** 회원별 업로드 횟수 확인 + 기록: 1시간에 20장까지 */
+ public void checkQuota(Long userId) {
+     java.time.Instant now = java.time.Instant.now();
+     java.util.Deque<java.time.Instant> q = uploads.computeIfAbsent(userId, k -> new java.util.ArrayDeque<>());
+     synchronized (q) {
+         while (!q.isEmpty() && q.peekFirst().isBefore(now.minus(java.time.Duration.ofHours(1)))) q.removeFirst();
+         if (q.size() >= MAX_UPLOADS_PER_HOUR) {
+             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "사진은 1시간에 " + MAX_UPLOADS_PER_HOUR + "장까지 올릴 수 있어요. 잠시 후 다시 시도해 주세요.");
+         }
+         q.addLast(now);
+     }
  }
 
  /** 사진 저장 → 화면에서 쓸 주소 */

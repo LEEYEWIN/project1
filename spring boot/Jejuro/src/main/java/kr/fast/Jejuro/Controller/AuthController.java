@@ -24,6 +24,7 @@ import kr.fast.Jejuro.RequestDTO.SignupRequest;
 import kr.fast.Jejuro.ResponseDTO.MeResponse;
 import kr.fast.Jejuro.Service.AuthService;
 import kr.fast.Jejuro.Service.EmailVerificationService;
+import kr.fast.Jejuro.Service.LoginAttemptLimiter;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -34,13 +35,15 @@ public class AuthController {
  private final SessionAuthenticationStrategy sessions;
  private final UserRepository users;
  private final EmailVerificationService emailVerificationService;
+ private final LoginAttemptLimiter loginLimiter;
  public AuthController(
 	        AuthService service,
 	        AuthenticationManager authentication,
 	        SecurityContextRepository contexts,
 	        SessionAuthenticationStrategy sessions,
 	        UserRepository users,
-	        EmailVerificationService emailVerificationService
+	        EmailVerificationService emailVerificationService,
+	        LoginAttemptLimiter loginLimiter
 	) {
 	    this.service = service;
 	    this.authentication = authentication;
@@ -48,6 +51,7 @@ public class AuthController {
 	    this.sessions = sessions;
 	    this.users = users;
 	    this.emailVerificationService = emailVerificationService;
+	    this.loginLimiter = loginLimiter;
 	}
  /** 닉네임 사용 가능 여부 (회원가입·내 정보 수정 화면에서 입력할 때마다 확인). 로그인 상태면 내 닉네임은 제외 */
  @GetMapping("/nickname/check")
@@ -111,7 +115,17 @@ public class AuthController {
  }
  @PostMapping("/login")
  public MeResponse login(@Valid @RequestBody LoginRequest body, HttpServletRequest request, HttpServletResponse response) {
-     return signIn(body.email(), body.password(), request, response);
+     String email = body.email().strip().toLowerCase(Locale.ROOT);
+     String ip = request.getRemoteAddr();
+     loginLimiter.check(email, ip);          // 실패가 많으면 429 (비밀번호 무차별 대입 방지)
+     try {
+         MeResponse me = signIn(email, body.password(), request, response);
+         loginLimiter.recordSuccess(email);
+         return me;
+     } catch (ApiException e) {
+         if (e.getStatus() == HttpStatus.UNAUTHORIZED) loginLimiter.recordFailure(email, ip);
+         throw e;
+     }
  }
 
  private MeResponse signIn(String email, String password, HttpServletRequest request, HttpServletResponse response) {

@@ -65,7 +65,7 @@ public class SecurityConfig {
              .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
              .requestMatchers("/api/auth/csrf", "/api/auth/login", "/api/auth/signup", "/api/auth/email/**",
                      "/api/auth/social/providers", "/api/auth/nickname/check", "/oauth2/**", "/login/oauth2/**").permitAll()
-             .requestMatchers(HttpMethod.GET, "/api/pois/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+             .requestMatchers(HttpMethod.GET, "/api/pois/**", "/api/community/images/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
              .requestMatchers("/api/admin/**").access((authentication, context) -> {
                  var principal = authentication.get();
                  if (principal == null || !principal.isAuthenticated()

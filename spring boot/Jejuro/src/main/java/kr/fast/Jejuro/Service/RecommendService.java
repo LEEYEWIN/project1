@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -59,6 +60,8 @@ public class RecommendService {
  private final RecommendLogService recommendLogService;
  private final PoiRepository poiRepository;
  private final DislikeService dislikeService;
+ /** 여행별 추천 호출을 한 줄로 세우는 잠금 (여행 ID 해시로 나눠 쓴다. 서버 한 대 기준) */
+ private final ReentrantLock[] travelLocks = java.util.stream.Stream.generate(ReentrantLock::new).limit(64).toArray(ReentrantLock[]::new);
  /** 지금 쓰는 AI 모델 버전 → RECOMMEND_REQUEST.model_version (학습 데이터의 model_version 칼럼) */
  private final String modelVersion;
 
@@ -90,8 +93,19 @@ public class RecommendService {
   * 추천 결과는 RECOMMEND_REQUEST/ITEM에 남고(관리자 KPI·재학습), 화면도 이 기록으로 다시 연다.
   * 추천은 여행당 한 번: 이미 성공한 추천이 있으면 AI를 다시 부르지 않고 그 결과를 돌려준다.
   */
- @Transactional(readOnly = true)
  public RecommendResponse recommend(Long travelId, Long userId) {
+     // 같은 여행의 동시 요청(새로고침·화면 이중 호출)은 한 줄로 세운다: 먼저 온 요청이 저장한 결과를 뒤 요청이 그대로 쓴다.
+     // 트랜잭션을 열지 않는다: AI 호출(최대 30초) 동안 DB 연결을 붙잡지 않고, 앞 요청이 저장한 기록을 바로 볼 수 있다.
+     ReentrantLock lock = travelLocks[Math.floorMod(travelId.hashCode(), travelLocks.length)];
+     lock.lock();
+     try {
+         return recommendLocked(travelId, userId);
+     } finally {
+         lock.unlock();
+     }
+ }
+
+ private RecommendResponse recommendLocked(Long travelId, Long userId) {
      Travel travel = travelAccessService.getOwned(travelId, userId);
      Optional<RecommendResponse> saved = savedResult(travelId);
      if (saved.isPresent()) {
@@ -194,6 +208,6 @@ public class RecommendService {
          Set<Long> hidden = ids.isEmpty() ? Set.of() : new HashSet<>(poiRepository.findHiddenIds(ids));
          List<Long> visible = ids.stream().filter(id -> !hidden.contains(id)).toList();
          return new RecommendResponse(travelId, poiService.findSummaries(visible));
-     });
+     }).filter(r -> !r.pois().isEmpty());   // 보여 줄 곳이 하나도 없는 기록은 "받은 추천"으로 치지 않는다(다시 받을 수 있게)
  }
 }

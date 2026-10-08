@@ -456,6 +456,7 @@ private static int nz(Integer v) {
 
 private static String csv(String s) {
    if (s == null) return "";
+   s = neutralize(s);
    return s.contains(",") || s.contains("\"") || s.contains("\n") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
 }
 
@@ -477,4 +478,13 @@ private static Boolean boolOrNull(ResultSet rs, String col) throws SQLException 
    int v = rs.getInt(col);
    return rs.wasNull() ? null : v == 1;
 }
+
+ /** 엑셀에서 수식으로 실행되지 않게: = + @ 탭 줄바꿈으로 시작하면 앞에 ' 를 붙인다. - 는 숫자(-1.5)가 아닐 때만 */
+ static String neutralize(String s) {
+     if (s.isEmpty()) return s;
+     char c = s.charAt(0);
+     boolean risky = c == '=' || c == '+' || c == '@' || c == '\t' || c == '\r'
+             || (c == '-' && !s.matches("-\\d+(\\.\\d+)?"));
+     return risky ? "'" + s : s;
+ }
 }
