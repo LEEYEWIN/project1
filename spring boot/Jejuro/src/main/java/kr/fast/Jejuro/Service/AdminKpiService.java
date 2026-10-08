@@ -21,7 +21,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -40,7 +39,6 @@ import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.LabelCount;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.MissReasons;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.PoiStat;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Reason;
-import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Segment;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Summary;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.Trend;
 import kr.fast.Jejuro.ResponseDTO.AdminKpiResponse.TrendPoint;
@@ -185,7 +183,6 @@ public AdminKpiResponse dashboard(int days) {
            summary(items, prevItems, requests, feedbacks, from, to, datasetTravels),
            funnel(from, to),
            trend(),
-           segments(items),
            overRecommended(items),
            missed(items, from, to),
            missReasons(from, to),
@@ -287,109 +284,6 @@ private Trend trend() {
        points.add(new TrendPoint(start.plusWeeks(w), week.size(), rate(week, ItemRow::added)));
    }
    return new Trend(points);
-}
-
-// ------------------------------------------------------------------ 세그먼트
-
-private Map<String, List<Segment>> segments(List<ItemRow> items) {
-   Set<Long> travelIds = items.stream().map(ItemRow::travelId).collect(Collectors.toSet());
-   Map<String, List<Segment>> result = new LinkedHashMap<>();
-   if (travelIds.isEmpty()) {
-       for (String key : List.of("companion", "age", "region", "days", "motive")) result.put(key, List.of());
-       return result;
-   }
-   String in = placeholders(travelIds.size());
-   Object[] ids = travelIds.toArray();
-
-   Map<String, String> ageName = new HashMap<>();
-   jdbc.query("SELECT code_value, code_name FROM code WHERE group_code = 'AGE'",
-           (rs, n) -> ageName.put(rs.getString(1), rs.getString(2)));
-
-   Map<Long, String> age = new HashMap<>();
-   Map<Long, String> days = new HashMap<>();
-   Map<Long, String> mode = new HashMap<>();
-   jdbc.query("SELECT travel_id, age_group_snapshot, DATEDIFF(end_date, start_date) + 1, region_mode FROM travel WHERE travel_id IN (" + in + ")",
-           (rs, n) -> {
-               long id = rs.getLong(1);
-               age.put(id, ageName.getOrDefault(String.valueOf(rs.getInt(2)), rs.getInt(2) + "그룹"));
-               days.put(id, daysBucket(rs.getInt(3)));
-               mode.put(id, rs.getString(4));
-               return null;
-           }, ids);
-
-   Map<Long, List<int[]>> companions = new HashMap<>();
-   jdbc.query("SELECT travel_id, relation_code, age_group_code FROM companion WHERE travel_id IN (" + in + ")",
-           (rs, n) -> companions.computeIfAbsent(rs.getLong(1), k -> new ArrayList<>())
-                   .add(new int[] { rs.getInt(2), rs.getInt(3) }), ids);
-
-   Map<Long, List<String>> regions = new HashMap<>();
-   jdbc.query("SELECT tr.travel_id, r.region_name FROM travel_region tr JOIN region r ON r.region_id = tr.region_id WHERE tr.travel_id IN (" + in + ")",
-           (rs, n) -> regions.computeIfAbsent(rs.getLong(1), k -> new ArrayList<>()).add(rs.getString(2)), ids);
-
-   Map<Long, String> motive = new HashMap<>();
-   jdbc.query("""
-           SELECT p.travel_id, o.option_name FROM travel_preference p
-             JOIN preference_option o ON o.preference_id = p.preference_id AND o.option_value = p.answer_value
-            WHERE p.preference_id = 201 AND p.answer_rank = 1 AND p.travel_id IN (""" + in + ")",
-           (rs, n) -> motive.put(rs.getLong(1), rs.getString(2)), ids);
-
-   Map<Long, Integer> score = new HashMap<>();
-   jdbc.query("SELECT travel_id, satisfaction_score FROM travel_feedback WHERE satisfaction_score IS NOT NULL AND travel_id IN (" + in + ")",
-           (rs, n) -> score.put(rs.getLong(1), rs.getInt(2)), ids);
-
-   Double overall = rate(items, ItemRow::added);
-   result.put("companion", segmentBy(items, id -> companionGroup(companions.get(id)), score, overall));
-   result.put("age", segmentBy(items, id -> age.getOrDefault(id, "알 수 없음"), score, overall));
-   result.put("region", segmentBy(items, id -> regionName(mode.get(id), regions.get(id)), score, overall));
-   result.put("days", segmentBy(items, id -> days.getOrDefault(id, "알 수 없음"), score, overall));
-   result.put("motive", segmentBy(items, id -> motive.getOrDefault(id, "응답 없음"), score, overall));
-   return result;
-}
-
-private List<Segment> segmentBy(List<ItemRow> items, Function<Long, String> keyOf,
-                               Map<Long, Integer> score, Double overall) {
-   Map<String, List<ItemRow>> groups = items.stream().collect(Collectors.groupingBy(r -> keyOf.apply(r.travelId())));
-   List<Segment> result = new ArrayList<>();
-   groups.forEach((name, rows) -> {
-       Set<Long> travels = rows.stream().map(ItemRow::travelId).collect(Collectors.toSet());
-       Double adoption = rate(rows, ItemRow::added);
-       List<ItemRow> withVisit = rows.stream().filter(r -> r.visited() != null).toList();
-       List<Integer> s = travels.stream().map(score::get).filter(v -> v != null).toList();
-       String level;
-       if (travels.size() < 5 || adoption == null || overall == null) level = "LOW_DATA";
-       else if (adoption < overall * 0.8) level = "WEAK";   // 4/5(80%) 규칙의 비율을 차용 (비교 대상은 전체 평균)
-       else if (adoption < overall * 0.9) level = "WATCH";
-       else level = "OK";
-       result.add(new Segment(name, travels.size(), adoption,
-               rate(withVisit, r -> Boolean.TRUE.equals(r.visited())),
-               s.isEmpty() ? null : round(s.stream().mapToInt(Integer::intValue).average().orElse(0), 2), level));
-   });
-   result.sort(Comparator.comparingInt(Segment::travels).reversed());
-   return result;
-}
-
-/** 동반자 구성 → 세그먼트 이름 (TCR 코드: 1 배우자 2 자녀 3 부모 4 조부모 5 형제 6 친인척 7 친구 8 연인 …) */
-private String companionGroup(List<int[]> list) {
-   if (list == null || list.isEmpty()) return "혼자";
-   if (list.stream().anyMatch(c -> c[0] == 2 && c[1] <= 2)) return "아이 동반 가족";   // 자녀 + 10대 이하
-   if (list.stream().anyMatch(c -> c[0] == 3 || c[0] == 4)) return "부모 동반";
-   if (list.stream().anyMatch(c -> c[0] == 1 || c[0] == 8)) return "연인·부부";
-   if (list.stream().anyMatch(c -> c[0] == 7)) return "친구";
-   if (list.stream().anyMatch(c -> c[0] == 2 || c[0] == 5 || c[0] == 6)) return "가족·친척";
-   return "동료·모임·기타";
-}
-
-private String regionName(String mode, List<String> names) {
-   if (!"SELECTED".equals(mode) || names == null || names.isEmpty()) return "제주 전체";
-   return names.size() == 1 ? names.get(0) : "여러 권역";
-}
-
-private String daysBucket(int d) {
-   if (d <= 1) return "당일";
-   if (d == 2) return "1박 2일";
-   if (d == 3) return "2박 3일";
-   if (d == 4) return "3박 4일";
-   return "4박 이상";
 }
 
 // ------------------------------------------------------------------ 관광지 표

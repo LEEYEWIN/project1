@@ -12,7 +12,7 @@ import java.util.List;
  * - route: 이 여행의 경로 요약 (아직 없으면 null)
  * - placeCount / placedCount: 여행 장소 수 / 그중 경로에 배치된 수 → 같아야 일정 확정 가능
  * - editLocked: 경로·장소를 고칠 수 없음 (확정 + 출발일 당일부터, 또는 새 여행으로 바꾸는 중인 변경 전 여행)
- * - canReplace: "날짜·동행 바꿔 다시 만들기" 가능 (설문이 있는 여행, 후기 전, 종료일 전, 이미 바꾸는 중이 아님)
+ * - canReplace: "날짜·동행 바꿔 다시 만들기" 가능 (설문이 있는 여행, 후기 전, 출발일 전, 이미 바꾸는 중이 아님)
  * - overlaps: 기간이 겹치는 내 다른 여행. newer=true 이면 이 여행을 바꿔 만든 새 여행, false 이면 변경 전 여행
  */
 public record TravelDetailResponse(

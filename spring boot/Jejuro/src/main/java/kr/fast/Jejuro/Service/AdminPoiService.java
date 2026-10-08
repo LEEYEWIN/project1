@@ -40,7 +40,7 @@ import kr.fast.Jejuro.ResponseDTO.AdminPoiResponse;
 @Service
 public class AdminPoiService {
 
- private static final int PAGE_SIZE = 20;
+ private static final int PAGE_SIZE = 10;
  /** 관리자 화면에서 사진을 올리면 받는 주소 (커뮤니티 사진 저장소를 같이 씀) */
  private static final String UPLOADED_IMAGE_PREFIX = "/api/community/images/";
 

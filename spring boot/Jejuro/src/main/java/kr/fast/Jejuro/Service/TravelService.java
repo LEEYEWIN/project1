@@ -225,13 +225,13 @@ public class TravelService {
                 null);
     }
 
-    /** 바꿔 만들 수 있는 여행인지: 설문이 있는 여행 · 후기 전 · 종료일 전 · 이미 바꾸는 중이 아님 */
+    /** 바꿔 만들 수 있는 여행인지: 설문이 있는 여행 · 후기 전 · 출발일 전 · 이미 바꾸는 중이 아님 */
     private void ensureReplaceable(Travel old) {
         if (old.isImported()) {
             throw new ApiException(HttpStatus.CONFLICT, "커뮤니티에서 가져온 여행은 설문이 없어 바꿔 만들 수 없어요. 글에서 다시 가져와 주세요.");
         }
-        if (LocalDate.now().isAfter(old.getEndDate())) {
-            throw new ApiException(HttpStatus.CONFLICT, "이미 끝난 여행은 바꿔 만들 수 없어요.");
+        if (!LocalDate.now().isBefore(old.getStartDate())) {
+            throw new ApiException(HttpStatus.CONFLICT, "출발일부터는 날짜·동행을 바꿔 다시 만들 수 없어요.");
         }
         if (feedbackRepository.existsByTravelId(old.getTravelId())) {
             throw new ApiException(HttpStatus.CONFLICT, "후기를 남긴 여행은 바꿔 만들 수 없어요.");

@@ -25,7 +25,8 @@ export default function PoiDetailPage() {
   const { travelId, poiId } = useParams();
   const travelMode = Boolean(travelId);
   const navigate = useNavigate();
-  const listPath = travelMode ? `/travels/${travelId}/pois` : '/pois';
+  const from = new URLSearchParams(useLocation().search).get('from');
+  const listPath = travelMode ? `/travels/${travelId}/pois${from ? `?from=${from}` : ''}` : '/pois';
 
   const [poi, setPoi] = useState(null);
   const [notFound, setNotFound] = useState(false);

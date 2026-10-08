@@ -109,7 +109,7 @@ export default function RecommendationListPage() {
               : '다른 관광지도 추가하고 싶다면 관광지 더보기에서 찾아보세요. 마음에 드는 곳의 [+ 장소 추가]를 누르면 이 여행의 여행 장소에 함께 담겨요.'}
           </p>
         </div>
-        <Link className="btn ghost" to={`/travels/${travelId}/pois`} aria-describedby="more-places-description">
+        <Link className="btn ghost" to={`/travels/${travelId}/pois?from=recommend`} aria-describedby="more-places-description">
           관광지 더보기 <span aria-hidden="true">→</span>
         </Link>
       </aside>

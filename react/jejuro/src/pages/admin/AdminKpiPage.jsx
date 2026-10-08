@@ -8,7 +8,6 @@ import {
   DatasetPanel,
   MissReasons,
   PoiTable,
-  SegmentTable,
   SummaryTiles,
   TrendChart,
 } from '../../components/admin/KpiParts.jsx';
@@ -26,7 +25,6 @@ export default function AdminKpiPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [forbidden, setForbidden] = useState(false);
-  const [segTab, setSegTab] = useState('companion');
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -86,8 +84,6 @@ export default function AdminKpiPage() {
           <FunnelPanel steps={data.funnel} />
 
           <TrendChart trend={data.trend} />
-
-          <SegmentTable segments={data.segments} tab={segTab} onTab={setSegTab} />
 
           <section className="adm-grid-3">
             <PoiTable title="과추천 관광지" desc="추천은 많은데 담기지 않는 곳 (추천 3회 이상)" rows={data.overRecommended} mode="over" />

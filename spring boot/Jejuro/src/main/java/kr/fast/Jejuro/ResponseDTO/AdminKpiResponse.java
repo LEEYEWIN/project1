@@ -6,7 +6,6 @@ package kr.fast.Jejuro.ResponseDTO;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 /**
 * GET /api/admin/kpi 응답. 화면의 구역 순서대로 들어 있다.
@@ -17,7 +16,6 @@ public record AdminKpiResponse(
    Summary summary,
    List<FunnelStep> funnel,
    Trend trend,
-   Map<String, List<Segment>> segments,   // 기준(companion/age/region/days/motive) → 세그먼트 목록
    List<PoiStat> overRecommended,
    List<PoiStat> missed,
    MissReasons missReasons,
@@ -53,11 +51,6 @@ public record Trend(List<TrendPoint> points) {
 }
 
 public record TrendPoint(LocalDate weekStart, int items, Double adoptionRate) {
-}
-
-/** 세그먼트 한 줄. level = OK / WATCH / WEAK / LOW_DATA */
-public record Segment(String name, int travels, Double adoptionRate, Double visitRate, Double avgSatisfaction,
-                     String level) {
 }
 
 /** 관광지 표 한 줄 (과추천 / AI가 놓친 곳) */

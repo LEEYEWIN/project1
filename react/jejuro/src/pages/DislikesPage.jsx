@@ -13,7 +13,28 @@ import { formatDateTime } from '../utils/format.js';
  * - 위: 지금 관심없음으로 표시한 관광지. [↺ 되돌리기]를 눌러도 카드는 이 화면에 남아 있어 [관심없음]으로 다시 표시 가능
  * - 아래: 이전에 추천받은 관광지 (내 모든 여행의 AI 추천 기록). 여기서도 [관심없음] ↔ [↺ 되돌리기]
  * - 관심없음인 관광지는 내 모든 여행의 다음 AI 추천에서 제외된다
+ * - 두 목록 모두 한 쪽에 12곳(4열 × 3줄)씩 페이지로 나눠 보여 준다 (탭마다 쪽 번호 따로)
  */
+const PAGE_SIZE = 12;
+
+/** 이전 · n / 전체 · 다음 */
+function Pager({ page, total, onPage }) {
+  if (total <= 1) return null;
+  return (
+    <nav className="pager" aria-label="페이지">
+      <button type="button" className="btn ghost" disabled={page === 0} onClick={() => onPage(page - 1)}>
+        이전
+      </button>
+      <span>
+        {page + 1} / {total}
+      </span>
+      <button type="button" className="btn ghost" disabled={page + 1 >= total} onClick={() => onPage(page + 1)}>
+        다음
+      </button>
+    </nav>
+  );
+}
+
 export default function DislikesPage() {
   const [dislikes, setDislikes] = useState(null); // 이 화면에 들어올 때의 관심없음 목록 (되돌려도 카드는 남김)
   const [recommended, setRecommended] = useState([]);
@@ -21,6 +42,7 @@ export default function DislikesPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
   const [tab, setTab] = useState('DISLIKED');
+  const [pages, setPages] = useState({ DISLIKED: 0, RECOMMENDED: 0 }); // 탭별 현재 쪽 (0부터)
 
   useEffect(() => {
     Promise.all([fetchDislikes(), fetchRecommendedPois().catch(() => [])])
@@ -74,6 +96,13 @@ export default function DislikesPage() {
   );
 
   const list = dislikes ?? [];
+  const totalOf = (n) => Math.max(1, Math.ceil(n / PAGE_SIZE));
+  const pageOf = (key, n) => Math.min(pages[key], totalOf(n) - 1);
+  const slice = (key, arr) => arr.slice(pageOf(key, arr.length) * PAGE_SIZE, (pageOf(key, arr.length) + 1) * PAGE_SIZE);
+  const goPage = (key, p) => {
+    setPages((s) => ({ ...s, [key]: p }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   return (
     <main className="page wide dislikes-page">
       <div className="title-row">
@@ -110,8 +139,9 @@ export default function DislikesPage() {
             <p>원하지 않는 장소를 AI 추천 목록이나 이전에 추천받은 관광지에서 ‘관심없음’으로 표시해 보세요.</p>
           </div>
         ) : (
+          <>
           <div className="poi-grid">
-            {list.map(({ poi, createdAt }) => (
+            {slice('DISLIKED', list).map(({ poi, createdAt }) => (
               <PoiCard key={poi.poiId} poi={poi} to={`/pois/${poi.poiId}`} dimmed={on.has(poi.poiId)} left={button(poi)}>
                 <p className="muted small-text">
                   {on.has(poi.poiId) ? `${formatDateTime(createdAt)} 관심없음 표시` : '되돌림 · 다음 추천에 다시 나올 수 있어요'}
@@ -119,14 +149,17 @@ export default function DislikesPage() {
               </PoiCard>
             ))}
           </div>
+          <Pager page={pageOf('DISLIKED', list.length)} total={totalOf(list.length)} onPage={(p) => goPage('DISLIKED', p)} />
+          </>
         ))}
 
       {tab === 'RECOMMENDED' &&
         (recommended.length === 0 ? (
           <p className="empty">아직 AI 추천을 받은 기록이 없어요.</p>
         ) : (
+          <>
           <div className="poi-grid">
-            {recommended.map(({ poi, lastRecommendedAt, times }) => (
+            {slice('RECOMMENDED', recommended).map(({ poi, lastRecommendedAt, times }) => (
               <PoiCard key={poi.poiId} poi={poi} to={`/pois/${poi.poiId}`} dimmed={on.has(poi.poiId)} left={button(poi)}>
                 <p className="muted small-text">
                   {formatDateTime(lastRecommendedAt)} 추천{times > 1 ? ` · ${times}번 추천받음` : ''}
@@ -135,6 +168,8 @@ export default function DislikesPage() {
               </PoiCard>
             ))}
           </div>
+          <Pager page={pageOf('RECOMMENDED', recommended.length)} total={totalOf(recommended.length)} onPage={(p) => goPage('RECOMMENDED', p)} />
+          </>
         ))}
     </main>
   );

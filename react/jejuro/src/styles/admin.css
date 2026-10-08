@@ -97,12 +97,6 @@
 .adm-tbl td { padding: 10px; border-bottom: 1px solid #F0EDE5; }
 .adm-tbl .r { text-align: right; }
 .adm-tbl .strong { font-weight: 600; }
-.adm-tbl tr.weak { background: #FFF8EF; }
-.adm-tbl tr.weak td:first-child { font-weight: 600; }
-.adm-heat { display: inline-block; min-width: 64px; padding: 4px 8px; border-radius: 6px; }
-.adm-level { font-size: 13px; color: #5B6475; }
-.adm-level.weak { font-size: 12px; font-weight: 600; color: #8F2E3E; background: #FBE3E7; padding: 4px 10px; border-radius: 999px; }
-.adm-level.weak::before { content: '! '; }
 
 /* 재학습 데이터셋 */
 .adm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -311,12 +305,6 @@
 .adm-tbl td { padding: 10px; border-bottom: 1px solid #F0EDE5; }
 .adm-tbl .r { text-align: right; }
 .adm-tbl .strong { font-weight: 600; }
-.adm-tbl tr.weak { background: #FFF8EF; }
-.adm-tbl tr.weak td:first-child { font-weight: 600; }
-.adm-heat { display: inline-block; min-width: 64px; padding: 4px 8px; border-radius: 6px; }
-.adm-level { font-size: 13px; color: #5B6475; }
-.adm-level.weak { font-size: 12px; font-weight: 600; color: #8F2E3E; background: #FBE3E7; padding: 4px 10px; border-radius: 999px; }
-.adm-level.weak::before { content: '! '; }
 
 /* 재학습 데이터셋 */
 .adm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -635,3 +623,9 @@
 
 /* 퍼널 확정 이탈 기준 안내 */
 .fn-rule { margin: 12px 0 0; font-size: 12px; line-height: 1.6; }
+
+/* 왼쪽 갈색 메뉴: 페이지 길이만큼 늘어나고, 닉네임(.adm-user)은 맨 아래 */
+.adm-nav { position: static; height: auto; min-height: 100vh; align-self: stretch; }
+@media (max-width: 760px) {
+  .adm-nav { min-height: 0; }
+}

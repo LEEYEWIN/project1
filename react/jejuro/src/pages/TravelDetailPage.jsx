@@ -143,7 +143,20 @@ export default function TravelDetailPage() {
       <nav className="quick-links">
         {!t.imported && <Link to={`/travels/${travelId}/recommendations`}>AI 추천 목록</Link>}
         <Link to={`/travels/${travelId}/bookmarks`}>여행 장소 {t.placeCount}곳</Link>
-        {!editLocked && <Link to={`/travels/${travelId}/pois`}>관광지 더 찾기</Link>}
+        {!editLocked && (
+          <Link
+            to={`/travels/${travelId}/pois?from=detail`}
+            onClick={() => {
+              try {
+                sessionStorage.removeItem(`poiVisitBase:${travelId}`); // 새로 들어갈 때마다 기준을 다시 잡음
+              } catch {
+                /* 무시 */
+              }
+            }}
+          >
+            관광지 더 찾기
+          </Link>
+        )}
       </nav>
 
       <ErrorBox message={error} />
@@ -201,7 +214,7 @@ export default function TravelDetailPage() {
               </button>
               {!editLocked && (
                 <button type="button" className="btn big primary" onClick={() => navigate(`/travels/${travelId}/route`)}>
-                  확정 일정 고치기
+                  확정 일정 수정
                 </button>
               )}
             </>

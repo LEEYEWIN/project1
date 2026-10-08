@@ -210,7 +210,8 @@ public TravelDetailResponse detail(Long travelId, Long userId) {
                    o.getEndDate(), o.getAdoptedRouteId() != null, o.getTravelId() > t.getTravelId()))
            .toList();
    boolean replacing = overlaps.stream().anyMatch(TravelDetailResponse.OverlapItem::newer);
-   boolean canReplace = !t.isImported() && feedback == null && !LocalDate.now().isAfter(t.getEndDate()) && !replacing;
+   // 출발일 당일부터는 바꿔 만들 수 없다 (출발한 여행은 일정 수정도 잠김)
+   boolean canReplace = !t.isImported() && feedback == null && LocalDate.now().isBefore(t.getStartDate()) && !replacing;
 
    return new TravelDetailResponse(t.getTravelId(), t.getTravelNo(), t.getTravelName(),
            t.getStartDate(), t.getEndDate(), t.tripDays(), phase(t),

@@ -28,6 +28,10 @@ const PAGE_SIZE = 12;
  * ② /travels/:travelId/pois    여행 장소 → "관광지 더 찾기": [+ 장소 추가] + [루트에 추가]
  * - 권역·관광 유형·검색어는 함께 적용(AND), 이름 가나다순, 12개씩
  * - 조건을 바꾸면 1쪽부터. 조건은 주소(?region=&category=&q=&page=)에 남겨 뒤로 가기 해도 유지
+ * - 들어온 곳(?from=)에 따라 [←] 버튼이 돌아갈 곳이 다르다
+ *   recommend: AI 추천 목록 → 'AI 추천 목록'으로
+ *   detail   : 여행 상세 '관광지 더 찾기' → 이번에 장소를 추가했으면 '여행 장소', 안 했으면 '여행 일정'(여행 상세)으로
+ *   (없음)   : 여행 장소 화면 등 → '여행 장소'로
  */
 export default function PoiListPage() {
   const { travelId } = useParams();
@@ -37,12 +41,50 @@ export default function PoiListPage() {
   const category = params.get('category') ?? '';
   const keyword = params.get('q') ?? '';
   const page = Math.max(Number(params.get('page')) || 0, 0);
+  const from = params.get('from') ?? '';
 
   const [keywordInput, setKeywordInput] = useState(keyword);
   const [result, setResult] = useState(null);
   const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
-  const { bookmarks, isBookmarked, toggle, ensure, pending, locked, error: bookmarkError } = useBookmarks(travelId);
+  const { bookmarks, loading: bookmarksLoading, isBookmarked, toggle, ensure, pending, locked, error: bookmarkError } = useBookmarks(travelId);
+
+  // 여행 상세에서 들어왔을 때: 들어온 시점의 여행 장소를 기억해 두고, 새로 추가했는지 비교한다
+  // (관광지 상세에 다녀와도 유지되도록 이 탭의 sessionStorage에 보관, 여행 상세의 링크를 누를 때 지움)
+  const baseKey = `poiVisitBase:${travelId}`;
+  useEffect(() => {
+    if (from !== 'detail' || bookmarksLoading) return;
+    try {
+      if (sessionStorage.getItem(baseKey) == null) {
+        sessionStorage.setItem(baseKey, JSON.stringify(bookmarks.map((b) => b.poi.poiId)));
+      }
+    } catch {
+      /* 저장소를 못 쓰면 비교 없이 '여행 일정'으로 돌아감 */
+    }
+  }, [from, bookmarksLoading, bookmarks, baseKey]);
+
+  const addedThisVisit = (() => {
+    try {
+      const base = new Set(JSON.parse(sessionStorage.getItem(baseKey) ?? 'null') ?? bookmarks.map((b) => b.poi.poiId));
+      return bookmarks.some((b) => !base.has(b.poi.poiId));
+    } catch {
+      return false;
+    }
+  })();
+
+  const back =
+    from === 'recommend'
+      ? { to: `/travels/${travelId}/recommendations`, label: '← AI 추천 목록' }
+      : from === 'detail' && !addedThisVisit
+        ? { to: `/travels/${travelId}`, label: '← 여행 일정' }
+        : { to: `/travels/${travelId}/bookmarks`, label: '← 여행 장소' };
+  const leave = () => {
+    try {
+      sessionStorage.removeItem(baseKey);
+    } catch {
+      /* 무시 */
+    }
+  };
 
   useEffect(() => {
     fetchPoiCategories()
@@ -69,7 +111,7 @@ export default function PoiListPage() {
 
   /** 조건 변경 → 1쪽부터 (FR-34) */
   const change = (patch) => {
-    const next = { region: regionId, category, q: keyword, ...patch, page: patch.page ?? '0' };
+    const next = { region: regionId, category, q: keyword, ...patch, page: patch.page ?? '0', from };
     Object.keys(next).forEach((k) => (next[k] === '' || next[k] == null) && delete next[k]);
     setParams(next);
   };
@@ -79,7 +121,8 @@ export default function PoiListPage() {
     change({ q: keywordInput.trim() });
   };
 
-  const detailPath = (poiId) => (travelMode ? `/travels/${travelId}/pois/${poiId}` : `/pois/${poiId}`);
+  const detailPath = (poiId) =>
+    travelMode ? `/travels/${travelId}/pois/${poiId}${from ? `?from=${from}` : ''}` : `/pois/${poiId}`;
   const filtered = regionId || category || keyword;
 
   return (
@@ -87,8 +130,8 @@ export default function PoiListPage() {
       <div className="title-row">
         <h1>제주 관광지</h1>
         {travelMode && (
-          <Link className="btn ghost" to={`/travels/${travelId}/bookmarks`}>
-            ← 여행 장소
+          <Link className="btn ghost" to={back.to} onClick={leave}>
+            {back.label}
           </Link>
         )}
       </div>
